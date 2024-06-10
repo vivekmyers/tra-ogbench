@@ -1,0 +1,11 @@
+jax
+flax
+distrax
+gym==0.23.1
+Cython<3
+matplotlib
+d4rl
+tqdm
+ml_collections
+wandb
+numba
