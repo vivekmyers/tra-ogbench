@@ -308,12 +308,12 @@ class JointTrainAgent(flax.struct.PyTreeNode):
 
             return loss, info
 
-        new_target_params = jax.tree_map(
+        new_target_params = jax.tree_util.tree_map(
             lambda p, tp: p * agent.config['target_update_rate'] + tp * (1 - agent.config['target_update_rate']),
             agent.network.params['networks_value'], agent.network.params['networks_target_value']
         )
 
-        new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn, has_aux=True)
+        new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn)
 
         params = unfreeze(new_network.params)
         params['networks_target_value'] = new_target_params
@@ -334,11 +334,11 @@ class JointTrainAgent(flax.struct.PyTreeNode):
 
             return loss, info
 
-        new_target_params = jax.tree_map(
+        new_target_params = jax.tree_util.tree_map(
             lambda p, tp: p * agent.config['target_update_rate'] + tp * (1 - agent.config['target_update_rate']), agent.network.params['networks_critic'], agent.network.params['networks_target_critic']
         )
 
-        new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn, has_aux=True)
+        new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn)
 
         params = unfreeze(new_network.params)
         params['networks_target_critic'] = new_target_params

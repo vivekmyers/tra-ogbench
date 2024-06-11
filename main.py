@@ -111,7 +111,7 @@ config_flags.DEFINE_config_dict('wandb', default_wandb_config(), lock_config=Fal
 @jax.jit
 def get_traj_v(agent, trajectory):
     def get_v(s, g):
-        v = agent.network(jax.tree_map(lambda x: x[None], s), jax.tree_map(lambda x: x[None], g), method='value')
+        v = agent.network(jax.tree_util.tree_map(lambda x: x[None], s), jax.tree_util.tree_map(lambda x: x[None], g), method='value')
         if FLAGS.value_only:
             v1, v2 = v
             return (v1 + v2) / 2
@@ -426,7 +426,7 @@ def main(_):
     else:
         actor_dataset = train_dataset
 
-    base_observation = jax.tree_map(lambda arr: arr[0], dataset['observations'])
+    base_observation = jax.tree_util.tree_map(lambda arr: arr[0], dataset['observations'])
 
     env.reset()
 
@@ -461,12 +461,6 @@ def main(_):
     example_batch = dataset.sample(1)
     if FLAGS.agent_name == 'trl':
         from src.agents import trl as learner
-    elif FLAGS.agent_name == 'gciql':
-        from src.agents import gciql as learner
-    elif FLAGS.agent_name == 'iql':
-        from src.agents import iql as learner
-    elif FLAGS.agent_name == 'viql':
-        from src.agents import viql as learner
     else:
         raise NotImplementedError
 

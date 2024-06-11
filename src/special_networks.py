@@ -46,9 +46,9 @@ class RelativeRepresentation(nn.Module):
             if self.rep_type == 'state':
                 inputs = targets
             elif self.rep_type == 'diff':
-                inputs = jax.tree_map(lambda t, b: t - b + jnp.ones_like(t) * 1e-6, targets, bases)
+                inputs = jax.tree_util.tree_map(lambda t, b: t - b + jnp.ones_like(t) * 1e-6, targets, bases)
             elif self.rep_type == 'concat':
-                inputs = jax.tree_map(lambda t, b: jnp.concatenate([t, b], axis=-1), targets, bases)
+                inputs = jax.tree_util.tree_map(lambda t, b: jnp.concatenate([t, b], axis=-1), targets, bases)
             else:
                 raise NotImplementedError
 

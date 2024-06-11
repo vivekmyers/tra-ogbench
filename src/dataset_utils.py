@@ -90,7 +90,7 @@ class GCDataset:
         batch['rewards'] = success.astype(float)
         batch['masks'] = (1.0 - success.astype(float))
 
-        batch['goals'] = jax.tree_map(lambda arr: arr[goal_indx], self.dataset['observations'])
+        batch['goals'] = jax.tree_util.tree_map(lambda arr: arr[goal_indx], self.dataset['observations'])
 
         final_state_indx = self.terminal_locs[np.searchsorted(self.terminal_locs, indx)]
 
@@ -104,7 +104,7 @@ class GCDataset:
         pick_random = (np.random.rand(batch_size) < self.policy_p_randomgoal)
         policy_goal_idx = np.where(pick_random, policy_random_goal_indx, policy_traj_goal_indx)
 
-        batch['policy_goals'] = jax.tree_map(lambda arr: arr[policy_goal_idx], self.dataset['observations'])
+        batch['policy_goals'] = jax.tree_util.tree_map(lambda arr: arr[policy_goal_idx], self.dataset['observations'])
 
         if self.p_aug is not None and not evaluation:
             if np.random.rand() < self.p_aug:
@@ -113,7 +113,7 @@ class GCDataset:
                 crop_froms = np.random.randint(0, 2 * padding + 1, (batch_size, 2))
                 crop_froms = np.concatenate([crop_froms, np.zeros((batch_size, 1), dtype=np.int32)], axis=1)
                 for key in aug_keys:
-                    batch[key] = jax.tree_map(lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(arr.shape) == 4 else arr, batch[key])
+                    batch[key] = jax.tree_util.tree_map(lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(arr.shape) == 4 else arr, batch[key])
 
                 if self.color_aug:
                     import tensorflow as tf

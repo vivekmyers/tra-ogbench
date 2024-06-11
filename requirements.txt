@@ -1,7 +1,10 @@
-jax
-flax
-distrax
+jax==0.4.13
+distrax==0.1.2
+flax==0.7.0
+chex==0.1.6
+optax==0.1.5
 gym==0.23.1
+scipy==1.12.0
 Cython<3
 matplotlib
 d4rl
