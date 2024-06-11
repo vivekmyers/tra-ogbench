@@ -2,8 +2,8 @@ import d4rl
 import gym
 import numpy as np
 
-from jaxrl_m.dataset import Dataset
-from jaxrl_m.evaluation import EpisodeMonitor
+from utils.dataset import Dataset
+from utils.evaluation import EpisodeMonitor
 
 
 def make_env(env_name: str):
@@ -62,7 +62,8 @@ def get_dataset(env: gym.Env,
         traj_ends = np.zeros_like(dataset['rewards'])
 
         for i in range(len(dones_float) - 1):
-            if np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6 or dataset['terminals'][i] == 1.0:
+            if np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6 or \
+                    dataset['terminals'][i] == 1.0:
                 dones_float[i] = traj_ends[i] = 1
             else:
                 dones_float[i] = traj_ends[i] = 0

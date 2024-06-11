@@ -1,22 +1,12 @@
 import functools
+from typing import Any
 
 import flax
 import jax
 import jax.numpy as jnp
 import optax
 
-from typing import Any
-
 nonpytree_field = functools.partial(flax.struct.field, pytree_node=False)
-
-
-def target_update(
-        model, target_model, tau
-):
-    new_target_params = jax.tree_util.tree_map(
-        lambda p, tp: p * tau + tp * (1 - tau), model.params, target_model.params
-    )
-    return target_model.replace(params=new_target_params)
 
 
 class TrainState(flax.struct.PyTreeNode):
