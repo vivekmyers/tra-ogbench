@@ -84,7 +84,7 @@ class ValueCritic(nn.Module):
         return jnp.squeeze(critic, -1)
 
 
-class Policy(nn.Module):
+class Actor(nn.Module):
     hidden_dims: Sequence[int]
     action_dim: int
     log_std_min: Optional[float] = -20
@@ -95,10 +95,10 @@ class Policy(nn.Module):
     encoder: nn.Module = None
 
     def setup(self) -> None:
-        policy_module = MLP(self.hidden_dims, activate_final=True)
+        actor_module = MLP(self.hidden_dims, activate_final=True)
         if self.encoder is not None:
-            policy_module = nn.Sequential([self.encoder(), policy_module])
-        self.policy_module = policy_module
+            actor_module = nn.Sequential([self.encoder(), actor_module])
+        self.actor_module = actor_module
 
         self.mean_module = nn.Dense(
             self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
@@ -112,9 +112,12 @@ class Policy(nn.Module):
                 self.log_stds = self.param("log_stds", nn.initializers.zeros, (self.action_dim,))
 
     def __call__(
-            self, observations: jnp.ndarray, temperature: float = 1.0,
+            self, observations, goals=None, temperature=1.0,
     ):
-        outputs = self.policy_module(observations)
+        if goals is None:
+            outputs = self.actor_module(observations)
+        else:
+            outputs = self.actor_module(jnp.concatenate([observations, goals], axis=-1))
 
         means = self.mean_module(outputs)
         if self.state_dependent_std:
@@ -214,39 +217,3 @@ class GoalConditionedCritic(nn.Module):
             q = jnp.log(jnp.maximum(q, 1e-6))
 
         return q
-
-
-class TRLNetwork(nn.Module):
-    networks: Any
-    goal_conditioned: bool = True
-    value_only: bool = True
-
-    def value(self, observations, goals=None, **kwargs):
-        return self.networks['value'](observations, goals, **kwargs)
-
-    def target_value(self, observations, goals=None, **kwargs):
-        return self.networks['target_value'](observations, goals, **kwargs)
-
-    def critic(self, observations, goals, actions=None, **kwargs):
-        return self.networks['critic'](observations, goals, actions, **kwargs)
-
-    def target_critic(self, observations, goals, actions=None, **kwargs):
-        return self.networks['target_critic'](observations, goals, actions, **kwargs)
-
-    def actor(self, observations, goals=None, **kwargs):
-        return self.networks['actor'](jnp.concatenate([observations, goals], axis=-1), **kwargs)
-
-    def __call__(self, observations, goals=None, actions=None):
-        # Only for initialization
-        rets = {}
-        rets.update({
-            'actor': self.actor(observations, goals),
-            'value': self.value(observations, goals),
-            'target_value': self.target_value(observations, goals),
-        })
-        if not self.value_only:
-            rets.update({
-                'critic': self.critic(observations, goals, actions),
-                'target_critic': self.target_critic(observations, goals, actions),
-            })
-        return rets

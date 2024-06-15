@@ -1,5 +1,6 @@
 import dataclasses
 from functools import partial
+from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -66,22 +67,13 @@ class Dataset(FrozenDict):
 @dataclasses.dataclass
 class GCDataset:
     dataset: Dataset
-    value_p_curgoal: float = 0.2
-    value_p_trajgoal: float = 0.5
-    value_p_randomgoal: float = 0.3
-    value_geom_sample: bool = True
-    policy_p_curgoal: float = 0.0
-    policy_p_trajgoal: float = 0.7
-    policy_p_randomgoal: float = 0.3
-    policy_geom_sample: bool = False
-    discount: float = 0.99
-    p_aug: float = None
+    config: Any
 
     def __post_init__(self):
         self.size = self.dataset.size
         self.terminal_locs, = np.nonzero(self.dataset['dones_float'] > 0)
-        assert np.isclose(self.value_p_curgoal + self.value_p_trajgoal + self.value_p_randomgoal, 1.0)
-        assert np.isclose(self.policy_p_curgoal + self.policy_p_trajgoal + self.policy_p_randomgoal, 1.0)
+        assert np.isclose(self.config['value_p_curgoal'] + self.config['value_p_trajgoal'] + self.config['value_p_randomgoal'], 1.0)
+        assert np.isclose(self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0)
 
     def sample_goals(self, indices, p_curgoal, p_trajgoal, p_randomgoal, geom_sample):
         batch_size = len(indices)
@@ -92,7 +84,7 @@ class GCDataset:
         # Goals from the same trajectory (excluding the current state, unless it is the final state)
         final_state_indices = self.terminal_locs[np.searchsorted(self.terminal_locs, indices)]
         if geom_sample:
-            offsets = np.random.geometric(p=1 - self.discount, size=batch_size)  # in [1, inf)
+            offsets = np.random.geometric(p=1 - self.config['discount'], size=batch_size)  # in [1, inf)
             middle_goal_indices = np.minimum(indices + offsets, final_state_indices)
         else:
             distances = np.random.rand(batch_size)  # in [0, 1)
@@ -110,17 +102,17 @@ class GCDataset:
 
         batch = self.dataset.sample(batch_size, indices)
 
-        value_goal_indices = self.sample_goals(indices, self.value_p_curgoal, self.value_p_trajgoal, self.value_p_randomgoal, self.value_geom_sample)
-        policy_goal_indices = self.sample_goals(indices, self.policy_p_curgoal, self.policy_p_trajgoal, self.policy_p_randomgoal, self.policy_geom_sample)
+        value_goal_indices = self.sample_goals(indices, self.config['value_p_curgoal'], self.config['value_p_trajgoal'], self.config['value_p_randomgoal'], self.config['value_geom_sample'])
+        actor_goal_indices = self.sample_goals(indices, self.config['actor_p_curgoal'], self.config['actor_p_trajgoal'], self.config['actor_p_randomgoal'], self.config['actor_geom_sample'])
 
         batch['value_goals'] = jax.tree_util.tree_map(lambda arr: arr[value_goal_indices], self.dataset['observations'])
-        batch['policy_goals'] = jax.tree_util.tree_map(lambda arr: arr[policy_goal_indices], self.dataset['observations'])
+        batch['actor_goals'] = jax.tree_util.tree_map(lambda arr: arr[actor_goal_indices], self.dataset['observations'])
         batch['rewards'] = (indices == value_goal_indices).astype(float)
         batch['masks'] = 1.0 - batch['rewards']
 
-        if self.p_aug is not None and not evaluation:
-            if np.random.rand() < self.p_aug:
-                aug_keys = ['observations', 'next_observations', 'goals', 'policy_goals']
+        if self.config['p_aug'] is not None and not evaluation:
+            if np.random.rand() < self.config['p_aug']:
+                aug_keys = ['observations', 'next_observations', 'goals', 'actor_goals']
                 padding = 3
                 crop_froms = np.random.randint(0, 2 * padding + 1, (batch_size, 2))
                 crop_froms = np.concatenate([crop_froms, np.zeros((batch_size, 1), dtype=np.int32)], axis=1)

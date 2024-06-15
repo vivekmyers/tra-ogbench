@@ -34,14 +34,18 @@ class TrainState(flax.struct.PyTreeNode):
             **kwargs,
         )
 
-    def __call__(self, *args, params=None, method=None, **kwargs):
-        if params is None:
-            params = self.params
-        variables = {"params": params}
-        if method is not None:
-            method = getattr(self.model_def, method)
+    def __call__(self, method=None):
+        def inner(*args, params=None, **kwargs):
+            if params is None:
+                params = self.params
+            variables = {"params": params}
+            if method is not None:
+                method_name = getattr(self.model_def, method)
+            else:
+                method_name = None
 
-        return self.apply_fn(variables, *args, method=method, **kwargs)
+            return self.apply_fn(variables, *args, method=method_name, **kwargs)
+        return inner
 
     def apply_gradients(self, grads, **kwargs):
         updates, new_opt_state = self.tx.update(grads, self.opt_state, self.params)

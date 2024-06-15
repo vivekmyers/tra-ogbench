@@ -64,11 +64,10 @@ def adroit_render(adroit_env, wh=64):
 def evaluate_with_trajectories(
         agent, env: gym.Env, env_name, goal_info=None,
         num_episodes=10, base_observation=None, num_video_episodes=0,
-        eval_temperature=0, eval_gaussian=None, sfbc_samples=None,
+        eval_temperature=0, eval_gaussian=None,
         config=None,
 ):
-    policy_fn = supply_rng(agent.sample_actions)
-    sfbc_policy_fn = supply_rng(agent.sample_sfbc_actions)
+    actor_fn = supply_rng(agent.sample_actions)
     trajectories = []
     stats = defaultdict(list)
 
@@ -94,13 +93,10 @@ def evaluate_with_trajectories(
         render = []
         step = 0
         while not done:
-            policy_obs = observation
-            policy_goal = obs_goal
+            actor_obs = observation
+            actor_goal = obs_goal
 
-            if sfbc_samples is not None:
-                action = sfbc_policy_fn(observations=policy_obs, goals=policy_goal, temperature=eval_temperature, num_samples=sfbc_samples)
-            else:
-                action = policy_fn(observations=policy_obs, goals=policy_goal, temperature=eval_temperature)
+            action = actor_fn(observations=actor_obs, goals=actor_goal, temperature=eval_temperature)
             action = np.array(action)
             if eval_gaussian is not None:
                 action = np.random.normal(action, eval_gaussian)
