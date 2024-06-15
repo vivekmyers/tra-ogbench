@@ -23,7 +23,7 @@ def expectile_loss(adv, diff, expectile):
 def compute_actor_loss(agent, batch, grad_params, rng=None):
     cur_goals = batch['actor_goals']
 
-    if agent.config['actor_loss_type'] == 'awr':
+    if agent.config['actor_loss'] == 'awr':
         if agent.config['v_only']:
             v1, v2 = agent.network('value')(batch['observations'], cur_goals)
             nv1, nv2 = agent.network('value')(batch['next_observations'], cur_goals)
@@ -56,7 +56,7 @@ def compute_actor_loss(agent, batch, grad_params, rng=None):
             'std': jnp.mean(dist.scale_diag),
         })
         return total_actor_loss, info
-    elif agent.config['actor_loss_type'] == 'ddpg':
+    elif agent.config['actor_loss'] == 'ddpg':
         assert not agent.config['v_only']
 
         total_actor_loss = 0.
@@ -333,7 +333,7 @@ def get_config():
         'discount': 0.99,
         'tau': 0.005,  # Target network update rate
         'expectile': 0.9,
-        'actor_loss_type': 'awr',  # 'awr' or 'ddpgbc'
+        'actor_loss': 'awr',  # 'awr' or 'ddpgbc'
         'alpha': 3.0,  # AWR temperature or DDPG+BC coefficient
         'v_only': True,  # True for GCIVL, False for GCIQL
         'const_std': True,
