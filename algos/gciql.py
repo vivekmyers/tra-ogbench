@@ -93,11 +93,6 @@ def compute_actor_loss(agent, batch, grad_params, rng=None):
 
 def compute_value_loss(agent, batch, grad_params):
     goals = batch['value_goals']
-    # masks are 0 if terminal, 1 otherwise
-    batch['masks'] = 1.0 - batch['rewards']
-    if agent.config['gc_negative']:
-        # rewards are 0 if terminal, -1 otherwise
-        batch['rewards'] = batch['rewards'] - 1.0
 
     if agent.config['v_only']:
         (next_v1_t, next_v2_t) = agent.network('target_value')(batch['next_observations'], goals)
@@ -138,11 +133,6 @@ def compute_value_loss(agent, batch, grad_params):
 
 def compute_critic_loss(agent, batch, grad_params):
     goals = batch['value_goals']
-    # masks are 0 if terminal, 1 otherwise
-    batch['masks'] = 1.0 - batch['rewards']
-    if agent.config['gc_negative']:
-        # rewards are 0 if terminal, -1 otherwise
-        batch['rewards'] = batch['rewards'] - 1.0
 
     next_v = agent.network('value')(batch['next_observations'], goals)
     q = batch['rewards'] + agent.config['discount'] * batch['masks'] * next_v
@@ -209,52 +199,40 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             for k, v in value_info.items():
                 info[f'value/{k}'] = v
 
+            if not agent.config['v_only']:
+                critic_loss, critic_info = compute_critic_loss(agent, batch, grad_params)
+                for k, v in critic_info.items():
+                    info[f'critic/{k}'] = v
+            else:
+                critic_loss = 0.
+
             actor_loss, actor_info = compute_actor_loss(agent, batch, grad_params, rng)
             for k, v in actor_info.items():
                 info[f'actor/{k}'] = v
 
-            loss = value_loss + actor_loss
+            loss = value_loss + critic_loss + actor_loss
 
             return loss, info
 
-        new_target_params = jax.tree_util.tree_map(
+        new_target_value_params = jax.tree_util.tree_map(
             lambda p, tp: p * agent.config['tau'] + tp * (1 - agent.config['tau']),
             agent.network.params['networks_value'], agent.network.params['networks_target_value']
         )
+        if not agent.config['v_only']:
+            new_target_critic_params = jax.tree_util.tree_map(
+                lambda p, tp: p * agent.config['tau'] + tp * (1 - agent.config['tau']),
+                agent.network.params['networks_critic'], agent.network.params['networks_target_critic']
+            )
 
         new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn)
 
         params = unfreeze(new_network.params)
-        params['networks_target_value'] = new_target_params
+        params['networks_target_value'] = new_target_value_params
+        if not agent.config['v_only']:
+            params['networks_target_critic'] = new_target_critic_params
         new_network = new_network.replace(params=freeze(params))
 
         return agent.replace(network=new_network, rng=new_rng), info
-
-    @jax.jit
-    def update_q(agent, batch):
-        def loss_fn(grad_params):
-            info = {}
-
-            critic_loss, critic_info = compute_critic_loss(agent, batch, grad_params)
-            for k, v in critic_info.items():
-                info[f'critic/{k}'] = v
-
-            loss = critic_loss
-
-            return loss, info
-
-        new_target_params = jax.tree_util.tree_map(
-            lambda p, tp: p * agent.config['tau'] + tp * (1 - agent.config['tau']),
-            agent.network.params['networks_critic'], agent.network.params['networks_target_critic']
-        )
-
-        new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn)
-
-        params = unfreeze(new_network.params)
-        params['networks_target_critic'] = new_target_params
-        new_network = new_network.replace(params=freeze(params))
-
-        return agent.replace(network=new_network), info
 
     @jax.jit
     def get_loss_info(agent, batch):
@@ -264,13 +242,15 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             value_loss, value_info = compute_value_loss(agent, batch, grad_params)
             for k, v in value_info.items():
                 info[f'value/{k}'] = v
-            actor_loss, actor_info = compute_actor_loss(agent, batch, grad_params, agent.rng)
-            for k, v in actor_info.items():
-                info[f'actor/{k}'] = v
+
             if not agent.config['v_only']:
                 critic_loss, critic_info = compute_critic_loss(agent, batch, grad_params)
                 for k, v in critic_info.items():
                     info[f'critic/{k}'] = v
+
+            actor_loss, actor_info = compute_actor_loss(agent, batch, grad_params, agent.rng)
+            for k, v in actor_info.items():
+                info[f'actor/{k}'] = v
 
             return info
 
@@ -355,7 +335,6 @@ def get_config():
         'expectile': 0.9,
         'actor_loss_type': 'awr',  # 'awr' or 'ddpgbc'
         'alpha': 3.0,  # AWR temperature or DDPG+BC coefficient
-        'gc_negative': True,  # True for (-1, 0) rewards, False for (0, 1) rewards
         'v_only': True,  # True for GCIVL, False for GCIQL
         'const_std': True,
         'encoder': ml_collections.config_dict.placeholder(str),
@@ -368,6 +347,7 @@ def get_config():
         'actor_p_trajgoal': 0.7,
         'actor_p_randomgoal': 0.3,
         'actor_geom_sample': False,
+        'gc_negative': True,  # True for (-1, 0) rewards, False for (0, 1) rewards
         'p_aug': 0.0,
     })
     return config

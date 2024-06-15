@@ -107,8 +107,9 @@ class GCDataset:
 
         batch['value_goals'] = jax.tree_util.tree_map(lambda arr: arr[value_goal_indices], self.dataset['observations'])
         batch['actor_goals'] = jax.tree_util.tree_map(lambda arr: arr[actor_goal_indices], self.dataset['observations'])
-        batch['rewards'] = (indices == value_goal_indices).astype(float)
-        batch['masks'] = 1.0 - batch['rewards']
+        successes = (indices == value_goal_indices).astype(float)
+        batch['masks'] = 1.0 - successes
+        batch['rewards'] = successes - (1.0 if self.config['gc_negative'] else 0.0)
 
         if self.config['p_aug'] is not None and not evaluation:
             if np.random.rand() < self.config['p_aug']:

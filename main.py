@@ -198,9 +198,6 @@ def main(_):
         update_info = dict()
         agent, info = agent.update(batch)
         update_info.update(info)
-        if not config.v_only and config.agent_name == 'gciql':
-            agent, info = agent.update_q(batch)
-            update_info.update(info)
 
         if i % FLAGS.log_interval == 0:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
