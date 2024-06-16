@@ -1,12 +1,37 @@
 import functools
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 import flax
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import optax
 
 nonpytree_field = functools.partial(flax.struct.field, pytree_node=False)
+
+
+class ModuleDict(nn.Module):
+    modules: Any
+
+    @nn.compact
+    def __call__(self, *args, name=None, **kwargs):
+        if name is None:
+            if kwargs.keys() != self.modules.keys():
+                raise ValueError(
+                    f'When `name` is not specified, kwargs must contain the arguments for each module. '
+                    f'Got kwargs keys {kwargs.keys()} but module keys {self.modules.keys()}'
+                )
+            out = {}
+            for key, value in kwargs.items():
+                if isinstance(value, Mapping):
+                    out[key] = self.modules[key](**value)
+                elif isinstance(value, Sequence):
+                    out[key] = self.modules[key](*value)
+                else:
+                    out[key] = self.modules[key](value)
+            return out
+
+        return self.modules[name](*args, **kwargs)
 
 
 class TrainState(flax.struct.PyTreeNode):
@@ -34,18 +59,19 @@ class TrainState(flax.struct.PyTreeNode):
             **kwargs,
         )
 
-    def __call__(self, method=None):
-        def inner(*args, params=None, **kwargs):
-            if params is None:
-                params = self.params
-            variables = {"params": params}
-            if method is not None:
-                method_name = getattr(self.model_def, method)
-            else:
-                method_name = None
+    def __call__(self, *args, params=None, method=None, **kwargs):
+        if params is None:
+            params = self.params
+        variables = {'params': params}
+        if method is not None:
+            method_name = getattr(self.model_def, method)
+        else:
+            method_name = None
 
-            return self.apply_fn(variables, *args, method=method_name, **kwargs)
-        return inner
+        return self.apply_fn(variables, *args, method=method_name, **kwargs)
+
+    def select(self, name):
+        return functools.partial(self, name=name)
 
     def apply_gradients(self, grads, **kwargs):
         updates, new_opt_state = self.tx.update(grads, self.opt_state, self.params)

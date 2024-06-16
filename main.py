@@ -136,11 +136,10 @@ def main(_):
         env = d4rl_utils.make_env(FLAGS.env_name)
         if FLAGS.dataset_path is not None:
             dataset = d4rl_utils.get_dataset(
-                env, FLAGS.env_name, dataset=dict(np.load(FLAGS.dataset_path)),
-                goal_conditioned=True, filter_terminals=False,
+                env, FLAGS.env_name, dataset=dict(np.load(FLAGS.dataset_path)), filter_terminals=False,
             )
         else:
-            dataset = d4rl_utils.get_dataset(env, FLAGS.env_name, goal_conditioned=True, filter_terminals=True)
+            dataset = d4rl_utils.get_dataset(env, FLAGS.env_name, filter_terminals=True)
         dataset = dataset.copy({'observations': dataset['observations'][:, :30],
                                 'next_observations': dataset['next_observations'][:, :30]})
 
