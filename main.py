@@ -18,7 +18,7 @@ from utils import d4rl_utils
 from utils.utils import record_video, CsvLogger
 from utils.dataset import Dataset, GCDataset
 from utils.evaluation import evaluate_with_trajectories
-from utils.wandb import setup_wandb, default_wandb_config, get_flag_dict
+from utils.wandb_utils import setup_wandb, get_flag_dict
 
 if 'mac' in platform.platform():
     pass
@@ -45,7 +45,6 @@ flags.DEFINE_float('eval_temperature', 0, '')
 flags.DEFINE_float('eval_gaussian', None, '')
 
 config_flags.DEFINE_config_file('agent', 'algos/gciql.py', lock_config=False)
-config_flags.DEFINE_config_dict('wandb', default_wandb_config(), lock_config=False)
 
 
 def truncate_dataset(dataset, ratio, return_both=False):
@@ -82,7 +81,6 @@ def get_exp_name():
     if 'SLURM_PROCID' in os.environ:
         exp_name += f'{os.environ["SLURM_PROCID"]}.'
     exp_name += f'{datetime.now().strftime("%Y%m%d_%H%M%S")}'
-    exp_name += f'_{FLAGS.wandb["name"]}'
 
     return exp_name
 
@@ -90,9 +88,7 @@ def get_exp_name():
 def main(_):
     # Set up logger
     exp_name = get_exp_name()
-    FLAGS.wandb['name'] = exp_name
-    FLAGS.wandb['group'] = FLAGS.run_group
-    setup_wandb(dict(), **FLAGS.wandb)
+    setup_wandb(project='ogcrl', group=FLAGS.run_group, name=exp_name)
 
     FLAGS.save_dir = os.path.join(FLAGS.save_dir, wandb.run.project, FLAGS.run_group, exp_name)
     os.makedirs(FLAGS.save_dir, exist_ok=True)
@@ -113,12 +109,11 @@ def main(_):
             dataset = d4rl.qlearning_dataset(env, dataset=env.get_dataset(FLAGS.dataset_path))
             # Manually replace dense rewards with sparse rewards
             if 'large' in FLAGS.env_name:
-                dataset['rewards'] = (np.linalg.norm(dataset['observations'][:, :2] - np.array([32.75, 24.75]),
-                                                     axis=1) <= 0.5).astype(np.float32)
+                dataset['rewards'] = (np.linalg.norm(dataset['observations'][:, :2] - np.array([32.75, 24.75]), axis=1) <= 0.5).astype(np.float32)
                 dataset['terminals'] = dataset['rewards']
         else:
             dataset = None
-        dataset = d4rl_utils.get_dataset(env, FLAGS.env_name, goal_conditioned=True, dataset=dataset)
+        dataset = d4rl_utils.get_dataset(env, FLAGS.env_name, dataset=dataset)
         dataset = dataset.copy({'rewards': dataset['rewards'] - 1.0})
 
         env.render(mode='rgb_array', width=200, height=200)
@@ -184,7 +179,7 @@ def main(_):
             restore_path = candidates[0] + '/params.pkl'
         else:
             restore_path = candidates[0] + f'/params_{FLAGS.restore_epoch}.pkl'
-        with open(restore_path, "rb") as f:
+        with open(restore_path, 'rb') as f:
             load_dict = pickle.load(f)
         agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
         print(f'Restored from {restore_path}')
@@ -201,9 +196,9 @@ def main(_):
 
         if i % FLAGS.log_interval == 0:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
-            if val_dataset is not None and hasattr(agent, 'get_loss_info'):
+            if val_dataset is not None:
                 val_batch = val_dataset.sample(config.batch_size)
-                val_info = agent.get_loss_info(val_batch)
+                _, val_info = agent.total_loss(val_batch, None, agent.rng)
                 train_metrics.update({f'validation/{k}': v for k, v in val_info.items()})
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
             train_metrics['time/total_time'] = (time.time() - first_time)
@@ -239,7 +234,7 @@ def main(_):
 
             fname = os.path.join(FLAGS.save_dir, f'params_{i}.pkl')
             print(f'Saving to {fname}')
-            with open(fname, "wb") as f:
+            with open(fname, 'wb') as f:
                 pickle.dump(save_dict, f)
     train_logger.close()
     eval_logger.close()

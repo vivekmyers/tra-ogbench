@@ -15,139 +15,6 @@ from utils.networks import Actor
 from utils.train_state import TrainState, nonpytree_field
 
 
-def expectile_loss(adv, diff, expectile):
-    weight = jnp.where(adv >= 0, expectile, (1 - expectile))
-    return weight * (diff ** 2)
-
-
-def compute_actor_loss(agent, batch, grad_params, rng=None):
-    cur_goals = batch['actor_goals']
-
-    if agent.config['actor_loss'] == 'awr':
-        if agent.config['v_only']:
-            v1, v2 = agent.network('value')(batch['observations'], cur_goals)
-            nv1, nv2 = agent.network('value')(batch['next_observations'], cur_goals)
-            v = (v1 + v2) / 2
-            nv = (nv1 + nv2) / 2
-
-            adv = nv - v
-        else:
-            v = agent.network('value')(batch['observations'], cur_goals)
-            q1, q2 = agent.network('target_critic')(batch['observations'], cur_goals, batch['actions'])
-            q = jnp.minimum(q1, q2)
-            adv = q - v
-
-        total_actor_loss = 0.
-        info = {}
-        exp_a = jnp.exp(adv * agent.config['alpha'])
-        exp_a = jnp.minimum(exp_a, 100.0)
-
-        dist = agent.network('actor')(batch['observations'], cur_goals, params=grad_params)
-        log_probs = dist.log_prob(batch['actions'])
-
-        actor_loss = -(exp_a * log_probs).mean()
-
-        total_actor_loss = total_actor_loss + actor_loss
-        info.update({
-            'actor_loss': actor_loss,
-            'adv': adv.mean(),
-            'bc_log_probs': log_probs.mean(),
-            'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-            'std': jnp.mean(dist.scale_diag),
-        })
-        return total_actor_loss, info
-    elif agent.config['actor_loss'] == 'ddpg':
-        assert not agent.config['v_only']
-
-        total_actor_loss = 0.
-        info = {}
-
-        dist = agent.network('actor')(batch['observations'], cur_goals, params=grad_params)
-        if agent.config['const_std']:
-            q1, q2 = agent.network('critic')(batch['observations'], cur_goals, jnp.clip(dist.mode(), -1, 1))
-        else:
-            q_actions = jnp.clip(dist.sample(seed=rng), -1, 1)
-            q1, q2 = agent.network('critic')(batch['observations'], cur_goals, q_actions)
-        q = jnp.minimum(q1, q2)
-
-        q_loss = -q.mean()
-        log_probs = dist.log_prob(batch['actions'])
-
-        bc_loss = -(agent.config['alpha'] * log_probs).mean()
-
-        actor_loss = q_loss + bc_loss
-
-        total_actor_loss = total_actor_loss + actor_loss
-
-        info.update({
-            'actor_loss': actor_loss,
-            'bc_log_probs': log_probs.mean(),
-            'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-            'q_loss': q_loss,
-            'std': jnp.mean(dist.scale_diag),
-        })
-        return total_actor_loss, info
-    else:
-        raise NotImplementedError
-
-
-def compute_value_loss(agent, batch, grad_params):
-    goals = batch['value_goals']
-
-    if agent.config['v_only']:
-        (next_v1_t, next_v2_t) = agent.network('target_value')(batch['next_observations'], goals)
-        next_v_t = jnp.minimum(next_v1_t, next_v2_t)
-        q = batch['rewards'] + agent.config['discount'] * batch['masks'] * next_v_t
-
-        (v1_t, v2_t) = agent.network('target_value')(batch['observations'], goals)
-        v_t = (v1_t + v2_t) / 2
-        adv = q - v_t
-
-        q1 = batch['rewards'] + agent.config['discount'] * batch['masks'] * next_v1_t
-        q2 = batch['rewards'] + agent.config['discount'] * batch['masks'] * next_v2_t
-        (v1, v2) = agent.network('value')(batch['observations'], goals, params=grad_params)
-        v = (v1 + v2) / 2
-
-        value_loss1 = expectile_loss(adv, q1 - v1, agent.config['expectile']).mean()
-        value_loss2 = expectile_loss(adv, q2 - v2, agent.config['expectile']).mean()
-        value_loss = value_loss1 + value_loss2
-    else:
-        q1, q2 = agent.network('target_critic')(batch['observations'], goals, batch['actions'])
-        q = jnp.minimum(q1, q2)
-        v = agent.network('value')(batch['observations'], goals, params=grad_params)
-        adv = q - v
-        value_loss = expectile_loss(adv, q - v, agent.config['expectile']).mean()
-
-    return value_loss, {
-        'value_loss': value_loss,
-        'v max': v.max(),
-        'v min': v.min(),
-        'v mean': v.mean(),
-        'abs adv mean': jnp.abs(adv).mean(),
-        'adv mean': adv.mean(),
-        'adv max': adv.max(),
-        'adv min': adv.min(),
-        'accept prob': (adv >= 0).mean(),
-    }
-
-
-def compute_critic_loss(agent, batch, grad_params):
-    goals = batch['value_goals']
-
-    next_v = agent.network('value')(batch['next_observations'], goals)
-    q = batch['rewards'] + agent.config['discount'] * batch['masks'] * next_v
-
-    q1, q2 = agent.network('critic')(batch['observations'], goals, batch['actions'], params=grad_params)
-    critic_loss = ((q1 - q) ** 2 + (q2 - q) ** 2).mean()
-
-    return critic_loss, {
-        'critic_loss': critic_loss,
-        'q max': q.max(),
-        'q min': q.min(),
-        'q mean': q.mean(),
-    }
-
-
 class GCIQLNetwork(nn.Module):
     networks: Any
     v_only: bool = True
@@ -188,79 +55,172 @@ class GCIQLAgent(flax.struct.PyTreeNode):
     network: Any
     config: Any = nonpytree_field()
 
+    @staticmethod
+    def expectile_loss(adv, diff, expectile):
+        weight = jnp.where(adv >= 0, expectile, (1 - expectile))
+        return weight * (diff ** 2)
+
+    def value_loss(self, batch, grad_params):
+        goals = batch['value_goals']
+
+        if self.config['v_only']:
+            (next_v1_t, next_v2_t) = self.network('target_value')(batch['next_observations'], goals)
+            next_v_t = jnp.minimum(next_v1_t, next_v2_t)
+            q = batch['rewards'] + self.config['discount'] * batch['masks'] * next_v_t
+
+            (v1_t, v2_t) = self.network('target_value')(batch['observations'], goals)
+            v_t = (v1_t + v2_t) / 2
+            adv = q - v_t
+
+            q1 = batch['rewards'] + self.config['discount'] * batch['masks'] * next_v1_t
+            q2 = batch['rewards'] + self.config['discount'] * batch['masks'] * next_v2_t
+            (v1, v2) = self.network('value')(batch['observations'], goals, params=grad_params)
+            v = (v1 + v2) / 2
+
+            value_loss1 = self.expectile_loss(adv, q1 - v1, self.config['expectile']).mean()
+            value_loss2 = self.expectile_loss(adv, q2 - v2, self.config['expectile']).mean()
+            value_loss = value_loss1 + value_loss2
+        else:
+            q1, q2 = self.network('target_critic')(batch['observations'], goals, batch['actions'])
+            q = jnp.minimum(q1, q2)
+            v = self.network('value')(batch['observations'], goals, params=grad_params)
+            value_loss = self.expectile_loss(q - v, q - v, self.config['expectile']).mean()
+
+        return value_loss, {
+            'value_loss': value_loss,
+            'v_mean': v.mean(),
+            'v_max': v.max(),
+            'v_min': v.min(),
+        }
+
+    def critic_loss(self, batch, grad_params):
+        goals = batch['value_goals']
+
+        next_v = self.network('value')(batch['next_observations'], goals)
+        q = batch['rewards'] + self.config['discount'] * batch['masks'] * next_v
+
+        q1, q2 = self.network('critic')(batch['observations'], goals, batch['actions'], params=grad_params)
+        critic_loss = ((q1 - q) ** 2 + (q2 - q) ** 2).mean()
+
+        return critic_loss, {
+            'critic_loss': critic_loss,
+            'q_mean': q.mean(),
+            'q_max': q.max(),
+            'q_min': q.min(),
+        }
+
+    def actor_loss(self, batch, grad_params, rng=None):
+        cur_goals = batch['actor_goals']
+
+        if self.config['actor_loss'] == 'awr':
+            if self.config['v_only']:
+                v1, v2 = self.network('value')(batch['observations'], cur_goals)
+                nv1, nv2 = self.network('value')(batch['next_observations'], cur_goals)
+                v = (v1 + v2) / 2
+                nv = (nv1 + nv2) / 2
+
+                adv = nv - v
+            else:
+                v = self.network('value')(batch['observations'], cur_goals)
+                q1, q2 = self.network('target_critic')(batch['observations'], cur_goals, batch['actions'])
+                q = jnp.minimum(q1, q2)
+                adv = q - v
+
+            exp_a = jnp.exp(adv * self.config['alpha'])
+            exp_a = jnp.minimum(exp_a, 100.)
+
+            dist = self.network('actor')(batch['observations'], cur_goals, params=grad_params)
+            log_prob = dist.log_prob(batch['actions'])
+
+            actor_loss = -(exp_a * log_prob).mean()
+
+            return actor_loss, {
+                'actor_loss': actor_loss,
+                'adv': adv.mean(),
+                'bc_log_prob': log_prob.mean(),
+                'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
+                'std': jnp.mean(dist.scale_diag),
+            }
+        elif self.config['actor_loss'] == 'ddpg':
+            assert not self.config['v_only']
+
+            dist = self.network('actor')(batch['observations'], cur_goals, params=grad_params)
+            if self.config['const_std']:
+                q1, q2 = self.network('critic')(batch['observations'], cur_goals, jnp.clip(dist.mode(), -1, 1))
+            else:
+                q_actions = jnp.clip(dist.sample(seed=rng), -1, 1)
+                q1, q2 = self.network('critic')(batch['observations'], cur_goals, q_actions)
+            q = jnp.minimum(q1, q2)
+
+            q_loss = -q.mean()
+            log_prob = dist.log_prob(batch['actions'])
+
+            bc_loss = -(self.config['alpha'] * log_prob).mean()
+
+            actor_loss = q_loss + bc_loss
+
+            return actor_loss, {
+                'actor_loss': actor_loss,
+                'q_loss': q_loss,
+                'bc_loss': bc_loss,
+                'bc_log_prob': log_prob.mean(),
+                'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
+                'std': jnp.mean(dist.scale_diag),
+            }
+        else:
+            raise NotImplementedError
+
+    def total_loss(self, batch, grad_params, rng=None):
+        info = {}
+
+        value_loss, value_info = self.value_loss(batch, grad_params)
+        for k, v in value_info.items():
+            info[f'value/{k}'] = v
+
+        if not self.config['v_only']:
+            critic_loss, critic_info = self.critic_loss(batch, grad_params)
+            for k, v in critic_info.items():
+                info[f'critic/{k}'] = v
+        else:
+            critic_loss = 0.
+
+        actor_loss, actor_info = self.actor_loss(batch, grad_params, rng)
+        for k, v in actor_info.items():
+            info[f'actor/{k}'] = v
+
+        loss = value_loss + critic_loss + actor_loss
+        return loss, info
+
     @jax.jit
-    def update(agent, batch):
-        rng, new_rng = jax.random.split(agent.rng)
+    def update(self, batch):
+        rng, new_rng = jax.random.split(self.rng)
 
         def loss_fn(grad_params):
-            info = {}
-
-            value_loss, value_info = compute_value_loss(agent, batch, grad_params)
-            for k, v in value_info.items():
-                info[f'value/{k}'] = v
-
-            if not agent.config['v_only']:
-                critic_loss, critic_info = compute_critic_loss(agent, batch, grad_params)
-                for k, v in critic_info.items():
-                    info[f'critic/{k}'] = v
-            else:
-                critic_loss = 0.
-
-            actor_loss, actor_info = compute_actor_loss(agent, batch, grad_params, rng)
-            for k, v in actor_info.items():
-                info[f'actor/{k}'] = v
-
-            loss = value_loss + critic_loss + actor_loss
-
-            return loss, info
+            return self.total_loss(batch, grad_params, rng=rng)
 
         new_target_value_params = jax.tree_util.tree_map(
-            lambda p, tp: p * agent.config['tau'] + tp * (1 - agent.config['tau']),
-            agent.network.params['networks_value'], agent.network.params['networks_target_value']
+            lambda p, tp: p * self.config['tau'] + tp * (1 - self.config['tau']),
+            self.network.params['networks_value'], self.network.params['networks_target_value']
         )
-        if not agent.config['v_only']:
+        if not self.config['v_only']:
             new_target_critic_params = jax.tree_util.tree_map(
-                lambda p, tp: p * agent.config['tau'] + tp * (1 - agent.config['tau']),
-                agent.network.params['networks_critic'], agent.network.params['networks_target_critic']
+                lambda p, tp: p * self.config['tau'] + tp * (1 - self.config['tau']),
+                self.network.params['networks_critic'], self.network.params['networks_target_critic']
             )
 
-        new_network, info = agent.network.apply_loss_fn(loss_fn=loss_fn)
+        new_network, info = self.network.apply_loss_fn(loss_fn=loss_fn)
 
         params = unfreeze(new_network.params)
         params['networks_target_value'] = new_target_value_params
-        if not agent.config['v_only']:
+        if not self.config['v_only']:
             params['networks_target_critic'] = new_target_critic_params
         new_network = new_network.replace(params=freeze(params))
 
-        return agent.replace(network=new_network, rng=new_rng), info
-
-    @jax.jit
-    def get_loss_info(agent, batch):
-        def loss_fn(grad_params):
-            info = {}
-
-            value_loss, value_info = compute_value_loss(agent, batch, grad_params)
-            for k, v in value_info.items():
-                info[f'value/{k}'] = v
-
-            if not agent.config['v_only']:
-                critic_loss, critic_info = compute_critic_loss(agent, batch, grad_params)
-                for k, v in critic_info.items():
-                    info[f'critic/{k}'] = v
-
-            actor_loss, actor_info = compute_actor_loss(agent, batch, grad_params, agent.rng)
-            for k, v in actor_info.items():
-                info[f'actor/{k}'] = v
-
-            return info
-
-        info = loss_fn(agent.network.params)
-
-        return info
+        return self.replace(network=new_network, rng=new_rng), info
 
     @partial(jax.jit, static_argnames=('discrete',))
     def sample_actions(
-            agent,
+            self,
             observations,
             goals=None,
             *,
@@ -268,7 +228,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             temperature=1.0,
             discrete=False
     ):
-        dist = agent.network('actor')(observations, goals, temperature=temperature)
+        dist = self.network('actor')(observations, goals, temperature=temperature)
         actions = dist.sample(seed=seed)
         if not discrete:
             actions = jnp.clip(actions, -1, 1)

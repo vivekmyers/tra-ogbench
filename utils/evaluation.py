@@ -8,15 +8,6 @@ from tqdm import trange
 
 
 def supply_rng(f, rng=jax.random.PRNGKey(0)):
-    """
-    Wrapper that supplies a jax random key to a function (using keyword `seed`).
-    Useful for stochastic policies that require randomness.
-
-    Similar to functools.partial(f, seed=seed), but makes sure to use a different
-    key for each new call (to avoid stale rng keys).
-
-    """
-
     def wrapped(*args, **kwargs):
         nonlocal rng
         rng, key = jax.random.split(rng)
@@ -26,10 +17,6 @@ def supply_rng(f, rng=jax.random.PRNGKey(0)):
 
 
 def flatten(d, parent_key="", sep="."):
-    """
-    Helper function that flattens a dictionary of dictionaries into a single dictionary.
-    E.g: flatten({'a': {'b': 1}}) -> {'a.b': 1}
-    """
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
@@ -147,8 +134,6 @@ def evaluate_with_trajectories(
 
 
 class EpisodeMonitor(gym.ActionWrapper):
-    """A class that computes episode returns and lengths."""
-
     def __init__(self, env: gym.Env):
         super().__init__(env)
         self._reset_stats()

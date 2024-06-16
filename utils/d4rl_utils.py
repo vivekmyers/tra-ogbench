@@ -19,11 +19,10 @@ def get_dataset(env: gym.Env,
                 dataset=None,
                 filter_terminals=False,
                 obs_dtype=np.float32,
-                goal_conditioned=True,
                 ):
     # traj_ends: trajectory boundaries
     # dones_float: either trajectory boundaries or "dead"
-    # masks: 1 - "dead" (RL) / 1 - trajectory boundaries (GCRL)
+    # masks: 1 - trajectory boundaries (GCRL)
     # In GCRL, traj_ends and dones_float are the same. In RL, they can be different.
 
     if dataset is None:
@@ -33,8 +32,7 @@ def get_dataset(env: gym.Env,
         lim = 1 - eps
         dataset['actions'] = np.clip(dataset['actions'], -lim, lim)
 
-    if goal_conditioned:
-        dataset['terminals'][-1] = 1
+    dataset['terminals'][-1] = 1
 
     if filter_terminals:
         # drop terminal transitions
@@ -53,10 +51,7 @@ def get_dataset(env: gym.Env,
         for i in range(len(dones_float) - 1):
             traj_end = (np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6)
             traj_ends[i] = traj_end
-            if goal_conditioned:
-                dones_float[i] = int(traj_end)
-            else:
-                dones_float[i] = int(traj_end or dataset['terminals'][i] == 1.0)
+            dones_float[i] = int(traj_end)
     else:
         dones_float = np.zeros_like(dataset['rewards'])
         traj_ends = np.zeros_like(dataset['rewards'])
@@ -73,10 +68,7 @@ def get_dataset(env: gym.Env,
     observations = dataset['observations'].astype(obs_dtype)
     next_observations = dataset['next_observations'].astype(obs_dtype)
 
-    if goal_conditioned:
-        masks = 1.0 - dones_float
-    else:
-        masks = 1.0 - dataset['terminals'].astype(np.float32)
+    masks = 1.0 - dones_float
 
     return Dataset.create(
         observations=observations,
@@ -87,23 +79,3 @@ def get_dataset(env: gym.Env,
         next_observations=next_observations,
         traj_ends=traj_ends
     )
-
-
-def get_normalization(dataset):
-    returns = []
-    ret = 0
-    for r, term in zip(dataset['rewards'], dataset['dones_float']):
-        ret += r
-        if term:
-            returns.append(ret)
-            ret = 0
-    return (max(returns) - min(returns)) / 1000
-
-
-def normalize_dataset(env_name, dataset):
-    if 'antmaze' in env_name:
-        return dataset.copy({'rewards': dataset['rewards'] - 1.0})
-    else:
-        normalizing_factor = get_normalization(dataset)
-        dataset = dataset.copy({'rewards': dataset['rewards'] / normalizing_factor})
-        return dataset
