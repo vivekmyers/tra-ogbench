@@ -134,6 +134,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
     def total_loss(self, batch, grad_params, rng=None):
         info = {}
+        rng = rng if rng is not None else self.rng
 
         value_loss, value_info = self.value_loss(batch, grad_params)
         for k, v in value_info.items():
@@ -146,7 +147,8 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         else:
             critic_loss = 0.
 
-        actor_loss, actor_info = self.actor_loss(batch, grad_params, rng)
+        rng, actor_rng = jax.random.split(rng)
+        actor_loss, actor_info = self.actor_loss(batch, grad_params, actor_rng)
         for k, v in actor_info.items():
             info[f'actor/{k}'] = v
 
@@ -165,7 +167,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
     @jax.jit
     def update(self, batch):
-        rng, new_rng = jax.random.split(self.rng)
+        new_rng, rng = jax.random.split(self.rng)
 
         def loss_fn(grad_params):
             return self.total_loss(batch, grad_params, rng=rng)
@@ -218,12 +220,12 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
         actor_def = Actor(config['actor_hidden_dims'], action_dim=action_dim, log_std_min=-5.0, state_dependent_std=False, const_std=config['const_std'], encoder=encoder_module)
 
-        networks: dict = dict(
+        networks = dict(
             value=value_def,
             target_value=copy.deepcopy(value_def),
             actor=actor_def,
         )
-        network_args: dict = dict(
+        network_args = dict(
             value=[ex_observations, ex_goals],
             target_value=[ex_observations, ex_goals],
             actor=[ex_observations, ex_goals],
@@ -273,8 +275,8 @@ def get_config():
         'value_p_randomgoal': 0.3,
         'value_geom_sample': True,
         'actor_p_curgoal': 0.0,
-        'actor_p_trajgoal': 0.7,
-        'actor_p_randomgoal': 0.3,
+        'actor_p_trajgoal': 1.0,
+        'actor_p_randomgoal': 0.0,
         'actor_geom_sample': False,
         'gc_negative': True,  # True for (-1, 0) rewards, False for (0, 1) rewards
         'p_aug': 0.0,

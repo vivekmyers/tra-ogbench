@@ -17,7 +17,7 @@ from ml_collections import config_flags
 from utils import d4rl_utils
 from utils.utils import record_video, CsvLogger
 from utils.dataset import Dataset, GCDataset
-from utils.evaluation import evaluate_with_trajectories
+from utils.evaluation import evaluate
 from utils.wandb_utils import setup_wandb, get_flag_dict
 
 if 'mac' in platform.platform():
@@ -37,6 +37,7 @@ flags.DEFINE_string('run_group', 'Debug', '')
 flags.DEFINE_integer('seed', 0, '')
 flags.DEFINE_integer('eval_episodes', 50, '')
 flags.DEFINE_integer('video_episodes', 2, '')
+flags.DEFINE_integer('video_frame_skip', 3, '')
 flags.DEFINE_integer('log_interval', 1000, '')
 flags.DEFINE_integer('eval_interval', 100000, '')
 flags.DEFINE_integer('save_interval', 100000, '')
@@ -197,7 +198,7 @@ def main(_):
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
             if val_dataset is not None:
                 val_batch = val_dataset.sample(config.batch_size)
-                _, val_info = agent.total_loss(val_batch, None, agent.rng)
+                _, val_info = agent.total_loss(val_batch, grad_params=None)
                 train_metrics.update({f'validation/{k}': v for k, v in val_info.items()})
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
             train_metrics['time/total_time'] = (time.time() - first_time)
@@ -209,12 +210,17 @@ def main(_):
             renders = []
             eval_metrics = {}
             for goal_info in goal_infos:
-                eval_info, trajs, cur_renders = evaluate_with_trajectories(
-                    agent, env if 'env' not in goal_info else goal_info['env'], goal_info=goal_info,
-                    env_name=FLAGS.env_name, num_episodes=FLAGS.eval_episodes,
-                    base_observation=base_observation, num_video_episodes=FLAGS.video_episodes,
-                    eval_temperature=FLAGS.eval_temperature, eval_gaussian=FLAGS.eval_gaussian,
+                eval_info, trajs, cur_renders = evaluate(
+                    agent=agent,
+                    env=env if 'env' not in goal_info else goal_info['env'],
+                    env_name=FLAGS.env_name,
                     config=config,
+                    base_observation=base_observation,
+                    num_eval_episodes=FLAGS.eval_episodes,
+                    num_video_episodes=FLAGS.video_episodes,
+                    video_frame_skip=FLAGS.video_frame_skip,
+                    eval_temperature=FLAGS.eval_temperature,
+                    eval_gaussian=FLAGS.eval_gaussian,
                 )
                 renders.extend(cur_renders)
                 eval_metrics.update({f'evaluation/{k}': v for k, v in eval_info.items()})

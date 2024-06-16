@@ -1,7 +1,5 @@
-import time
 from collections import defaultdict
 
-import gym
 import jax
 import numpy as np
 from tqdm import trange
@@ -16,11 +14,11 @@ def supply_rng(f, rng=jax.random.PRNGKey(0)):
     return wrapped
 
 
-def flatten(d, parent_key="", sep="."):
+def flatten(d, parent_key='', sep='.'):
     items = []
     for k, v in d.items():
         new_key = parent_key + sep + k if parent_key else k
-        if hasattr(v, "items"):
+        if hasattr(v, 'items'):
             items.extend(flatten(v, new_key, sep=sep).items())
         else:
             items.append((new_key, v))
@@ -40,31 +38,27 @@ def kitchen_render(kitchen_env, wh=64):
     return img
 
 
-def adroit_render(adroit_env, wh=64):
-    adroit_env.viewer.render(width=wh, height=wh)
-    frame = np.asarray(
-        adroit_env.viewer.read_pixels(wh, wh, depth=False)[::-1, :, :], dtype=np.uint8,
-    )
-    return frame
-
-
-def evaluate_with_trajectories(
-        agent, env: gym.Env, env_name, goal_info=None,
-        num_episodes=10, base_observation=None, num_video_episodes=0,
-        eval_temperature=0, eval_gaussian=None,
+def evaluate(
+        agent,
+        env,
+        env_name,
         config=None,
+        base_observation=None,
+        num_eval_episodes=50,
+        num_video_episodes=0,
+        video_frame_skip=3,
+        eval_temperature=0,
+        eval_gaussian=None,
 ):
-    actor_fn = supply_rng(agent.sample_actions)
-    trajectories = []
+    actor_fn = supply_rng(agent.sample_actions, rng=agent.rng)
+    trajs = []
     stats = defaultdict(list)
 
     renders = []
-    for i in trange(num_episodes + num_video_episodes):
-        trajectory = defaultdict(list)
+    for i in trange(num_eval_episodes + num_video_episodes):
+        traj = defaultdict(list)
 
         # Reset
-        if 'roboverse' in env_name:
-            env.unwrapped.reset_counter = env.unwrapped.reset_interval - 1
         observation, done = env.reset(), False
 
         # Set goal
@@ -101,7 +95,7 @@ def evaluate_with_trajectories(
             step += 1
 
             # Render
-            if i >= num_episodes and step % 3 == 0:
+            if i >= num_eval_episodes and step % video_frame_skip == 0:
                 if 'antmaze' in env_name:
                     size = 200
                     cur_frame = env.render(mode='rgb_array', width=size, height=size).transpose(2, 0, 1).copy()
@@ -119,52 +113,16 @@ def evaluate_with_trajectories(
                 done=done,
                 info=info,
             )
-            add_to(trajectory, transition)
-            add_to(stats, flatten(info))
+            add_to(traj, transition)
             observation = next_observation
-        if i < num_episodes:
-            add_to(stats, flatten(info, parent_key="final"))
-            trajectories.append(trajectory)
+        if i < num_eval_episodes:
+            add_to(stats, flatten(info))
+            trajs.append(traj)
         else:
             renders.append(np.array(render))
 
     for k, v in stats.items():
         stats[k] = np.mean(v)
-    return stats, trajectories, renders
+    return stats, trajs, renders
 
 
-class EpisodeMonitor(gym.ActionWrapper):
-    def __init__(self, env: gym.Env):
-        super().__init__(env)
-        self._reset_stats()
-        self.total_timesteps = 0
-
-    def _reset_stats(self):
-        self.reward_sum = 0.0
-        self.episode_length = 0
-        self.start_time = time.time()
-
-    def step(self, action: np.ndarray):
-        observation, reward, done, info = self.env.step(action)
-
-        self.reward_sum += reward
-        self.episode_length += 1
-        self.total_timesteps += 1
-        info["total"] = {"timesteps": self.total_timesteps}
-
-        if done:
-            info["episode"] = {}
-            info["episode"]["return"] = self.reward_sum
-            info["episode"]["length"] = self.episode_length
-            info["episode"]["duration"] = time.time() - self.start_time
-
-            if hasattr(self, "get_normalized_score"):
-                info["episode"]["normalized_return"] = (
-                        self.get_normalized_score(info["episode"]["return"]) * 100.0
-                )
-
-        return observation, reward, done, info
-
-    def reset(self) -> np.ndarray:
-        self._reset_stats()
-        return self.env.reset()
