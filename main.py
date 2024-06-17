@@ -15,10 +15,9 @@ from absl import app, flags
 from ml_collections import config_flags
 
 from utils import d4rl_utils
-from utils.utils import record_video, CsvLogger
 from utils.dataset import Dataset, GCDataset
 from utils.evaluation import evaluate
-from utils.wandb_utils import setup_wandb, get_flag_dict
+from utils.log import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
 
 if 'mac' in platform.platform():
     pass
@@ -110,7 +109,8 @@ def main(_):
             dataset = d4rl.qlearning_dataset(env, dataset=env.get_dataset(FLAGS.dataset_path))
             # Manually replace dense rewards with sparse rewards
             if 'large' in FLAGS.env_name:
-                dataset['rewards'] = (np.linalg.norm(dataset['observations'][:, :2] - np.array([32.75, 24.75]), axis=1) <= 0.5).astype(np.float32)
+                dataset['rewards'] = (np.linalg.norm(dataset['observations'][:, :2] - np.array([32.75, 24.75]),
+                                                     axis=1) <= 0.5).astype(np.float32)
                 dataset['terminals'] = dataset['rewards']
         else:
             dataset = None
@@ -226,7 +226,7 @@ def main(_):
                 eval_metrics.update({f'evaluation/{k}': v for k, v in eval_info.items()})
 
             if FLAGS.video_episodes > 0:
-                video = record_video('Video', i, renders=renders)
+                video = get_wandb_video(renders=renders)
                 eval_metrics['video'] = video
 
             wandb.log(eval_metrics, step=i)
