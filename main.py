@@ -158,6 +158,9 @@ def main(_):
     if config.agent_name == 'gciql':
         from algos.gciql import GCIQLAgent
         agent_class = GCIQLAgent
+    elif config.agent_name == 'crl':
+        from algos.crl import CRLAgent
+        agent_class = CRLAgent
     else:
         raise NotImplementedError
 

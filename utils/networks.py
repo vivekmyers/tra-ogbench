@@ -116,51 +116,69 @@ class GoalConditionedValue(nn.Module):
     encoder: nn.Module = None
 
     def setup(self):
-        assert self.layer_norm
-        mlp_module = LayerNormMLP
+        mlp_module = LayerNormMLP if self.layer_norm else MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
         value_net = mlp_module((*self.hidden_dims, 1), activate_final=False)
+
         if self.encoder is not None:
             value_net = nn.Sequential([self.encoder(), value_net])
+
         self.value_net = value_net
 
-    def __call__(self, observations, goals=None, info=False):
-        if goals is None:
-            inputs = observations
-        else:
-            inputs = jnp.concatenate([observations, goals], axis=-1)
+    def __call__(self, observations, goals=None, actions=None, info=False):
+        inputs = [observations]
+        if goals is not None:
+            inputs.append(goals)
+        if actions is not None:
+            inputs.append(actions)
+        inputs = jnp.concatenate(inputs, axis=-1)
+
         v = self.value_net(inputs).squeeze(-1)
+
         if self.value_exp:
             v = jnp.exp(v)
 
         return v
 
 
-class GoalConditionedCritic(nn.Module):
-    hidden_dims: tuple = (256, 256)
+class GoalConditionedBilinearValue(nn.Module):
+    hidden_dims: Sequence[int]
+    latent_dim: int
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
     encoder: nn.Module = None
 
-    def setup(self):
-        assert self.layer_norm
-        mlp_module = LayerNormMLP
+    def setup(self) -> None:
+        mlp_module = LayerNormMLP if self.layer_norm else MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-        critic_net = mlp_module((*self.hidden_dims, 1), activate_final=False)
+        phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
+        psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
+
         if self.encoder is not None:
-            critic_net = nn.Sequential([self.encoder(), critic_net])
-        self.critic_net = critic_net
+            phi = nn.Sequential([self.encoder(), phi])
+            psi = nn.Sequential([self.encoder(), psi])
+
+        self.phi = phi
+        self.psi = psi
 
     def __call__(self, observations, goals=None, actions=None, info=False):
-        if goals is None:
-            inputs = jnp.concatenate([observations, actions], axis=-1)
+        if actions is None:
+            phi_inputs = observations
         else:
-            inputs = jnp.concatenate([observations, goals, actions], axis=-1)
-        q = self.critic_net(inputs).squeeze(-1)
-        if self.value_exp:
-            q = jnp.exp(q)
+            phi_inputs = jnp.concatenate([observations, actions], axis=-1)
 
-        return q
+        phi = self.phi(phi_inputs)
+        psi = self.psi(goals)
+
+        v = (phi * psi / jnp.sqrt(self.latent_dim)).sum(axis=-1)
+
+        if self.value_exp:
+            v = jnp.exp(v)
+
+        if info:
+            return v, phi, psi
+        else:
+            return v
