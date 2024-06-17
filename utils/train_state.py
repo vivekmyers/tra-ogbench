@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Mapping, Sequence
+from typing import Any, Mapping, Sequence, Dict
 
 import flax
 import flax.linen as nn
@@ -11,7 +11,7 @@ nonpytree_field = functools.partial(flax.struct.field, pytree_node=False)
 
 
 class ModuleDict(nn.Module):
-    modules: Any
+    modules: Dict[str, nn.Module]
 
     @nn.compact
     def __call__(self, *args, name=None, **kwargs):

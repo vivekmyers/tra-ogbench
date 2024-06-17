@@ -218,7 +218,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             value_def = GoalConditionedValue(hidden_dims=config['value_hidden_dims'], layer_norm=config['layer_norm'], ensemble=False, encoder=encoder_module)
             critic_def = GoalConditionedCritic(hidden_dims=config['value_hidden_dims'], layer_norm=config['layer_norm'], ensemble=True, encoder=encoder_module)
 
-        actor_def = Actor(config['actor_hidden_dims'], action_dim=action_dim, log_std_min=-5.0, state_dependent_std=False, const_std=config['const_std'], encoder=encoder_module)
+        actor_def = Actor(config['actor_hidden_dims'], action_dim=action_dim, state_dependent_std=False, const_std=config['const_std'], encoder=encoder_module)
 
         networks = dict(
             value=value_def,
