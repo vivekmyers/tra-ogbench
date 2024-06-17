@@ -114,7 +114,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             q1, q2 = self.network.select('critic')(batch['observations'], goals, q_actions)
             q = jnp.minimum(q1, q2)
 
-            q_loss = -q.mean()
+            q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-9)
             log_prob = dist.log_prob(batch['actions'])
 
             bc_loss = -(self.config['alpha'] * log_prob).mean()
@@ -125,6 +125,8 @@ class GCIQLAgent(flax.struct.PyTreeNode):
                 'actor_loss': actor_loss,
                 'q_loss': q_loss,
                 'bc_loss': bc_loss,
+                'q_mean': q.mean(),
+                'q_abs_mean': jnp.abs(q).mean(),
                 'bc_log_prob': log_prob.mean(),
                 'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
                 'std': jnp.mean(dist.scale_diag),
@@ -212,25 +214,15 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         ex_goals = ex_observations
         action_dim = ex_actions.shape[-1]
 
-        activations = {
-            'relu': jax.nn.relu,
-            'gelu': jax.nn.gelu,
-            'swish': jax.nn.swish,
-            'mish': lambda x: x * jax.nn.tanh(jax.nn.softplus(x)),
-            'glu': jax.nn.glu,
-        }[config['nonlinearity']]
-
         if config['use_q']:
             value_def = GoalConditionedValue(
                 hidden_dims=config['value_hidden_dims'],
-                activations=activations,
                 layer_norm=config['layer_norm'],
                 ensemble=False,
                 encoder=encoder_module,
             )
             critic_def = GoalConditionedValue(
                 hidden_dims=config['value_hidden_dims'],
-                activations=activations,
                 layer_norm=config['layer_norm'],
                 ensemble=True,
                 encoder=encoder_module,
@@ -238,7 +230,6 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         else:
             value_def = GoalConditionedValue(
                 hidden_dims=config['value_hidden_dims'],
-                activations=activations,
                 layer_norm=config['layer_norm'],
                 ensemble=True,
                 encoder=encoder_module,
@@ -247,7 +238,6 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
         actor_def = Actor(
             hidden_dims=config['actor_hidden_dims'],
-            activations=activations,
             action_dim=action_dim,
             state_dependent_std=False,
             const_std=config['const_std'],
@@ -291,7 +281,6 @@ def get_config():
     config = ml_collections.ConfigDict({
         'agent_name': 'gciql',
         'lr': 3e-4,
-        'nonlinearity': 'gelu',  # ['relu', 'gelu', 'swish', 'mish', 'glu']
         'batch_size': 1024,
         'actor_hidden_dims': (512, 512, 512),
         'value_hidden_dims': (512, 512, 512),
