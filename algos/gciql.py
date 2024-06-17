@@ -78,7 +78,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         if self.config['actor_loss'] == 'awr':
             if self.config['use_q']:
                 v = self.network.select('value')(batch['observations'], goals)
-                q1, q2 = self.network.select('target_critic')(batch['observations'], goals, batch['actions'])
+                q1, q2 = self.network.select('critic')(batch['observations'], goals, batch['actions'])
                 q = jnp.minimum(q1, q2)
                 adv = q - v
             else:
@@ -212,14 +212,47 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         ex_goals = ex_observations
         action_dim = ex_actions.shape[-1]
 
+        activations = {
+            'relu': jax.nn.relu,
+            'gelu': jax.nn.gelu,
+            'swish': jax.nn.swish,
+            'mish': lambda x: x * jax.nn.tanh(jax.nn.softplus(x)),
+            'glu': jax.nn.glu,
+        }[config['nonlinearity']]
+
         if config['use_q']:
-            value_def = GoalConditionedValue(hidden_dims=config['value_hidden_dims'], layer_norm=config['layer_norm'], ensemble=False, encoder=encoder_module)
-            critic_def = GoalConditionedValue(hidden_dims=config['value_hidden_dims'], layer_norm=config['layer_norm'], ensemble=True, encoder=encoder_module)
+            value_def = GoalConditionedValue(
+                hidden_dims=config['value_hidden_dims'],
+                activations=activations,
+                layer_norm=config['layer_norm'],
+                ensemble=False,
+                encoder=encoder_module,
+            )
+            critic_def = GoalConditionedValue(
+                hidden_dims=config['value_hidden_dims'],
+                activations=activations,
+                layer_norm=config['layer_norm'],
+                ensemble=True,
+                encoder=encoder_module,
+            )
         else:
-            value_def = GoalConditionedValue(hidden_dims=config['value_hidden_dims'], layer_norm=config['layer_norm'], ensemble=True, encoder=encoder_module)
+            value_def = GoalConditionedValue(
+                hidden_dims=config['value_hidden_dims'],
+                activations=activations,
+                layer_norm=config['layer_norm'],
+                ensemble=True,
+                encoder=encoder_module,
+            )
             critic_def = None
 
-        actor_def = Actor(config['actor_hidden_dims'], action_dim=action_dim, state_dependent_std=False, const_std=config['const_std'], encoder=encoder_module)
+        actor_def = Actor(
+            hidden_dims=config['actor_hidden_dims'],
+            activations=activations,
+            action_dim=action_dim,
+            state_dependent_std=False,
+            const_std=config['const_std'],
+            encoder=encoder_module,
+        )
 
         networks = dict(
             value=value_def,
@@ -258,6 +291,7 @@ def get_config():
     config = ml_collections.ConfigDict({
         'agent_name': 'gciql',
         'lr': 3e-4,
+        'nonlinearity': 'gelu',  # ['relu', 'gelu', 'swish', 'mish', 'glu']
         'batch_size': 1024,
         'actor_hidden_dims': (512, 512, 512),
         'value_hidden_dims': (512, 512, 512),
@@ -265,7 +299,7 @@ def get_config():
         'discount': 0.99,
         'tau': 0.005,  # Target network update rate
         'expectile': 0.9,
-        'actor_loss': 'awr',  # 'awr' or 'ddpgbc'
+        'actor_loss': 'awr',  # ['awr', 'ddpgbc']
         'alpha': 3.0,  # AWR temperature or DDPG+BC coefficient
         'use_q': True,  # True for GCIQL, False for GCIVL
         'const_std': True,

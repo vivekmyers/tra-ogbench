@@ -23,7 +23,7 @@ def ensemblize(cls, num_qs, out_axes=0, **kwargs):
 
 class MLP(nn.Module):
     hidden_dims: Sequence[int]
-    activations: Any = nn.relu
+    activations: Any = nn.gelu
     activate_final: bool = False
     kernel_init: Any = default_init()
 
@@ -59,6 +59,7 @@ class LayerNormMLP(nn.Module):
 class Actor(nn.Module):
     hidden_dims: Sequence[int]
     action_dim: int
+    activations: Any = nn.gelu
     log_std_min: Optional[float] = -5
     log_std_max: Optional[float] = 2
     state_dependent_std: bool = False
@@ -67,7 +68,7 @@ class Actor(nn.Module):
     encoder: nn.Module = None
 
     def setup(self):
-        actor_module = MLP(self.hidden_dims, activate_final=True)
+        actor_module = MLP(self.hidden_dims, activations=self.activations, activate_final=True)
         if self.encoder is not None:
             actor_module = nn.Sequential([self.encoder(), actor_module])
         self.actor_module = actor_module
@@ -110,6 +111,7 @@ class Actor(nn.Module):
 
 class GoalConditionedValue(nn.Module):
     hidden_dims: Sequence[int]
+    activations: Any = nn.gelu
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
@@ -119,7 +121,7 @@ class GoalConditionedValue(nn.Module):
         mlp_module = LayerNormMLP if self.layer_norm else MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-        value_net = mlp_module((*self.hidden_dims, 1), activate_final=False)
+        value_net = mlp_module((*self.hidden_dims, 1), activations=self.activations, activate_final=False)
 
         if self.encoder is not None:
             value_net = nn.Sequential([self.encoder(), value_net])
@@ -145,6 +147,7 @@ class GoalConditionedValue(nn.Module):
 class GoalConditionedBilinearValue(nn.Module):
     hidden_dims: Sequence[int]
     latent_dim: int
+    activations: Any = nn.gelu
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
@@ -154,8 +157,8 @@ class GoalConditionedBilinearValue(nn.Module):
         mlp_module = LayerNormMLP if self.layer_norm else MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-        phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
-        psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
+        phi = mlp_module((*self.hidden_dims, self.latent_dim), activations=self.activations, activate_final=False)
+        psi = mlp_module((*self.hidden_dims, self.latent_dim), activations=self.activations, activate_final=False)
 
         if self.encoder is not None:
             phi = nn.Sequential([self.encoder(), phi])

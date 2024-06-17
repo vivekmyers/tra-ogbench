@@ -1,4 +1,3 @@
-import copy
 from functools import partial
 from typing import Any
 
@@ -7,7 +6,6 @@ import jax
 import jax.numpy as jnp
 import ml_collections
 import optax
-from flax.core import freeze, unfreeze
 
 from utils.networks import GoalConditionedBilinearValue, Actor
 from utils.train_state import TrainState, nonpytree_field, ModuleDict
@@ -190,10 +188,19 @@ class CRLAgent(flax.struct.PyTreeNode):
         ex_goals = ex_observations
         action_dim = ex_actions.shape[-1]
 
+        activations = {
+            'relu': jax.nn.relu,
+            'gelu': jax.nn.gelu,
+            'swish': jax.nn.swish,
+            'mish': lambda x: x * jax.nn.tanh(jax.nn.softplus(x)),
+            'glu': jax.nn.glu,
+        }[config['nonlinearity']]
+
         if config['use_q']:
             value_def = GoalConditionedBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
                 latent_dim=config['latent_dim'],
+                activations=activations,
                 layer_norm=config['layer_norm'],
                 ensemble=False,
                 value_exp=True,
@@ -202,6 +209,7 @@ class CRLAgent(flax.struct.PyTreeNode):
             critic_def = GoalConditionedBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
                 latent_dim=config['latent_dim'],
+                activations=activations,
                 layer_norm=config['layer_norm'],
                 ensemble=True,
                 value_exp=True,
@@ -211,6 +219,7 @@ class CRLAgent(flax.struct.PyTreeNode):
             value_def = GoalConditionedBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
                 latent_dim=config['latent_dim'],
+                activations=activations,
                 layer_norm=config['layer_norm'],
                 ensemble=True,
                 value_exp=True,
@@ -218,7 +227,14 @@ class CRLAgent(flax.struct.PyTreeNode):
             )
             critic_def = None
 
-        actor_def = Actor(config['actor_hidden_dims'], action_dim=action_dim, state_dependent_std=False, const_std=config['const_std'], encoder=encoder_module)
+        actor_def = Actor(
+            hidden_dims=config['actor_hidden_dims'],
+            activations=activations,
+            action_dim=action_dim,
+            state_dependent_std=False,
+            const_std=config['const_std'],
+            encoder=encoder_module,
+        )
 
         networks = dict(
             value=value_def,
@@ -246,13 +262,14 @@ def get_config():
     config = ml_collections.ConfigDict({
         'agent_name': 'crl',
         'lr': 3e-4,
+        'nonlinearity': 'gelu',  # ['relu', 'gelu', 'swish', 'mish', 'glu']
         'batch_size': 1024,
         'actor_hidden_dims': (512, 512, 512),
         'value_hidden_dims': (512, 512, 512),
         'latent_dim': 512,
         'layer_norm': True,
         'discount': 0.99,
-        'actor_loss': 'ddpgbc',  # 'awr' or 'ddpgbc'
+        'actor_loss': 'ddpgbc',  # ['awr', 'ddpgbc']
         'alpha': 1.0,  # AWR temperature or DDPG+BC coefficient
         'use_q': True,  # Whether to fit Q or V with contrastive RL
         'actor_log_q': True,  # Whether to use log Q in actor loss
