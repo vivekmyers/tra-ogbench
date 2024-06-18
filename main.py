@@ -2,75 +2,47 @@ import glob
 import json
 import os
 import pickle
-import platform
+import random
 import time
+from collections import defaultdict
 from datetime import datetime
 
 import flax
-import jax
 import numpy as np
 import tqdm
 import wandb
 from absl import app, flags
 from ml_collections import config_flags
 
-from utils import d4rl_utils
+from algos import algos
+from envs.env_loader import make_env_and_dataset
 from utils.dataset import Dataset, GCDataset
 from utils.evaluation import evaluate
-from utils.log import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
-
-if 'mac' in platform.platform():
-    pass
-else:
-    os.environ['MUJOCO_GL'] = 'egl'
-    if 'SLURM_STEP_GPUS' in os.environ:
-        os.environ['EGL_DEVICE_ID'] = os.environ['SLURM_STEP_GPUS']
+from utils.logger import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('env_name', 'antmaze-large-diverse-v2', '')
-flags.DEFINE_string('dataset_path', None, '')
-flags.DEFINE_string('save_dir', 'exp/', '')
-flags.DEFINE_string('restore_path', None, '')
-flags.DEFINE_integer('restore_epoch', None, '')
-flags.DEFINE_string('run_group', 'Debug', '')
-flags.DEFINE_integer('seed', 0, '')
-flags.DEFINE_integer('eval_episodes', 50, '')
-flags.DEFINE_integer('video_episodes', 2, '')
-flags.DEFINE_integer('video_frame_skip', 3, '')
-flags.DEFINE_integer('log_interval', 1000, '')
-flags.DEFINE_integer('eval_interval', 100000, '')
-flags.DEFINE_integer('save_interval', 100000, '')
-flags.DEFINE_integer('train_steps', 1000000, '')
-flags.DEFINE_float('eval_temperature', 0, '')
-flags.DEFINE_float('eval_gaussian', None, '')
+
+flags.DEFINE_string('run_group', 'Debug', 'Run group')
+flags.DEFINE_integer('seed', 0, 'Random seed')
+flags.DEFINE_string('env_name', 'antmaze-large-diverse-v2', 'Environment name')
+flags.DEFINE_string('dataset_path', None, 'Dataset path')
+flags.DEFINE_string('save_dir', 'exp/', 'Save directory')
+flags.DEFINE_string('restore_path', None, 'Restore path')
+flags.DEFINE_integer('restore_epoch', None, 'Restore epoch')
+
+flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps')
+flags.DEFINE_integer('log_interval', 1000, 'Log interval')
+flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
+flags.DEFINE_integer('save_interval', 100000, 'Save interval')
+
+flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all)')
+flags.DEFINE_integer('eval_episodes', 50, 'Number of episodes for each task')
+flags.DEFINE_float('eval_temperature', 0, 'Evaluation temperature')
+flags.DEFINE_float('eval_gaussian', None, 'Evaluation Gaussian noise')
+flags.DEFINE_integer('video_episodes', 2, 'Number of video episodes for each task')
+flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for video')
 
 config_flags.DEFINE_config_file('agent', 'algos/gciql.py', lock_config=False)
-
-
-def truncate_dataset(dataset, ratio, return_both=False):
-    size = dataset.size
-    traj_idxs = []
-    traj_start = 0
-    for i in range(len(dataset['observations'])):
-        if dataset['traj_ends'][i] == 1.0:
-            traj_idxs.append(np.arange(traj_start, i + 1))
-            traj_start = i + 1
-    np.random.seed(0)
-    traj_idxs = np.random.permutation(traj_idxs)
-    np.random.seed(FLAGS.seed)
-    new_idxs = []
-    num_states = 0
-    for idxs in traj_idxs:
-        new_idxs.extend(idxs)
-        num_states += len(idxs)
-        if num_states >= size * ratio:
-            break
-    trunc_dataset = Dataset(dataset.get_subset(new_idxs))
-    if return_both:
-        codataset = Dataset(dataset.get_subset(np.setdiff1d(np.arange(size), new_idxs)))
-        return trunc_dataset, codataset
-    else:
-        return trunc_dataset
 
 
 def get_exp_name():
@@ -86,7 +58,6 @@ def get_exp_name():
 
 
 def main(_):
-    # Set up logger
     exp_name = get_exp_name()
     setup_wandb(project='ogcrl', group=FLAGS.run_group, name=exp_name)
 
@@ -98,72 +69,18 @@ def main(_):
 
     config = FLAGS.agent
 
-    goal_infos = [{}]
-    if 'antmaze' in FLAGS.env_name:
-        import d4rl
-        env_name = FLAGS.env_name
+    env, train_dataset, val_dataset = make_env_and_dataset(FLAGS.env_name)
 
-        env = d4rl_utils.make_env(env_name)
-
-        if FLAGS.dataset_path is not None:
-            dataset = d4rl.qlearning_dataset(env, dataset=env.get_dataset(FLAGS.dataset_path))
-            # Manually replace dense rewards with sparse rewards
-            if 'large' in FLAGS.env_name:
-                dataset['rewards'] = (np.linalg.norm(dataset['observations'][:, :2] - np.array([32.75, 24.75]),
-                                                     axis=1) <= 0.5).astype(np.float32)
-                dataset['terminals'] = dataset['rewards']
-        else:
-            dataset = None
-        dataset = d4rl_utils.get_dataset(env, FLAGS.env_name, dataset=dataset)
-        dataset = dataset.copy({'rewards': dataset['rewards'] - 1.0})
-
-        env.render(mode='rgb_array', width=200, height=200)
-        if 'large' in FLAGS.env_name:
-            env.viewer.cam.lookat[0] = 18
-            env.viewer.cam.lookat[1] = 12
-            env.viewer.cam.distance = 50
-            env.viewer.cam.elevation = -90
-        else:
-            env.viewer.cam.lookat[0] = 18
-            env.viewer.cam.lookat[1] = 12
-            env.viewer.cam.distance = 50
-            env.viewer.cam.elevation = -90
-    elif 'kitchen' in FLAGS.env_name:
-        # HACK: Monkey patching to make it compatible with Python 3.10.
-        import collections
-        if not hasattr(collections, 'Mapping'):
-            collections.Mapping = collections.abc.Mapping
-
-        env = d4rl_utils.make_env(FLAGS.env_name)
-        if FLAGS.dataset_path is not None:
-            dataset = d4rl_utils.get_dataset(
-                env, FLAGS.env_name, dataset=dict(np.load(FLAGS.dataset_path)), filter_terminals=False,
-            )
-        else:
-            dataset = d4rl_utils.get_dataset(env, FLAGS.env_name, filter_terminals=True)
-        dataset = dataset.copy({'observations': dataset['observations'][:, :30],
-                                'next_observations': dataset['next_observations'][:, :30]})
-
-    train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
-
-    base_observation = jax.tree_util.tree_map(lambda arr: arr[0], dataset['observations'])
-
-    env.reset()
+    random.seed(FLAGS.seed)
+    np.random.seed(FLAGS.seed)
 
     train_dataset = GCDataset(Dataset.create(**train_dataset), config)
     val_dataset = GCDataset(Dataset.create(**val_dataset), config)
 
     total_steps = FLAGS.train_steps
-    example_batch = dataset.sample(1)
-    if config.agent_name == 'gciql':
-        from algos.gciql import GCIQLAgent
-        agent_class = GCIQLAgent
-    elif config.agent_name == 'crl':
-        from algos.crl import CRLAgent
-        agent_class = CRLAgent
-    else:
-        raise NotImplementedError
+    example_batch = train_dataset.sample(1)
 
+    agent_class = algos[config.agent_name]
     agent = agent_class.create(
         FLAGS.seed,
         example_batch['observations'],
@@ -212,13 +129,15 @@ def main(_):
         if i == 1 or i % FLAGS.eval_interval == 0:
             renders = []
             eval_metrics = {}
-            for goal_info in goal_infos:
+            overall_metrics = defaultdict(list)
+            num_tasks = FLAGS.eval_tasks if FLAGS.eval_tasks is not None else len(env.task_infos)
+            for task_idx in tqdm.trange(num_tasks):
+                task_name = env.task_infos[task_idx]['task_name']
                 eval_info, trajs, cur_renders = evaluate(
                     agent=agent,
-                    env=env if 'env' not in goal_info else goal_info['env'],
-                    env_name=FLAGS.env_name,
+                    env=env,
+                    task_idx=task_idx,
                     config=config,
-                    base_observation=base_observation,
                     num_eval_episodes=FLAGS.eval_episodes,
                     num_video_episodes=FLAGS.video_episodes,
                     video_frame_skip=FLAGS.video_frame_skip,
@@ -226,7 +145,11 @@ def main(_):
                     eval_gaussian=FLAGS.eval_gaussian,
                 )
                 renders.extend(cur_renders)
-                eval_metrics.update({f'evaluation/{k}': v for k, v in eval_info.items()})
+                eval_metrics.update({f'evaluation/{task_name}_{k}': v for k, v in eval_info.items()})
+                for k, v in eval_info.items():
+                    overall_metrics[k].append(v)
+            for k, v in overall_metrics.items():
+                eval_metrics[f'evaluation/overall_{k}'] = np.mean(v)
 
             if FLAGS.video_episodes > 0:
                 video = get_wandb_video(renders=renders)

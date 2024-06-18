@@ -47,25 +47,15 @@ def make_env(env_name: str):
     return env
 
 
-def get_dataset(env: gym.Env,
-                env_name: str,
-                clip_to_eps: bool = True,
-                eps: float = 1e-5,
-                dataset=None,
-                filter_terminals=False,
-                obs_dtype=np.float32,
-                ):
-    # traj_ends: trajectory boundaries
-    # dones_float: either trajectory boundaries or "dead"
-    # masks: 1 - trajectory boundaries (GCRL)
-    # In GCRL, traj_ends and dones_float are the same. In RL, they can be different.
-
+def get_dataset(
+        env,
+        env_name,
+        dataset=None,
+        filter_terminals=False,
+        obs_dtype=np.float32,
+):
     if dataset is None:
         dataset = d4rl.qlearning_dataset(env)
-
-    if clip_to_eps:
-        lim = 1 - eps
-        dataset['actions'] = np.clip(dataset['actions'], -lim, lim)
 
     dataset['terminals'][-1] = 1
 
@@ -79,38 +69,21 @@ def get_dataset(env: gym.Env,
                 v[penult_idx] = 1
             dataset[k] = v[non_last_idx]
 
+    terminals = np.zeros_like(dataset['rewards'])
     if 'antmaze' in env_name:
-        dones_float = np.zeros_like(dataset['rewards'])
-        traj_ends = np.zeros_like(dataset['rewards'])
-
-        for i in range(len(dones_float) - 1):
-            traj_end = (np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6)
-            traj_ends[i] = traj_end
-            dones_float[i] = int(traj_end)
+        for i in range(len(terminals) - 1):
+            terminals[i] = float(np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6)
     else:
-        dones_float = np.zeros_like(dataset['rewards'])
-        traj_ends = np.zeros_like(dataset['rewards'])
-
-        for i in range(len(dones_float) - 1):
-            if np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6 or \
-                    dataset['terminals'][i] == 1.0:
-                dones_float[i] = traj_ends[i] = 1
+        for i in range(len(terminals) - 1):
+            if np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6 or dataset['terminals'][i] == 1.0:
+                terminals[i] = 1
             else:
-                dones_float[i] = traj_ends[i] = 0
-    dones_float[-1] = 1
-    traj_ends[-1] = 1
-
-    observations = dataset['observations'].astype(obs_dtype)
-    next_observations = dataset['next_observations'].astype(obs_dtype)
-
-    masks = 1.0 - dones_float
+                terminals[i] = 0
+    terminals[-1] = 1
 
     return Dataset.create(
-        observations=observations,
+        observations=dataset['observations'].astype(obs_dtype),
         actions=dataset['actions'].astype(np.float32),
-        rewards=dataset['rewards'].astype(np.float32),
-        masks=masks,
-        dones_float=dones_float.astype(np.float32),
-        next_observations=next_observations,
-        traj_ends=traj_ends
+        next_observations=dataset['next_observations'].astype(obs_dtype),
+        terminals=terminals.astype(np.float32),
     )

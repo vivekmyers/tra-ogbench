@@ -30,22 +30,10 @@ class Dataset(FrozenDict):
     @classmethod
     def create(
             cls,
-            observations,
-            actions,
-            rewards,
-            masks,
-            next_observations,
             freeze=True,
-            **extra_fields,
+            **fields,
     ):
-        data = {
-            'observations': observations,
-            'actions': actions,
-            'rewards': rewards,
-            'masks': masks,
-            'next_observations': next_observations,
-            **extra_fields,
-        }
+        data = fields
         # Force freeze
         if freeze:
             tree_util.tree_map(lambda arr: arr.setflags(write=False), data)
@@ -71,7 +59,7 @@ class GCDataset:
 
     def __post_init__(self):
         self.size = self.dataset.size
-        self.terminal_locs, = np.nonzero(self.dataset['dones_float'] > 0)
+        self.terminal_locs, = np.nonzero(self.dataset['terminals'] > 0)
         assert np.isclose(self.config['value_p_curgoal'] + self.config['value_p_trajgoal'] + self.config['value_p_randomgoal'], 1.0)
         assert np.isclose(self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0)
 

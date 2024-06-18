@@ -41,9 +41,8 @@ def kitchen_render(kitchen_env, wh=64):
 def evaluate(
         agent,
         env,
-        env_name,
+        task_idx,
         config=None,
-        base_observation=None,
         num_eval_episodes=50,
         num_video_episodes=0,
         video_frame_skip=3,
@@ -58,53 +57,24 @@ def evaluate(
     for i in trange(num_eval_episodes + num_video_episodes):
         traj = defaultdict(list)
 
-        # Reset
-        observation, done = env.reset(), False
-
-        # Set goal
-        if 'antmaze' in env_name:
-            goal = env.wrapped_env.target_goal
-            obs_goal = np.concatenate([goal, base_observation[-27:]])
-        elif 'kitchen' in env_name:
-            observation, obs_goal = observation[:30], observation[30:]
-            obs_goal[:9] = base_observation[:9]
-        else:
-            raise NotImplementedError
-
-        render = []
+        observation, goal = env.reset(task_idx=task_idx)
+        done = False
         step = 0
+        render = []
         while not done:
-            actor_obs = observation
-            actor_goal = obs_goal
-
-            action = actor_fn(observations=actor_obs, goals=actor_goal, temperature=eval_temperature)
+            action = actor_fn(observations=observation, goals=goal, temperature=eval_temperature)
             action = np.array(action)
             if eval_gaussian is not None:
                 action = np.random.normal(action, eval_gaussian)
                 action = np.clip(action, -1, 1)
 
-            # Step
-            if 'antmaze' in env_name:
-                next_observation, reward, done, info = env.step(action)
-            elif 'kitchen' in env_name:
-                next_observation, reward, done, info = env.step(action)
-                next_observation = next_observation[:30]
-            else:
-                next_observation, reward, done, info = env.step(action)
-
+            next_observation, reward, done, info = env.step(action)
             step += 1
 
-            # Render
             if i >= num_eval_episodes and step % video_frame_skip == 0:
-                if 'antmaze' in env_name:
-                    size = 200
-                    cur_frame = env.render(mode='rgb_array', width=size, height=size).transpose(2, 0, 1).copy()
-                elif 'kitchen' in env_name:
-                    cur_frame = kitchen_render(env, wh=200).transpose(2, 0, 1)
-                else:
-                    size = 200
-                    cur_frame = env.render(mode='rgb_array', width=size, height=size).transpose(2, 0, 1).copy()
-                render.append(cur_frame)
+                frame = env.render().copy()
+                render.append(frame)
+
             transition = dict(
                 observation=observation,
                 next_observation=next_observation,
@@ -124,5 +94,3 @@ def evaluate(
     for k, v in stats.items():
         stats[k] = np.mean(v)
     return stats, trajs, renders
-
-
