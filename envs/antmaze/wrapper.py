@@ -22,12 +22,17 @@ class AntMazeGoalWrapper(Wrapper):
             dict(
                 task_name='task2',
                 init_pos=np.array([0., 0.]),
-                goal_pos=np.array([36., 12.]),
+                goal_pos=np.array([36., 8.]),
             ),
             dict(
                 task_name='task3',
                 init_pos=np.array([12., 24.]),
-                goal_pos=np.array([4., 20.]),
+                goal_pos=np.array([4., 16.]),
+            ),
+            dict(
+                task_name='task4',
+                init_pos=np.array([12., 20.]),
+                goal_pos=np.array([36., 8.]),
             ),
         ]
         self.num_tasks = len(self.task_infos)
