@@ -253,7 +253,7 @@ def get_config():
         layer_norm=True,
         discount=0.99,
         tau=0.005,  # Target network update rate
-        expectile=0.9,
+        expectile=0.7,
         low_alpha=1.0,
         high_alpha=1.0,
         subgoal_steps=25,

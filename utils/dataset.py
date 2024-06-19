@@ -135,7 +135,7 @@ class HGCDataset(GCDataset):
         batch['masks'] = 1.0 - successes
         batch['rewards'] = successes - (1.0 if self.config['gc_negative'] else 0.0)
 
-        # Sample low actor goals
+        # Set low actor goals
         final_state_idxs = self.terminal_locs[np.searchsorted(self.terminal_locs, idxs)]
         low_goal_idxs = np.minimum(idxs + self.config['subgoal_steps'], final_state_idxs)
         batch['low_actor_goals'] = jax.tree_map(lambda arr: arr[low_goal_idxs], self.dataset['observations'])
