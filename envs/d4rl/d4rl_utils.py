@@ -61,13 +61,13 @@ def get_dataset(
 
     if filter_terminals:
         # drop terminal transitions
-        non_last_idx = np.nonzero(~dataset['terminals'])[0]
-        last_idx = np.nonzero(dataset['terminals'])[0]
-        penult_idx = last_idx - 1
+        non_last_idxs, _ = np.nonzero(~dataset['terminals'])
+        last_idxs, _ = np.nonzero(dataset['terminals'])
+        penult_idxs = last_idxs - 1
         for k, v in dataset.items():
             if k == 'terminals':
-                v[penult_idx] = 1
-            dataset[k] = v[non_last_idx]
+                v[penult_idxs] = 1
+            dataset[k] = v[non_last_idxs]
 
     terminals = np.zeros_like(dataset['rewards'])
     if 'antmaze' in env_name:

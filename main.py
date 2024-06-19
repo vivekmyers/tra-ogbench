@@ -16,7 +16,7 @@ from ml_collections import config_flags
 
 from algos import algos
 from envs.env_loader import make_env_and_dataset
-from utils.dataset import Dataset, GCDataset
+from utils.dataset import Dataset, GCDataset, HGCDataset
 from utils.evaluation import evaluate
 from utils.logger import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
 
@@ -68,19 +68,23 @@ def main(_):
         json.dump(flag_dict, f)
 
     config = FLAGS.agent
+    agent_class = algos[config.agent_name]
 
     env, train_dataset, val_dataset = make_env_and_dataset(FLAGS.env_name)
 
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
-    train_dataset = GCDataset(Dataset.create(**train_dataset), config)
-    val_dataset = GCDataset(Dataset.create(**val_dataset), config)
+    dataset_class = {
+        'GCDataset': GCDataset,
+        'HGCDataset': HGCDataset,
+    }[config['dataset_class']]
+    train_dataset = dataset_class(Dataset.create(**train_dataset), config)
+    val_dataset = dataset_class(Dataset.create(**val_dataset), config)
 
     total_steps = FLAGS.train_steps
     example_batch = train_dataset.sample(1)
 
-    agent_class = algos[config.agent_name]
     agent = agent_class.create(
         FLAGS.seed,
         example_batch['observations'],

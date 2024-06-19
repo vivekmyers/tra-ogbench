@@ -43,13 +43,13 @@ class Dataset(FrozenDict):
         super().__init__(*args, **kwargs)
         self.size = get_size(self._dict)
 
-    def sample(self, batch_size: int, indices=None):
-        if indices is None:
-            indices = np.random.randint(self.size, size=batch_size)
-        return self.get_subset(indices)
+    def sample(self, batch_size: int, idxs=None):
+        if idxs is None:
+            idxs = np.random.randint(self.size, size=batch_size)
+        return self.get_subset(idxs)
 
-    def get_subset(self, indices):
-        return tree_util.tree_map(lambda arr: arr[indices], self._dict)
+    def get_subset(self, idxs):
+        return tree_util.tree_map(lambda arr: arr[idxs], self._dict)
 
 
 @dataclasses.dataclass
@@ -63,52 +63,105 @@ class GCDataset:
         assert np.isclose(self.config['value_p_curgoal'] + self.config['value_p_trajgoal'] + self.config['value_p_randomgoal'], 1.0)
         assert np.isclose(self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0)
 
-    def sample_goals(self, indices, p_curgoal, p_trajgoal, p_randomgoal, geom_sample):
-        batch_size = len(indices)
+    def augment(self, batch, keys):
+        padding = 3
+        batch_size = len(batch[keys[0]])
+        crop_froms = np.random.randint(0, 2 * padding + 1, (batch_size, 2))
+        crop_froms = np.concatenate([crop_froms, np.zeros((batch_size, 1), dtype=np.int32)], axis=1)
+        for key in keys:
+            batch[key] = jax.tree_util.tree_map(lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(arr.shape) == 4 else arr, batch[key])
+
+    def sample_goals(self, idxs, p_curgoal, p_trajgoal, p_randomgoal, geom_sample):
+        batch_size = len(idxs)
 
         # Random goals
-        random_goal_indices = np.random.randint(self.size, size=batch_size)
+        random_goal_idxs = np.random.randint(self.size, size=batch_size)
 
         # Goals from the same trajectory (excluding the current state, unless it is the final state)
-        final_state_indices = self.terminal_locs[np.searchsorted(self.terminal_locs, indices)]
+        final_state_idxs = self.terminal_locs[np.searchsorted(self.terminal_locs, idxs)]
         if geom_sample:
             offsets = np.random.geometric(p=1 - self.config['discount'], size=batch_size)  # in [1, inf)
-            middle_goal_indices = np.minimum(indices + offsets, final_state_indices)
+            middle_goal_idxs = np.minimum(idxs + offsets, final_state_idxs)
         else:
             distances = np.random.rand(batch_size)  # in [0, 1)
-            middle_goal_indices = np.round((np.minimum(indices + 1, final_state_indices) * distances + final_state_indices * (1 - distances))).astype(int)
-        goal_indices = np.where(np.random.rand(batch_size) < p_trajgoal / (1.0 - p_curgoal + 1e-9), middle_goal_indices, random_goal_indices)
+            middle_goal_idxs = np.round((np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))).astype(int)
+        goal_idxs = np.where(np.random.rand(batch_size) < p_trajgoal / (1.0 - p_curgoal + 1e-9), middle_goal_idxs, random_goal_idxs)
 
         # Goals at the current state
-        goal_indices = np.where(np.random.rand(batch_size) < p_curgoal, indices, goal_indices)
+        goal_idxs = np.where(np.random.rand(batch_size) < p_curgoal, idxs, goal_idxs)
 
-        return goal_indices
+        return goal_idxs
 
-    def sample(self, batch_size: int, indices=None, evaluation=False):
-        if indices is None:
-            indices = np.random.randint(self.dataset.size - 1, size=batch_size)
+    def sample(self, batch_size: int, idxs=None, evaluation=False):
+        if idxs is None:
+            idxs = np.random.randint(self.dataset.size - 1, size=batch_size)
 
-        batch = self.dataset.sample(batch_size, indices)
+        batch = self.dataset.sample(batch_size, idxs)
 
-        value_goal_indices = self.sample_goals(indices, self.config['value_p_curgoal'], self.config['value_p_trajgoal'], self.config['value_p_randomgoal'], self.config['value_geom_sample'])
-        actor_goal_indices = self.sample_goals(indices, self.config['actor_p_curgoal'], self.config['actor_p_trajgoal'], self.config['actor_p_randomgoal'], self.config['actor_geom_sample'])
+        value_goal_idxs = self.sample_goals(idxs, self.config['value_p_curgoal'], self.config['value_p_trajgoal'], self.config['value_p_randomgoal'], self.config['value_geom_sample'])
+        actor_goal_idxs = self.sample_goals(idxs, self.config['actor_p_curgoal'], self.config['actor_p_trajgoal'], self.config['actor_p_randomgoal'], self.config['actor_geom_sample'])
 
-        batch['value_goals'] = jax.tree_util.tree_map(lambda arr: arr[value_goal_indices], self.dataset['observations'])
-        batch['actor_goals'] = jax.tree_util.tree_map(lambda arr: arr[actor_goal_indices], self.dataset['observations'])
-        successes = (indices == value_goal_indices).astype(float)
+        batch['value_goals'] = jax.tree_util.tree_map(lambda arr: arr[value_goal_idxs], self.dataset['observations'])
+        batch['actor_goals'] = jax.tree_util.tree_map(lambda arr: arr[actor_goal_idxs], self.dataset['observations'])
+        successes = (idxs == value_goal_idxs).astype(float)
         batch['masks'] = 1.0 - successes
         batch['rewards'] = successes - (1.0 if self.config['gc_negative'] else 0.0)
 
         if self.config['p_aug'] is not None and not evaluation:
             if np.random.rand() < self.config['p_aug']:
-                aug_keys = ['observations', 'next_observations', 'goals', 'actor_goals']
-                padding = 3
-                crop_froms = np.random.randint(0, 2 * padding + 1, (batch_size, 2))
-                crop_froms = np.concatenate([crop_froms, np.zeros((batch_size, 1), dtype=np.int32)], axis=1)
-                for key in aug_keys:
-                    batch[key] = jax.tree_util.tree_map(
-                        lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(
-                            arr.shape) == 4 else arr, batch[key])
+                self.augment(batch, ['observations', 'next_observations', 'value_goals', 'actor_goals'])
+
+        if isinstance(batch['value_goals'], FrozenDict):
+            # Freeze the other observations
+            batch['observations'] = freeze(batch['observations'])
+            batch['next_observations'] = freeze(batch['next_observations'])
+
+        return batch
+
+
+@dataclasses.dataclass
+class HGCDataset(GCDataset):
+    def sample(self, batch_size: int, idxs=None, evaluation=False):
+        if idxs is None:
+            idxs = np.random.randint(self.dataset.size - 1, size=batch_size)
+
+        batch = self.dataset.sample(batch_size, idxs)
+
+        # Sample value goals
+        value_goal_idxs = self.sample_goals(idxs, self.config['value_p_curgoal'], self.config['value_p_trajgoal'], self.config['value_p_randomgoal'], self.config['value_geom_sample'])
+        batch['value_goals'] = jax.tree_util.tree_map(lambda arr: arr[value_goal_idxs], self.dataset['observations'])
+
+        successes = (idxs == value_goal_idxs).astype(float)
+        batch['masks'] = 1.0 - successes
+        batch['rewards'] = successes - (1.0 if self.config['gc_negative'] else 0.0)
+
+        # Sample low actor goals
+        final_state_idxs = self.terminal_locs[np.searchsorted(self.terminal_locs, idxs)]
+        low_goal_idxs = np.minimum(idxs + self.config['subgoal_steps'], final_state_idxs)
+        batch['low_actor_goals'] = jax.tree_map(lambda arr: arr[low_goal_idxs], self.dataset['observations'])
+
+        # Sample high actor goals and prediction targets
+        if self.config['actor_geom_sample']:
+            offsets = np.random.geometric(p=1 - self.config['discount'], size=batch_size)  # in [1, inf)
+            high_traj_goal_idxs = np.minimum(idxs + offsets, final_state_idxs)
+        else:
+            distances = np.random.rand(batch_size)  # in [0, 1)
+            high_traj_goal_idxs = np.round((np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))).astype(int)
+        high_traj_target_idxs = np.minimum(idxs + self.config['subgoal_steps'], high_traj_goal_idxs)
+
+        high_random_goal_idxs = np.random.randint(self.dataset.size, size=batch_size)
+        high_random_target_idxs = np.minimum(idxs + self.config['subgoal_steps'], final_state_idxs)
+
+        pick_random = (np.random.rand(batch_size) < self.config['actor_p_randomgoal'])
+        high_goal_idxs = np.where(pick_random, high_random_goal_idxs, high_traj_goal_idxs)
+        high_target_idxs = np.where(pick_random, high_random_target_idxs, high_traj_target_idxs)
+
+        batch['high_actor_goals'] = jax.tree_map(lambda arr: arr[high_goal_idxs], self.dataset['observations'])
+        batch['high_actor_targets'] = jax.tree_map(lambda arr: arr[high_target_idxs], self.dataset['observations'])
+
+        if self.config['p_aug'] is not None and not evaluation:
+            if np.random.rand() < self.config['p_aug']:
+                self.augment(batch, ['observations', 'next_observations', 'value_goals', 'low_actor_goals', 'high_actor_goals', 'high_actor_targets'])
 
         if isinstance(batch['value_goals'], FrozenDict):
             # Freeze the other observations

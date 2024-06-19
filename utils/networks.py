@@ -2,6 +2,7 @@ from typing import Sequence, Optional, Any
 
 import distrax
 import flax.linen as nn
+import jax
 import jax.numpy as jnp
 
 
@@ -56,7 +57,7 @@ class LayerNormMLP(nn.Module):
         return x
 
 
-class Actor(nn.Module):
+class GCActor(nn.Module):
     hidden_dims: Sequence[int]
     action_dim: int
     log_std_min: Optional[float] = -5
@@ -64,19 +65,17 @@ class Actor(nn.Module):
     state_dependent_std: bool = False
     const_std: bool = True
     final_fc_init_scale: float = 1e-2
-    encoder: nn.Module = None
+    goal_encoder: nn.Module = None
+    state_encoder: nn.Module = None
 
     def setup(self):
-        actor_module = MLP(self.hidden_dims, activate_final=True)
-        if self.encoder is not None:
-            actor_module = nn.Sequential([self.encoder(), actor_module])
-        self.actor_module = actor_module
+        self.actor_net = MLP(self.hidden_dims, activate_final=True)
 
-        self.mean_module = nn.Dense(
+        self.mean_net = nn.Dense(
             self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
         )
         if self.state_dependent_std:
-            self.log_std_module = nn.Dense(
+            self.log_std_net = nn.Dense(
                 self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
             )
         else:
@@ -84,17 +83,22 @@ class Actor(nn.Module):
                 self.log_stds = self.param('log_stds', nn.initializers.zeros, (self.action_dim,))
 
     def __call__(
-            self, observations, goals=None, temperature=1.0,
+            self, observations, goals=None, goal_encoded=False, temperature=1.0,
     ):
-        if goals is None:
-            inputs = observations
-        else:
-            inputs = jnp.concatenate([observations, goals], axis=-1)
-        outputs = self.actor_module(inputs)
+        if self.goal_encoder is not None and not goal_encoded:
+            goals = self.goal_encoder(targets=goals, bases=observations)
+        if self.state_encoder is not None:
+            observations = self.state_encoder(observations)
 
-        means = self.mean_module(outputs)
+        inputs = [observations]
+        if goals is not None:
+            inputs.append(goals)
+        inputs = jnp.concatenate(inputs, axis=-1)
+        outputs = self.actor_net(inputs)
+
+        means = self.mean_net(outputs)
         if self.state_dependent_std:
-            log_stds = self.log_std_module(outputs)
+            log_stds = self.log_std_net(outputs)
         else:
             if self.const_std:
                 log_stds = jnp.zeros_like(means)
@@ -108,12 +112,13 @@ class Actor(nn.Module):
         return distribution
 
 
-class GoalConditionedValue(nn.Module):
+class GCValue(nn.Module):
     hidden_dims: Sequence[int]
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
-    encoder: nn.Module = None
+    goal_encoder: nn.Module = None
+    state_encoder: nn.Module = None
 
     def setup(self):
         mlp_module = LayerNormMLP if self.layer_norm else MLP
@@ -121,12 +126,14 @@ class GoalConditionedValue(nn.Module):
             mlp_module = ensemblize(mlp_module, 2)
         value_net = mlp_module((*self.hidden_dims, 1), activate_final=False)
 
-        if self.encoder is not None:
-            value_net = nn.Sequential([self.encoder(), value_net])
-
         self.value_net = value_net
 
     def __call__(self, observations, goals=None, actions=None, info=False):
+        if self.goal_encoder is not None:
+            goals = self.goal_encoder(targets=goals, bases=observations)
+        if self.state_encoder is not None:
+            observations = self.state_encoder(observations)
+
         inputs = [observations]
         if goals is not None:
             inputs.append(goals)
@@ -142,29 +149,29 @@ class GoalConditionedValue(nn.Module):
         return v
 
 
-class GoalConditionedBilinearValue(nn.Module):
+class GCBilinearValue(nn.Module):
     hidden_dims: Sequence[int]
     latent_dim: int
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
-    encoder: nn.Module = None
+    goal_encoder: nn.Module = None
+    state_encoder: nn.Module = None
 
     def setup(self) -> None:
         mlp_module = LayerNormMLP if self.layer_norm else MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-        phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
-        psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
 
-        if self.encoder is not None:
-            phi = nn.Sequential([self.encoder(), phi])
-            psi = nn.Sequential([self.encoder(), psi])
+        self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
+        self.psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
 
-        self.phi = phi
-        self.psi = psi
+    def __call__(self, observations, goals, actions=None, info=False):
+        if self.goal_encoder is not None:
+            goals = self.goal_encoder(goals)
+        if self.state_encoder is not None:
+            observations = self.state_encoder(observations)
 
-    def __call__(self, observations, goals=None, actions=None, info=False):
         if actions is None:
             phi_inputs = observations
         else:
@@ -182,3 +189,35 @@ class GoalConditionedBilinearValue(nn.Module):
             return v, phi, psi
         else:
             return v
+
+
+class RelativeRepresentation(nn.Module):
+    hidden_dims: Sequence[int]
+    rep_dim: int
+    layer_norm: bool = True
+    kernel_init: Any = default_init()
+    rep_type: str = 'state'
+    encoder: nn.Module = None
+
+    @nn.compact
+    def __call__(self, targets, bases=None):
+        if bases is None:
+            inputs = targets
+        else:
+            if self.rep_type == 'state':
+                inputs = targets
+            elif self.rep_type == 'diff':
+                inputs = jax.tree_util.tree_map(lambda t, b: t - b + jnp.ones_like(t) * 1e-9, targets, bases)
+            elif self.rep_type == 'concat':
+                inputs = jax.tree_util.tree_map(lambda t, b: jnp.concatenate([t, b], axis=-1), targets, bases)
+            else:
+                raise NotImplementedError
+
+        if self.encoder is not None:
+            inputs = self.encoder()(inputs)
+
+        mlp_module = LayerNormMLP if self.layer_norm else MLP
+        reps = mlp_module((*self.hidden_dims, self.rep_dim), activate_final=False)(inputs)
+        reps = reps / jnp.linalg.norm(reps, axis=-1, keepdims=True) * jnp.sqrt(self.rep_dim)
+
+        return reps
