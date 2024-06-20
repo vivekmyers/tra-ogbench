@@ -22,6 +22,8 @@ import wandb
 from absl import app, flags
 from ml_collections import config_flags
 
+from envs.env_loader import make_online_env
+from envs.viz_utils import visualize_trajs
 from utils.dataset import ReplayBuffer
 from utils.networks import GCValue, GCActor, LogParam
 from utils.evaluation import evaluate, flatten
@@ -80,23 +82,6 @@ def get_exp_name():
     exp_name += f'{datetime.now().strftime("%Y%m%d_%H%M%S")}'
 
     return exp_name
-
-
-def make_env(env_name):
-    if env_name == 'ant':
-        from envs.locomotion.ant import AntEnv
-        from d4rl.locomotion import wrappers
-        from gym.wrappers.order_enforcing import OrderEnforcing
-        from gym.wrappers.time_limit import TimeLimit
-
-        env = AntEnv()
-        env = wrappers.NormalizedBoxEnv(env)
-        env = OrderEnforcing(env)
-        env = TimeLimit(env, max_episode_steps=1000)
-    else:
-        raise NotImplementedError
-
-    return env
 
 
 class SACAgent(flax.struct.PyTreeNode):
@@ -280,8 +265,8 @@ def main(_):
 
     config = FLAGS.agent
 
-    env = make_env(FLAGS.env_name)
-    eval_env = make_env(FLAGS.env_name)
+    env = make_online_env(FLAGS.env_name, eval=False)
+    eval_env = make_online_env(FLAGS.env_name, eval=True)
 
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
@@ -383,6 +368,10 @@ def main(_):
             if FLAGS.video_episodes > 0:
                 video = get_wandb_video(renders=renders)
                 eval_metrics['video'] = video
+
+            if FLAGS.env_name in ['ant-xy']:
+                traj_image = visualize_trajs(FLAGS.env_name, trajs)
+                eval_metrics['traj'] = wandb.Image(traj_image)
 
             wandb.log(eval_metrics, step=i)
             eval_logger.log(eval_metrics, step=i)

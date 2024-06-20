@@ -68,3 +68,28 @@ def make_env_and_dataset(env_name):
     train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
 
     return env, train_dataset, val_dataset
+
+
+def make_online_env(env_name, eval=False):
+    if 'ant' in env_name:
+        from envs.locomotion.ant import AntEnv
+        from d4rl.locomotion import wrappers
+        from gym.wrappers.order_enforcing import OrderEnforcing
+        from gym.wrappers.time_limit import TimeLimit
+        from envs.d4rl.d4rl_utils import EpisodeMonitor
+
+        env = AntEnv()
+        env = wrappers.NormalizedBoxEnv(env)
+        env = OrderEnforcing(env)
+        env = TimeLimit(env, max_episode_steps=1000)
+        env = EpisodeMonitor(env)
+
+        if env_name == 'ant-xy':
+            from envs.locomotion.xy_wrapper import XYWrapper
+            env = XYWrapper(env, resample_interval=500 if eval else 100)
+    else:
+        raise NotImplementedError
+
+    return env
+
+
