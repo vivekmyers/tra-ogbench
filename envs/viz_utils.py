@@ -25,16 +25,16 @@ def visualize_trajs(env_name, trajs):
     if env_name == 'ant-xy':
         ax = fig.add_subplot()
 
-        xys = np.array([[info['xy'] for info in traj['info']] for traj in trajs])
-        directions = np.array([[info['direction'] for info in traj['info']] for traj in trajs])
-
-        for xy, direction in zip(xys, directions):
+        max_xy = 0.
+        for traj in trajs:
+            xy = np.array([info['xy'] for info in traj['info']])
+            direction = np.array([info['direction'] for info in traj['info']])
             color = get_2d_colors(direction, [-1, -1], [1, 1])
             for i in range(len(xy) - 1):
                 ax.plot(xy[i:i + 2, 0], xy[i:i + 2, 1], color=color[i], linewidth=0.7)
-        square_axis_limit = np.abs(xys).max() * 1.2
+            max_xy = max(max_xy, np.abs(xy).max() * 1.2)
 
-        plot_axis = [-square_axis_limit, square_axis_limit, -square_axis_limit, square_axis_limit]
+        plot_axis = [-max_xy, max_xy, -max_xy, max_xy]
         ax.axis(plot_axis)
         ax.set_aspect('equal')
     else:

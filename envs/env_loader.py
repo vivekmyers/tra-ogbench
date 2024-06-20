@@ -82,11 +82,12 @@ def make_online_env(env_name, eval=False):
         env = wrappers.NormalizedBoxEnv(env)
         env = OrderEnforcing(env)
         env = TimeLimit(env, max_episode_steps=1000)
-        env = EpisodeMonitor(env)
 
         if env_name == 'ant-xy':
             from envs.locomotion.xy_wrapper import XYWrapper
             env = XYWrapper(env, resample_interval=500 if eval else 100)
+
+        env = EpisodeMonitor(env)
     else:
         raise NotImplementedError
 
