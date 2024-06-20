@@ -78,5 +78,4 @@ class AntMazeGoalWrapper(Wrapper):
 
     def render(self, size=200):
         frame = self.env.render(mode='rgb_array', width=size, height=size).transpose(2, 0, 1)
-
         return frame

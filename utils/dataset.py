@@ -28,11 +28,7 @@ def batched_random_crop(imgs, crop_froms, padding):
 
 class Dataset(FrozenDict):
     @classmethod
-    def create(
-            cls,
-            freeze=True,
-            **fields,
-    ):
+    def create(cls, freeze=True, **fields):
         data = fields
         # Force freeze
         if freeze:
@@ -169,3 +165,44 @@ class HGCDataset(GCDataset):
             batch['next_observations'] = freeze(batch['next_observations'])
 
         return batch
+
+
+class ReplayBuffer(Dataset):
+    @classmethod
+    def create(cls, transition, size):
+        def create_buffer(example):
+            example = np.array(example)
+            return np.zeros((size, *example.shape), dtype=example.dtype)
+
+        buffer_dict = tree_util.tree_map(create_buffer, transition)
+        return cls(buffer_dict)
+
+    @classmethod
+    def create_from_initial_dataset(cls, init_dataset, size):
+        def create_buffer(init_buffer):
+            buffer = np.zeros((size, *init_buffer.shape[1:]), dtype=init_buffer.dtype)
+            buffer[: len(init_buffer)] = init_buffer
+            return buffer
+
+        buffer_dict = tree_util.tree_map(create_buffer, init_dataset)
+        dataset = cls(buffer_dict)
+        dataset.size = dataset.pointer = get_size(init_dataset)
+        return dataset
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.max_size = get_size(self._dict)
+        self.size = 0
+        self.pointer = 0
+
+    def add_transition(self, transition):
+        def set_idx(buffer, new_element):
+            buffer[self.pointer] = new_element
+
+        tree_util.tree_map(set_idx, self._dict, transition)
+        self.pointer = (self.pointer + 1) % self.max_size
+        self.size = max(self.pointer, self.size)
+
+    def clear(self):
+        self.size = self.pointer = 0

@@ -57,11 +57,26 @@ class LayerNormMLP(nn.Module):
         return x
 
 
+class LogParam(nn.Module):
+    init_value: float = 1.0
+
+    @nn.compact
+    def __call__(self):
+        log_value = self.param('log_value', init_fn=lambda key: jnp.full((), jnp.log(self.init_value)))
+        return jnp.exp(log_value)
+
+
+class TransformedWithMode(distrax.Transformed):
+    def mode(self):
+        return self.bijector.forward(self.distribution.mode())
+
+
 class GCActor(nn.Module):
     hidden_dims: Sequence[int]
     action_dim: int
     log_std_min: Optional[float] = -5
     log_std_max: Optional[float] = 2
+    tanh_squash: bool = False
     state_dependent_std: bool = False
     const_std: bool = True
     final_fc_init_scale: float = 1e-2
@@ -108,6 +123,8 @@ class GCActor(nn.Module):
         log_stds = jnp.clip(log_stds, self.log_std_min, self.log_std_max)
 
         distribution = distrax.MultivariateNormalDiag(loc=means, scale_diag=jnp.exp(log_stds) * temperature)
+        if self.tanh_squash:
+            distribution = TransformedWithMode(distribution, distrax.Block(distrax.Tanh(), ndims=1))
 
         return distribution
 

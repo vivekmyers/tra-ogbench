@@ -82,7 +82,6 @@ def main(_):
     train_dataset = dataset_class(Dataset.create(**train_dataset), config)
     val_dataset = dataset_class(Dataset.create(**val_dataset), config)
 
-    total_steps = FLAGS.train_steps
     example_batch = train_dataset.sample(1)
 
     agent = agent_class.create(
@@ -112,11 +111,9 @@ def main(_):
     eval_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'eval.csv'))
     first_time = time.time()
     last_time = time.time()
-    for i in tqdm.tqdm(range(1, total_steps + 1), smoothing=0.1, dynamic_ncols=True):
+    for i in tqdm.tqdm(range(1, FLAGS.train_steps + 1), smoothing=0.1, dynamic_ncols=True):
         batch = train_dataset.sample(config.batch_size)
-        update_info = dict()
-        agent, info = agent.update(batch)
-        update_info.update(info)
+        agent, update_info = agent.update(batch)
 
         if i % FLAGS.log_interval == 0:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}

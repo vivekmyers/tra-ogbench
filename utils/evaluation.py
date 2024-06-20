@@ -41,7 +41,7 @@ def kitchen_render(kitchen_env, wh=64):
 def evaluate(
         agent,
         env,
-        task_idx,
+        task_idx=None,
         config=None,
         num_eval_episodes=50,
         num_video_episodes=0,
@@ -57,7 +57,10 @@ def evaluate(
     for i in trange(num_eval_episodes + num_video_episodes):
         traj = defaultdict(list)
 
-        observation, goal = env.reset(task_idx=task_idx)
+        if task_idx is not None:
+            observation, goal = env.reset(task_idx=task_idx)
+        else:
+            observation, goal = env.reset(), None
         done = False
         step = 0
         render = []
