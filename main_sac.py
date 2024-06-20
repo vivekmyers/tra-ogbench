@@ -146,13 +146,13 @@ class SACAgent(flax.struct.PyTreeNode):
         else:
             action_std = dist.stddev().mean()
 
-        return actor_loss, {
+        return total_loss, {
             'total_loss': total_loss,
             'actor_loss': actor_loss,
             'alpha_loss': alpha_loss,
             'alpha': alpha,
             'entropy': -log_probs.mean(),
-            'std': action_std,
+            'std': action_std.mean(),
         }
 
     @jax.jit
@@ -320,7 +320,7 @@ def main(_):
         print(f'Restored from {restore_path}')
 
     expl_metrics = dict()
-    expl_rng = jax.random.PRNGKey(0)
+    expl_rng = jax.random.PRNGKey(FLAGS.seed)
     ob = env.reset()
 
     train_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'train.csv'))
