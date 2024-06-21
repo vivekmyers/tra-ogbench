@@ -3,7 +3,7 @@ import platform
 
 import numpy as np
 
-from envs.antmaze.wrapper import AntMazeGoalWrapper
+from envs.antmaze.wrappers import AntMazeGoalWrapper
 from envs.d4rl import d4rl_utils
 from utils.dataset import Dataset
 
@@ -84,8 +84,21 @@ def make_online_env(env_name, eval=False):
         env = TimeLimit(env, max_episode_steps=1000)
 
         if env_name == 'ant-xy':
-            from envs.locomotion.xy_wrapper import XYWrapper
+            from envs.locomotion.wrappers import XYWrapper
             env = XYWrapper(env, resample_interval=500 if eval else 100)
+
+        env = EpisodeMonitor(env)
+    elif 'humanoid' in env_name:
+        import gym
+        from envs.locomotion.wrappers import RenderWrapper
+        from envs.d4rl.d4rl_utils import EpisodeMonitor
+
+        env = gym.make('Humanoid-v3')
+        env = RenderWrapper(env)
+
+        if env_name == 'humanoid-xy':
+            from envs.locomotion.wrappers import XYWrapper
+            env = XYWrapper(env, resample_interval=500 if eval else 200)
 
         env = EpisodeMonitor(env)
     else:

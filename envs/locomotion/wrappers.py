@@ -23,9 +23,9 @@ class XYWrapper(Wrapper):
         return np.concatenate([ob, self.z])
 
     def step(self, action):
-        cur_xy = self.env.get_xy().copy()
+        cur_xy = self.env.sim.data.qpos[:2].copy()
         ob, reward, done, info = self.env.step(action)
-        next_xy = self.env.get_xy().copy()
+        next_xy = self.env.sim.data.qpos[:2].copy()
         self.num_steps += 1
 
         reward = (next_xy - cur_xy).dot(self.z)
@@ -37,3 +37,12 @@ class XYWrapper(Wrapper):
             self.z = self.z / np.linalg.norm(self.z)
 
         return np.concatenate([ob, self.z]), reward, done, info
+
+
+class RenderWrapper(Wrapper):
+    def __init__(self, env):
+        super().__init__(env)
+
+    def render(self, *args, **kwargs):
+        frame = super().render(mode='rgb_array', width=200, height=200).transpose(2, 0, 1)
+        return frame

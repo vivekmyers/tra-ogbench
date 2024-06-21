@@ -59,14 +59,14 @@ agent_config = ml_collections.ConfigDict(dict(
     batch_size=1024,
     actor_hidden_dims=(512, 512, 512),
     value_hidden_dims=(512, 512, 512),
-    layer_norm=True,
+    layer_norm=False,
     discount=0.99,
     tau=0.005,  # Target network update rate
     target_entropy=ml_collections.config_dict.placeholder(float),
     target_entropy_multiplier=0.5,
     tanh_squash=True,
     state_dependent_std=True,
-    actor_fc_scale=1.0,
+    actor_fc_scale=0.01,
 ))
 
 config_flags.DEFINE_config_dict('agent', agent_config, lock_config=False)
@@ -369,7 +369,7 @@ def main(_):
                 video = get_wandb_video(renders=renders)
                 eval_metrics['video'] = video
 
-            if FLAGS.env_name in ['ant-xy']:
+            if FLAGS.env_name in ['ant-xy', 'humanoid-xy']:
                 traj_image = visualize_trajs(FLAGS.env_name, trajs)
                 eval_metrics['traj'] = wandb.Image(traj_image)
 

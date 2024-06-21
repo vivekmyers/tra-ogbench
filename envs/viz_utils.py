@@ -22,7 +22,7 @@ def get_2d_colors(points, min_point, max_point):
 def visualize_trajs(env_name, trajs):
     fig = plt.figure(tight_layout=True)
     canvas = FigureCanvas(fig)
-    if env_name == 'ant-xy':
+    if env_name in ['ant-xy', 'humanoid-xy']:
         ax = fig.add_subplot()
 
         max_xy = 0.
