@@ -1,13 +1,13 @@
 import d4rl
-import gym
+import gymnasium
 import time
 import numpy as np
 
 from utils.dataset import Dataset
 
 
-class EpisodeMonitor(gym.ActionWrapper):
-    def __init__(self, env: gym.Env):
+class EpisodeMonitor(gymnasium.ActionWrapper):
+    def __init__(self, env):
         super().__init__(env)
         self._reset_stats()
         self.total_timesteps = 0
@@ -17,15 +17,15 @@ class EpisodeMonitor(gym.ActionWrapper):
         self.episode_length = 0
         self.start_time = time.time()
 
-    def step(self, action: np.ndarray):
-        observation, reward, done, info = self.env.step(action)
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
 
         self.reward_sum += reward
         self.episode_length += 1
         self.total_timesteps += 1
         info['total'] = {'timesteps': self.total_timesteps}
 
-        if done:
+        if terminated or truncated:
             info['episode'] = {}
             info['episode']['return'] = self.reward_sum
             info['episode']['length'] = self.episode_length
@@ -34,15 +34,15 @@ class EpisodeMonitor(gym.ActionWrapper):
             if hasattr(self, 'get_normalized_score'):
                 info['episode']['normalized_return'] = self.get_normalized_score(info['episode']['return']) * 100.0
 
-        return observation, reward, done, info
+        return observation, reward, terminated, truncated, info
 
-    def reset(self) -> np.ndarray:
+    def reset(self, *args, **kwargs):
         self._reset_stats()
-        return self.env.reset()
+        return self.env.reset(*args, **kwargs)
 
 
-def make_env(env_name: str):
-    env = gym.make(env_name)
+def make_env(env_name):
+    env = gymnasium.make('GymV21Environment-v0', env_id=env_name)
     env = EpisodeMonitor(env)
     return env
 

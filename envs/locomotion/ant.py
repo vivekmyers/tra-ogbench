@@ -1,127 +1,201 @@
-import os
-
-import mujoco_py
 import numpy as np
-from gym import utils
-from gym.envs.mujoco import mujoco_env
 
-GYM_ASSETS_DIR = os.path.join(os.path.dirname(__file__), 'assets')
+from gymnasium import utils
+from gymnasium.envs.mujoco import MujocoEnv
+from gymnasium.envs.registration import register
+from gymnasium.spaces import Box
 
 
-class AntEnv(mujoco_env.MujocoEnv, utils.EzPickle):
-    """Basic ant locomotion environment."""
-    FILE = os.path.join(GYM_ASSETS_DIR, 'ant.xml')
+DEFAULT_CAMERA_CONFIG = {
+    "distance": 4.0,
+}
 
-    def __init__(self, file_path=None, expose_all_qpos=False,
-                 expose_body_coms=None, expose_body_comvels=None, non_zero_reset=False):
-        if file_path is None:
-            file_path = self.FILE
 
-        self._expose_all_qpos = expose_all_qpos
-        self._expose_body_coms = expose_body_coms
-        self._expose_body_comvels = expose_body_comvels
-        self._body_com_indices = {}
-        self._body_comvel_indices = {}
+class AntEnv(MujocoEnv, utils.EzPickle):
+    metadata = {
+        "render_modes": [
+            "human",
+            "rgb_array",
+            "depth_array",
+        ],
+        "render_fps": 10,
+    }
 
-        self._non_zero_reset = non_zero_reset
-
-        mujoco_env.MujocoEnv.__init__(self, file_path, 5)
-        utils.EzPickle.__init__(self)
-
-    @property
-    def physics(self):
-        # Check mujoco version is greater than version 1.50 to call correct physics
-        # model containing PyMjData object for getting and setting position/velocity.
-        # Check https://github.com/openai/mujoco-py/issues/80 for updates to api.
-        if mujoco_py.get_version() >= '1.50':
-            return self.sim
-        else:
-            return self.model
-
-    def _step(self, a):
-        return self.step(a)
-
-    def step(self, a):
-        xposbefore = self.get_body_com("torso")[0]
-        self.do_simulation(a, self.frame_skip)
-        xposafter = self.get_body_com("torso")[0]
-        forward_reward = (xposafter - xposbefore) / self.dt
-        ctrl_cost = .5 * np.square(a / 30).sum()
-        contact_cost = 0.5 * 1e-3 * np.sum(
-            np.square(np.clip(self.sim.data.cfrc_ext, -1, 1)))
-        survive_reward = 1.0
-        reward = forward_reward - ctrl_cost - contact_cost + survive_reward
-        state = self.state_vector()
-        notdone = np.isfinite(state).all() and state[2] >= 0.2 and state[2] <= 1.0
-        done = not notdone
-        ob = self._get_obs()
-        return ob, reward, done, dict(
-            reward_forward=forward_reward,
-            reward_ctrl=-ctrl_cost,
-            reward_contact=-contact_cost,
-            reward_survive=survive_reward,
-            reward=reward,
+    def __init__(
+        self,
+        xml_file="ant.xml",
+        ctrl_cost_weight=0.5,
+        use_contact_forces=False,
+        contact_cost_weight=5e-4,
+        healthy_reward=1.0,
+        terminate_when_unhealthy=True,
+        healthy_z_range=(0.2, 1.0),
+        contact_force_range=(-1.0, 1.0),
+        reset_noise_scale=0.1,
+        exclude_current_positions_from_observation=True,
+        **kwargs,
+    ):
+        utils.EzPickle.__init__(
+            self,
+            xml_file,
+            ctrl_cost_weight,
+            use_contact_forces,
+            contact_cost_weight,
+            healthy_reward,
+            terminate_when_unhealthy,
+            healthy_z_range,
+            contact_force_range,
+            reset_noise_scale,
+            exclude_current_positions_from_observation,
+            **kwargs,
         )
 
+        self._ctrl_cost_weight = ctrl_cost_weight
+        self._contact_cost_weight = contact_cost_weight
+
+        self._healthy_reward = healthy_reward
+        self._terminate_when_unhealthy = terminate_when_unhealthy
+        self._healthy_z_range = healthy_z_range
+
+        self._contact_force_range = contact_force_range
+
+        self._reset_noise_scale = reset_noise_scale
+
+        self._use_contact_forces = use_contact_forces
+
+        self._exclude_current_positions_from_observation = (
+            exclude_current_positions_from_observation
+        )
+
+        obs_shape = 27
+        if not exclude_current_positions_from_observation:
+            obs_shape += 2
+        if use_contact_forces:
+            obs_shape += 84
+
+        observation_space = Box(
+            low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float64
+        )
+
+        MujocoEnv.__init__(
+            self,
+            xml_file,
+            5,
+            observation_space=observation_space,
+            default_camera_config=DEFAULT_CAMERA_CONFIG,
+            **kwargs,
+        )
+
+    @property
+    def healthy_reward(self):
+        return (
+            float(self.is_healthy or self._terminate_when_unhealthy)
+            * self._healthy_reward
+        )
+
+    def control_cost(self, action):
+        control_cost = self._ctrl_cost_weight * np.sum(np.square(action))
+        return control_cost
+
+    @property
+    def contact_forces(self):
+        raw_contact_forces = self.data.cfrc_ext
+        min_value, max_value = self._contact_force_range
+        contact_forces = np.clip(raw_contact_forces, min_value, max_value)
+        return contact_forces
+
+    @property
+    def contact_cost(self):
+        contact_cost = self._contact_cost_weight * np.sum(
+            np.square(self.contact_forces)
+        )
+        return contact_cost
+
+    @property
+    def is_healthy(self):
+        state = self.state_vector()
+        min_z, max_z = self._healthy_z_range
+        is_healthy = np.isfinite(state).all() and min_z <= state[2] <= max_z
+        return is_healthy
+
+    @property
+    def terminated(self):
+        terminated = not self.is_healthy if self._terminate_when_unhealthy else False
+        return terminated
+
+    def step(self, action):
+        xy_position_before = self.get_body_com("torso")[:2].copy()
+        self.do_simulation(action, self.frame_skip)
+        xy_position_after = self.get_body_com("torso")[:2].copy()
+
+        xy_velocity = (xy_position_after - xy_position_before) / self.dt
+        x_velocity, y_velocity = xy_velocity
+
+        forward_reward = x_velocity
+        healthy_reward = self.healthy_reward
+
+        rewards = forward_reward + healthy_reward
+
+        costs = ctrl_cost = self.control_cost(action)
+
+        terminated = self.terminated
+        observation = self._get_obs()
+        info = {
+            "reward_forward": forward_reward,
+            "reward_ctrl": -ctrl_cost,
+            "reward_survive": healthy_reward,
+            "x_position": xy_position_after[0],
+            "y_position": xy_position_after[1],
+            "distance_from_origin": np.linalg.norm(xy_position_after, ord=2),
+            "x_velocity": x_velocity,
+            "y_velocity": y_velocity,
+            "forward_reward": forward_reward,
+        }
+        if self._use_contact_forces:
+            contact_cost = self.contact_cost
+            costs += contact_cost
+            info["reward_ctrl"] = -contact_cost
+
+        reward = rewards - costs
+
+        if self.render_mode == "human":
+            self.render()
+        return observation, reward, terminated, False, info
+
     def _get_obs(self):
-        # No cfrc observation.
-        if self._expose_all_qpos:
-            obs = np.concatenate([
-                self.physics.data.qpos.flat[:15],  # Ensures only ant obs.
-                self.physics.data.qvel.flat[:14],
-            ])
+        position = self.data.qpos.flat.copy()
+        velocity = self.data.qvel.flat.copy()
+
+        if self._exclude_current_positions_from_observation:
+            position = position[2:]
+
+        if self._use_contact_forces:
+            contact_force = self.contact_forces.flat.copy()
+            return np.concatenate((position, velocity, contact_force))
         else:
-            obs = np.concatenate([
-                self.physics.data.qpos.flat[2:15],
-                self.physics.data.qvel.flat[:14],
-            ])
-
-        if self._expose_body_coms is not None:
-            for name in self._expose_body_coms:
-                com = self.get_body_com(name)
-                if name not in self._body_com_indices:
-                    indices = range(len(obs), len(obs) + len(com))
-                    self._body_com_indices[name] = indices
-                obs = np.concatenate([obs, com])
-
-        if self._expose_body_comvels is not None:
-            for name in self._expose_body_comvels:
-                comvel = self.get_body_comvel(name)
-                if name not in self._body_comvel_indices:
-                    indices = range(len(obs), len(obs) + len(comvel))
-                    self._body_comvel_indices[name] = indices
-                obs = np.concatenate([obs, comvel])
-        return obs
+            return np.concatenate((position, velocity))
 
     def reset_model(self):
+        noise_low = -self._reset_noise_scale
+        noise_high = self._reset_noise_scale
+
         qpos = self.init_qpos + self.np_random.uniform(
-            size=self.model.nq, low=-.1, high=.1)
-        qvel = self.init_qvel + self.np_random.randn(self.model.nv) * .1
-
-        if self._non_zero_reset:
-            """Now the reset is supposed to be to a non-zero location"""
-            reset_location = self._get_reset_location()
-            qpos[:2] = reset_location
-
-        # Set everything other than ant to original position and 0 velocity.
-        qpos[15:] = self.init_qpos[15:]
-        qvel[14:] = 0.
-        self.set_state(qpos, qvel)
-        return self._get_obs()
-
-    def viewer_setup(self):
-        self.viewer.cam.distance = self.model.stat.extent * 0.5
-
-    def get_xy(self):
-        return self.physics.data.qpos[:2]
-
-    def set_xy(self, xy):
-        qpos = np.copy(self.physics.data.qpos)
-        qpos[0] = xy[0]
-        qpos[1] = xy[1]
-        qvel = self.physics.data.qvel
+            low=noise_low, high=noise_high, size=self.model.nq
+        )
+        qvel = (
+            self.init_qvel
+            + self._reset_noise_scale * self.np_random.standard_normal(self.model.nv)
+        )
         self.set_state(qpos, qvel)
 
-    def render(self, *args, **kwargs):
-        frame = super().render(mode='rgb_array', width=200, height=200).transpose(2, 0, 1)
-        return frame
+        observation = self._get_obs()
+
+        return observation
+
+
+register(
+    id="AntCustom-v4",
+    entry_point="envs.locomotion.ant:AntEnv",
+    max_episode_steps=1000,
+    reward_threshold=6000.0,
+)

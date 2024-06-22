@@ -1,9 +1,9 @@
 import numpy as np
-from gym import Wrapper
-from gym.envs.mujoco.mujoco_env import convert_observation_to_space
+import gymnasium
+from gymnasium.spaces import Box
 
 
-class XYWrapper(Wrapper):
+class XYWrapper(gymnasium.Wrapper):
     def __init__(self, env, resample_interval=100):
         super().__init__(env)
 
@@ -11,21 +11,23 @@ class XYWrapper(Wrapper):
         self.num_steps = 0
         self.resample_interval = resample_interval
 
-        ob = self.reset()
-        self.observation_space = convert_observation_to_space(ob)
+        ob, _ = self.reset()
+        self.observation_space = Box(
+            low=-np.inf, high=np.inf, shape=ob.shape, dtype=np.float64
+        )
 
-    def reset(self, task_idx=None):
-        ob = self.env.reset()
+    def reset(self, *args, **kwargs):
+        ob, info = self.env.reset(*args, **kwargs)
         self.z = np.random.randn(2)
         self.z = self.z / np.linalg.norm(self.z)
         self.num_steps = 0
 
-        return np.concatenate([ob, self.z])
+        return np.concatenate([ob, self.z]), info
 
     def step(self, action):
-        cur_xy = self.env.sim.data.qpos[:2].copy()
-        ob, reward, done, info = self.env.step(action)
-        next_xy = self.env.sim.data.qpos[:2].copy()
+        cur_xy = self.env.data.qpos[:2].copy()
+        ob, reward, terminated, truncated, info = self.env.step(action)
+        next_xy = self.env.data.qpos[:2].copy()
         self.num_steps += 1
 
         reward = (next_xy - cur_xy).dot(self.z)
@@ -36,13 +38,4 @@ class XYWrapper(Wrapper):
             self.z = np.random.randn(2)
             self.z = self.z / np.linalg.norm(self.z)
 
-        return np.concatenate([ob, self.z]), reward, done, info
-
-
-class RenderWrapper(Wrapper):
-    def __init__(self, env):
-        super().__init__(env)
-
-    def render(self, *args, **kwargs):
-        frame = super().render(mode='rgb_array', width=200, height=200).transpose(2, 0, 1)
-        return frame
+        return np.concatenate([ob, self.z]), reward, terminated, truncated, info

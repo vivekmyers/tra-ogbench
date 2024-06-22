@@ -306,7 +306,7 @@ def main(_):
 
     expl_metrics = dict()
     expl_rng = jax.random.PRNGKey(FLAGS.seed)
-    ob = env.reset()
+    ob, _ = env.reset()
 
     train_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'train.csv'))
     eval_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'eval.csv'))
@@ -319,21 +319,20 @@ def main(_):
             expl_rng, key = jax.random.split(expl_rng)
             action = agent.sample_actions(ob, seed=key)
 
-        next_ob, reward, done, info = env.step(action)
-        mask = float(not done or 'TimeLimit.truncated' in info)
+        next_ob, reward, terminated, truncated, info = env.step(action)
 
         replay_buffer.add_transition(dict(
             observations=ob,
             actions=action,
             rewards=reward,
-            masks=mask,
+            masks=float(not terminated),
             next_observations=next_ob,
         ))
         ob = next_ob
 
-        if done:
+        if terminated or truncated:
             expl_metrics = {f'exploration/{k}': v for k, v in flatten(info).items()}
-            ob = env.reset()
+            ob, _ = env.reset()
 
         if replay_buffer.size < FLAGS.seed_steps:
             continue

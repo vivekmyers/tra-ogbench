@@ -57,10 +57,14 @@ def evaluate(
     for i in trange(num_eval_episodes + num_video_episodes):
         traj = defaultdict(list)
 
-        if task_idx is not None:
-            observation, goal = env.reset(task_idx=task_idx)
-        else:
-            observation, goal = env.reset(), None
+        # if task_idx is not None:
+        #     observation, info = env.reset(task_idx=task_idx)
+        #     goal = info['goal']
+        # else:
+        #     observation, info = env.reset()
+        #     goal = None
+        observation, info = env.reset(options=dict(task_idx=task_idx))
+        goal = info.get('goal')
         done = False
         step = 0
         render = []
@@ -71,7 +75,8 @@ def evaluate(
                 action = np.random.normal(action, eval_gaussian)
                 action = np.clip(action, -1, 1)
 
-            next_observation, reward, done, info = env.step(action)
+            next_observation, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
             step += 1
 
             if i >= num_eval_episodes and step % video_frame_skip == 0:

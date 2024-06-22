@@ -72,16 +72,12 @@ def make_env_and_dataset(env_name):
 
 def make_online_env(env_name, eval=False):
     if 'ant' in env_name:
-        from envs.locomotion.ant import AntEnv
-        from d4rl.locomotion import wrappers
-        from gym.wrappers.order_enforcing import OrderEnforcing
-        from gym.wrappers.time_limit import TimeLimit
+        from envs.locomotion.ant import AntEnv  # noqa
         from envs.d4rl.d4rl_utils import EpisodeMonitor
+        import gymnasium
 
-        env = AntEnv()
-        env = wrappers.NormalizedBoxEnv(env)
-        env = OrderEnforcing(env)
-        env = TimeLimit(env, max_episode_steps=1000)
+        xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
+        env = gymnasium.make('AntCustom-v4', render_mode='rgb_array', height=200, width=200, xml_file=xml_file)
 
         if env_name == 'ant-xy':
             from envs.locomotion.wrappers import XYWrapper
@@ -89,12 +85,10 @@ def make_online_env(env_name, eval=False):
 
         env = EpisodeMonitor(env)
     elif 'humanoid' in env_name:
-        import gym
-        from envs.locomotion.wrappers import RenderWrapper
         from envs.d4rl.d4rl_utils import EpisodeMonitor
+        import gymnasium
 
-        env = gym.make('Humanoid-v3')
-        env = RenderWrapper(env)
+        env = gymnasium.make('Humanoid-v4', render_mode='rgb_array', height=200, width=200)
 
         if env_name == 'humanoid-xy':
             from envs.locomotion.wrappers import XYWrapper
@@ -105,5 +99,3 @@ def make_online_env(env_name, eval=False):
         raise NotImplementedError
 
     return env
-
-

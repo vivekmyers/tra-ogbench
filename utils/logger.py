@@ -49,17 +49,17 @@ def reshape_video(v, n_cols=None):
     if v.ndim == 4:
         v = v[None,]
 
-    _, t, c, h, w = v.shape
+    _, t, h, w, c = v.shape
 
     if n_cols is None:
         n_cols = np.ceil(np.sqrt(v.shape[0])).astype(int)
     if v.shape[0] % n_cols != 0:
         len_addition = n_cols - v.shape[0] % n_cols
-        v = np.concatenate((v, np.zeros(shape=(len_addition, t, c, h, w))), axis=0)
+        v = np.concatenate((v, np.zeros(shape=(len_addition, t, h, w, c))), axis=0)
     n_rows = v.shape[0] // n_cols
 
-    v = np.reshape(v, newshape=(n_rows, n_cols, t, c, h, w))
-    v = np.transpose(v, axes=(2, 3, 0, 4, 1, 5))
+    v = np.reshape(v, newshape=(n_rows, n_cols, t, h, w, c))
+    v = np.transpose(v, axes=(2, 5, 0, 3, 1, 4))
     v = np.reshape(v, newshape=(t, c, n_rows * h, n_cols * w))
 
     return v
@@ -71,7 +71,7 @@ def get_wandb_video(renders=None, n_cols=None, frame_skip=1):
     for i, render in enumerate(renders):
         renders[i] = np.concatenate([render, np.zeros((max_length - render.shape[0], *render.shape[1:]), dtype=render.dtype)], axis=0)
         renders[i] = renders[i][::frame_skip]
-    renders = np.array(renders)  # (n, t, c, h, w)
+    renders = np.array(renders)  # (n, t, h, w, c)
 
     # Reshape
     assert renders.dtype == np.uint8

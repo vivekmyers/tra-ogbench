@@ -1,5 +1,5 @@
 import numpy as np
-from gym import Wrapper
+from gymnasium import Wrapper
 
 
 class AntMazeGoalWrapper(Wrapper):
@@ -7,7 +7,8 @@ class AntMazeGoalWrapper(Wrapper):
         super().__init__(env)
 
         # Set camera position
-        env.render(mode='rgb_array', width=200, height=200)
+        env.reset()
+        self.render()
         env.viewer.cam.lookat[0] = 18
         env.viewer.cam.lookat[1] = 12
         env.viewer.cam.distance = 50
@@ -40,9 +41,13 @@ class AntMazeGoalWrapper(Wrapper):
         self.cur_task_idx = None
         self.cur_task_info = None
 
-    def reset(self, task_idx=None):
-        goal_ob = self.env.reset()
-        ob = self.env.reset()
+    def reset(self, options=None, *args, **kwargs):
+        if options is not None:
+            task_idx = options.pop('task_idx', None)
+        else:
+            task_idx = None
+        goal_ob, _ = self.env.reset(*args, **kwargs)
+        ob, _ = self.env.reset(*args, **kwargs)
 
         if task_idx is None:
             task_idx = np.random.randint(self.num_tasks)
@@ -62,20 +67,22 @@ class AntMazeGoalWrapper(Wrapper):
 
         goal_ob = np.concatenate([goal_xy, goal_ob[2:]])
 
-        return ob, goal_ob
+        return ob, dict(
+            goal=goal_ob,
+        )
 
     def step(self, action):
-        ob, reward, done, info = self.env.step(action)
+        ob, reward, terminated, truncated, info = self.env.step(action)
 
         info = dict()
         if np.linalg.norm(self.get_xy() - self.target_goal) <= 0.5:
-            done = True
+            terminated = True
             info['success'] = True
         else:
             info['success'] = False
 
-        return ob, reward, done, info
+        return ob, reward, terminated, truncated, info
 
-    def render(self, size=200):
-        frame = self.env.render(mode='rgb_array', width=size, height=size).transpose(2, 0, 1)
+    def render(self):
+        frame = self.gym_env.render(mode='rgb_array', width=200, height=200)
         return frame
