@@ -31,7 +31,7 @@ class XYWrapper(gymnasium.Wrapper):
         self.num_steps += 1
 
         reward = (next_xy - cur_xy).dot(self.z)
-        info['xy'] = cur_xy
+        info['xy'] = next_xy
         info['direction'] = self.z
 
         if self.num_steps % self.resample_interval == 0:
