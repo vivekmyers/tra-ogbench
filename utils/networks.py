@@ -228,7 +228,7 @@ class RelativeRepresentation(nn.Module):
             elif self.rep_type == 'concat':
                 inputs = jax.tree_util.tree_map(lambda t, b: jnp.concatenate([t, b], axis=-1), targets, bases)
             else:
-                raise NotImplementedError
+                raise ValueError(f'Unknown rep_type: {self.rep_type}')
 
         if self.encoder is not None:
             inputs = self.encoder()(inputs)

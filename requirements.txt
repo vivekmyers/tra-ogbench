@@ -16,3 +16,4 @@ ml_collections
 wandb
 numba
 moviepy==1.0.3
+h5py

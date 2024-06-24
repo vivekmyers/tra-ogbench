@@ -38,7 +38,7 @@ def visualize_trajs(env_name, trajs):
         ax.axis(plot_axis)
         ax.set_aspect('equal')
     else:
-        raise NotImplementedError()
+        raise ValueError(f'Unsupported env_name: {env_name}')
 
     plt.tight_layout()
     canvas.draw()

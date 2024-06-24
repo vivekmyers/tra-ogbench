@@ -62,7 +62,7 @@ def make_env_and_dataset(env_name):
             'next_observations': dataset['next_observations'][:, :30],
         })
     else:
-        raise NotImplementedError
+        raise ValueError(f'Unknown environment: {env_name}')
 
     env.reset()
     train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
@@ -96,6 +96,6 @@ def make_online_env(env_name, eval=False):
 
         env = EpisodeMonitor(env)
     else:
-        raise NotImplementedError
+        raise ValueError(f'Unknown environment: {env_name}')
 
     return env

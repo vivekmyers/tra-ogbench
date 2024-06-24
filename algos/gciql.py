@@ -126,7 +126,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
                 'std': jnp.mean(dist.scale_diag),
             }
         else:
-            raise NotImplementedError
+            raise ValueError(f'Unsupported actor loss: {self.config["actor_loss"]}')
 
     @jax.jit
     def total_loss(self, batch, grad_params, rng=None):
