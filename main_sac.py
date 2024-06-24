@@ -123,7 +123,7 @@ def main(_):
             action = env.action_space.sample()
         else:
             expl_rng, key = jax.random.split(expl_rng)
-            action = agent.sample_actions(key, ob)
+            action = agent.sample_actions(observations=ob, seed=key)
 
         next_ob, reward, terminated, truncated, info = env.step(action)
 

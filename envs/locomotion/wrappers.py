@@ -25,9 +25,9 @@ class XYWrapper(gymnasium.Wrapper):
         return np.concatenate([ob, self.z]), info
 
     def step(self, action):
-        cur_xy = self.env.data.qpos[:2].copy()
+        cur_xy = self.unwrapped.data.qpos[:2].copy()
         ob, reward, terminated, truncated, info = self.env.step(action)
-        next_xy = self.env.data.qpos[:2].copy()
+        next_xy = self.unwrapped.data.qpos[:2].copy()
         self.num_steps += 1
 
         reward = (next_xy - cur_xy).dot(self.z)

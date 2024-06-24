@@ -54,7 +54,7 @@ class AntMazeGoalWrapper(Wrapper):
         self.cur_task_idx = task_idx
         self.cur_task_info = self.task_infos[task_idx]
 
-        self.env.set_xy(self.cur_task_info['init_pos'])
+        self.env.unwrapped.set_xy(self.cur_task_info['init_pos'])
 
         # Mimic the original goal sampling
         goal_x, goal_y = self.cur_task_info['goal_pos']
@@ -63,7 +63,7 @@ class AntMazeGoalWrapper(Wrapper):
         goal_x = goal_x + np.random.uniform(low=0, high=0.5) * 0.25 * 4
         goal_y = goal_y + np.random.uniform(low=0, high=0.5) * 0.25 * 4
         goal_xy = (max(goal_x, 0), max(goal_y, 0))
-        self.env.set_target_goal(goal_xy)
+        self.env.unwrapped.set_target_goal(goal_xy)
 
         goal_ob = np.concatenate([goal_xy, goal_ob[2:]])
 
@@ -84,5 +84,5 @@ class AntMazeGoalWrapper(Wrapper):
         return ob, reward, terminated, truncated, info
 
     def render(self):
-        frame = self.gym_env.render(mode='rgb_array', width=200, height=200)
+        frame = self.unwrapped.gym_env.render(mode='rgb_array', width=200, height=200)
         return frame

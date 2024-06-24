@@ -1,9 +1,9 @@
-jax==0.4.13
-jaxlib==0.4.13
-distrax==0.1.2
-flax==0.7.0
-chex==0.1.6
-optax==0.1.5
+distrax==0.1.5
+flax==0.8.4
+jax==0.4.26
+jaxlib==0.4.26
+optax==0.2.2
+chex==0.1.86
 gymnasium
 shimmy[gym-v21,gym-v26]
 gym==0.23.1

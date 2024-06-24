@@ -7,7 +7,6 @@ import jax
 import jax.numpy as jnp
 import ml_collections
 import optax
-from flax.core import freeze, unfreeze
 
 from utils.networks import GCValue, GCActor
 from utils.train_state import TrainState, nonpytree_field, ModuleDict
@@ -153,14 +152,11 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         return loss, info
 
     def target_update(self, network, module_name):
-        params = unfreeze(network.params)
         new_target_params = jax.tree_util.tree_map(
             lambda p, tp: p * self.config['tau'] + tp * (1 - self.config['tau']),
             self.network.params[f'modules_{module_name}'], self.network.params[f'modules_target_{module_name}']
         )
-        params[f'modules_target_{module_name}'] = new_target_params
-        network = network.replace(params=freeze(params))
-        return network
+        network.params[f'modules_target_{module_name}'] = new_target_params
 
     @jax.jit
     def update(self, batch):
@@ -170,9 +166,9 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             return self.total_loss(batch, grad_params, rng=rng)
 
         new_network, info = self.network.apply_loss_fn(loss_fn=loss_fn)
-        new_network = self.target_update(new_network, 'value')
+        self.target_update(new_network, 'value')
         if self.config['use_q']:
-            new_network = self.target_update(new_network, 'critic')
+            self.target_update(new_network, 'critic')
 
         return self.replace(network=new_network, rng=new_rng), info
 
@@ -255,11 +251,10 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         network_params = network_def.init(init_rng, **network_args)['params']
         network = TrainState.create(network_def, network_params, tx=network_tx)
 
-        params = unfreeze(network.params)
+        params = network_params
         params['modules_target_value'] = params['modules_value']
         if config['use_q']:
             params['modules_target_critic'] = params['modules_critic']
-        network = network.replace(params=freeze(params))
 
         return cls(rng, network=network, config=flax.core.FrozenDict(**config))
 
