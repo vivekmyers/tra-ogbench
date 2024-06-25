@@ -78,7 +78,7 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
         return observation
 
     def get_xy(self):
-        return self.data.qpos[:2]
+        return self.data.qpos[:2].copy()
 
     def set_xy(self, xy):
         qpos = self.data.qpos.copy()

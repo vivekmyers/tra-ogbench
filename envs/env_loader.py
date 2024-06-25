@@ -71,28 +71,24 @@ def make_env_and_dataset(env_name):
 
 
 def make_online_env(env_name, eval=False):
-    if 'ant' in env_name:
-        from envs.locomotion.ant import AntEnv  # noqa
+    if 'ant' in env_name or 'gymhum' in env_name or 'humanoid' in env_name:
+        import envs.locomotion  # noqa
         from envs.d4rl.d4rl_utils import EpisodeMonitor
         import gymnasium
 
-        xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
-        env = gymnasium.make('AntCustom-v4', render_mode='rgb_array', height=200, width=200, xml_file=xml_file)
+        if 'ant' in env_name:
+            xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
+            env = gymnasium.make('AntCustom-v0', render_mode='rgb_array', height=200, width=200, xml_file=xml_file)
+        elif 'gymhum' in env_name:
+            env = gymnasium.make('Humanoid-v4', render_mode='rgb_array', height=200, width=200)
+        elif 'humanoid' in env_name:
+            env = gymnasium.make('HumanoidCustom-v0', render_mode='rgb_array', height=200, width=200, camera_id=0)
+        else:
+            raise ValueError(f'Unknown environment: {env_name}')
 
-        if env_name == 'ant-xy':
+        if env_name.endswith('-xy'):
             from envs.locomotion.wrappers import XYWrapper
-            env = XYWrapper(env, resample_interval=500 if eval else 100)
-
-        env = EpisodeMonitor(env)
-    elif 'humanoid' in env_name:
-        from envs.d4rl.d4rl_utils import EpisodeMonitor
-        import gymnasium
-
-        env = gymnasium.make('Humanoid-v4', render_mode='rgb_array', height=200, width=200)
-
-        if env_name == 'humanoid-xy':
-            from envs.locomotion.wrappers import XYWrapper
-            env = XYWrapper(env, resample_interval=500 if eval else 200)
+            env = XYWrapper(env, resample_interval=500 if eval else (100 if 'ant' in env_name else 200))
 
         env = EpisodeMonitor(env)
     else:

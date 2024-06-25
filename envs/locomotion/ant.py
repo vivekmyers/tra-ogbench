@@ -2,7 +2,6 @@ import numpy as np
 
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
-from gymnasium.envs.registration import register
 from gymnasium.spaces import Box
 
 
@@ -191,11 +190,3 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         observation = self._get_obs()
 
         return observation
-
-
-register(
-    id="AntCustom-v4",
-    entry_point="envs.locomotion.ant:AntEnv",
-    max_episode_steps=1000,
-    reward_threshold=6000.0,
-)
