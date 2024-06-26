@@ -10,7 +10,7 @@ def main():
 
     qpos, qvel = dmc_env.physics.data.qpos, dmc_env.physics.data.qvel
 
-    custom_env = gymnasium.make('HumanoidCustom-v4', render_mode='rgb_array', task='walk')
+    custom_env = gymnasium.make('HumanoidCustom-v0', render_mode='rgb_array', task='walk')
     custom_env.reset()
     custom_env.step(custom_env.action_space.sample())
 

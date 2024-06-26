@@ -1,6 +1,7 @@
 from typing import Sequence, Optional, Any
 
 import distrax
+import flax
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
@@ -69,6 +70,41 @@ class LogParam(nn.Module):
 class TransformedWithMode(distrax.Transformed):
     def mode(self):
         return self.bijector.forward(self.distribution.mode())
+
+
+class RunningMeanStd(flax.struct.PyTreeNode):
+    eps: Any = 1e-6
+    mean: Any = 1.0
+    var: Any = 1.0
+    clip_max: Any = 10.0
+    count: int = 0
+
+    def normalize(self, batch):
+        batch = (batch - self.mean) / jnp.sqrt(self.var + self.eps)
+        batch = jnp.clip(batch, -self.clip_max, self.clip_max)
+        return batch
+
+    def unnormalize(self, batch):
+        return batch * jnp.sqrt(self.var + self.eps) + self.mean
+
+    def update(self, batch):
+        batch_mean, batch_var = jnp.mean(batch, axis=0), jnp.var(batch, axis=0)
+        batch_count = len(batch)
+
+        delta = batch_mean - self.mean
+        total_count = self.count + batch_count
+
+        new_mean = self.mean + delta * batch_count / total_count
+        m_a = self.var * self.count
+        m_b = batch_var * batch_count
+        m_2 = m_a + m_b + delta ** 2 * self.count * batch_count / total_count
+        new_var = m_2 / total_count
+
+        return self.replace(
+            mean=new_mean,
+            var=new_var,
+            count=total_count
+        )
 
 
 class GCActor(nn.Module):
@@ -224,7 +260,7 @@ class RelativeRepresentation(nn.Module):
             if self.rep_type == 'state':
                 inputs = targets
             elif self.rep_type == 'diff':
-                inputs = jax.tree_util.tree_map(lambda t, b: t - b + jnp.ones_like(t) * 1e-9, targets, bases)
+                inputs = jax.tree_util.tree_map(lambda t, b: t - b + jnp.ones_like(t) * 1e-6, targets, bases)
             elif self.rep_type == 'concat':
                 inputs = jax.tree_util.tree_map(lambda t, b: jnp.concatenate([t, b], axis=-1), targets, bases)
             else:

@@ -81,7 +81,7 @@ class GCDataset:
         else:
             distances = np.random.rand(batch_size)  # in [0, 1)
             middle_goal_idxs = np.round((np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))).astype(int)
-        goal_idxs = np.where(np.random.rand(batch_size) < p_trajgoal / (1.0 - p_curgoal + 1e-9), middle_goal_idxs, random_goal_idxs)
+        goal_idxs = np.where(np.random.rand(batch_size) < p_trajgoal / (1.0 - p_curgoal + 1e-6), middle_goal_idxs, random_goal_idxs)
 
         # Goals at the current state
         goal_idxs = np.where(np.random.rand(batch_size) < p_curgoal, idxs, goal_idxs)

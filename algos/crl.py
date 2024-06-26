@@ -55,7 +55,7 @@ class CRLAgent(flax.struct.PyTreeNode):
 
     def actor_loss(self, batch, grad_params, rng=None):
         if self.config['actor_log_q']:
-            value_transform = lambda x: jnp.log(jnp.maximum(x, 1e-9))
+            value_transform = lambda x: jnp.log(jnp.maximum(x, 1e-6))
         else:
             value_transform = lambda x: x
 
@@ -98,7 +98,7 @@ class CRLAgent(flax.struct.PyTreeNode):
             q1, q2 = value_transform(self.network.select('critic')(batch['observations'], batch['actor_goals'], q_actions))
             q = jnp.minimum(q1, q2)
 
-            q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-9)
+            q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-6)
             log_prob = dist.log_prob(batch['actions'])
 
             bc_loss = -(self.config['alpha'] * log_prob).mean()

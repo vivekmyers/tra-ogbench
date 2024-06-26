@@ -95,3 +95,10 @@ def make_online_env(env_name, eval=False):
         raise ValueError(f'Unknown environment: {env_name}')
 
     return env
+
+
+def make_vec_env(env_name, num_envs, **kwargs):
+    from gymnasium.vector import SyncVectorEnv
+    envs = [lambda: make_online_env(env_name, **kwargs) for _ in range(num_envs)]
+    env = SyncVectorEnv(envs)
+    return env

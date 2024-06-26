@@ -90,7 +90,7 @@ def main(_):
         while not done:
             subgoal_xy = env.unwrapped.get_oracle_subgoal()
             subgoal_dir = subgoal_xy - ob[:2]
-            subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-9)
+            subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
 
             agent_ob = np.concatenate([ob[2:], subgoal_dir])
             action = actor_fn(agent_ob, temperature=0)

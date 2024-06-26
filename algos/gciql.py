@@ -107,7 +107,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             q1, q2 = self.network.select('critic')(batch['observations'], batch['actor_goals'], q_actions)
             q = jnp.minimum(q1, q2)
 
-            q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-9)
+            q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-6)
             log_prob = dist.log_prob(batch['actions'])
 
             bc_loss = -(self.config['alpha'] * log_prob).mean()

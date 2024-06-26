@@ -15,7 +15,7 @@ from absl import app, flags
 from ml_collections import config_flags
 
 from algos import algos
-from envs.env_loader import make_online_env
+from envs.env_loader import make_online_env, make_vec_env
 from envs.viz_utils import visualize_trajs
 from utils.dataset import ReplayBuffer
 from utils.evaluation import evaluate, flatten
@@ -31,8 +31,9 @@ flags.DEFINE_string('save_dir', 'exp/', 'Save directory')
 flags.DEFINE_string('restore_path', None, 'Restore path')
 flags.DEFINE_integer('restore_epoch', None, 'Restore epoch')
 
-flags.DEFINE_integer('seed_steps', 10000, 'Number of seed steps')
+flags.DEFINE_integer('num_envs', 64, 'Number of environments')
 flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps')
+flags.DEFINE_integer('train_interval', 128, 'Train interval')
 flags.DEFINE_integer('log_interval', 1000, 'Log interval')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
 flags.DEFINE_integer('save_interval', 100000, 'Save interval')
@@ -44,7 +45,7 @@ flags.DEFINE_float('eval_gaussian', None, 'Evaluation Gaussian noise')
 flags.DEFINE_integer('video_episodes', 2, 'Number of video episodes for each task')
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for video')
 
-config_flags.DEFINE_config_file('agent', 'algos/sac.py', lock_config=False)
+config_flags.DEFINE_config_file('agent', 'algos/ppo.py', lock_config=False)
 
 
 def get_exp_name():
@@ -71,21 +72,23 @@ def main(_):
 
     config = FLAGS.agent
 
-    env = make_online_env(FLAGS.env_name, eval=False)
+    env = make_vec_env(FLAGS.env_name, FLAGS.num_envs, eval=False)
     eval_env = make_online_env(FLAGS.env_name, eval=True)
 
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
+    zeros = np.zeros((FLAGS.num_envs,))
     example_transition = dict(
         observations=env.observation_space.sample(),
         actions=env.action_space.sample(),
-        rewards=0.0,
-        masks=1.0,
+        rewards=zeros,
+        masks=zeros,
         next_observations=env.observation_space.sample(),
+        log_probs=zeros,
     )
 
-    replay_buffer = ReplayBuffer.create(example_transition, size=int(1e6))
+    replay_buffer = ReplayBuffer.create(example_transition, size=FLAGS.train_interval)
 
     agent_class = algos[config.agent_name]
     agent = agent_class.create(
@@ -113,41 +116,39 @@ def main(_):
 
     expl_metrics = dict()
     expl_rng = jax.random.PRNGKey(FLAGS.seed)
-    ob, _ = env.reset()
+    obs, _ = env.reset()
 
     train_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'train.csv'))
     eval_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'eval.csv'))
     first_time = time.time()
     last_time = time.time()
+    update_info = None
     for i in tqdm.tqdm(range(1, FLAGS.train_steps + 1), smoothing=0.1, dynamic_ncols=True):
-        if i < FLAGS.seed_steps:
-            action = env.action_space.sample()
-        else:
-            expl_rng, key = jax.random.split(expl_rng)
-            action = agent.sample_actions(observations=ob, seed=key)
+        expl_rng, key = jax.random.split(expl_rng)
+        actions, log_probs = agent.sample_actions(observations=obs, seed=key, info=True)
 
-        next_ob, reward, terminated, truncated, info = env.step(action)
+        next_obs, rewards, terminateds, truncateds, infos = env.step(np.clip(actions, -1.0, 1.0))
 
         replay_buffer.add_transition(dict(
-            observations=ob,
-            actions=action,
-            rewards=reward,
-            masks=float(not terminated),
-            next_observations=next_ob,
+            observations=obs,
+            actions=actions,
+            rewards=rewards,
+            masks=(~terminateds).astype(np.float64),
+            next_observations=next_obs,
+            log_probs=log_probs,
         ))
-        ob = next_ob
+        obs = next_obs
 
-        if terminated or truncated:
+        if terminateds[0] or truncateds[0]:
+            info = {k: v[0] for k, v in infos.items() if not k.startswith('_')}
             expl_metrics = {f'exploration/{k}': v for k, v in flatten(info).items()}
-            ob, _ = env.reset()
 
-        if replay_buffer.size < FLAGS.seed_steps:
-            continue
+        if i % FLAGS.train_interval == 0:
+            traj_batch = replay_buffer.get_subset(slice(0, FLAGS.train_interval))
+            agent, update_info = agent.train(traj_batch)
+            replay_buffer.clear()
 
-        batch = replay_buffer.sample(config.batch_size)
-        agent, update_info = agent.update(batch)
-
-        if i % FLAGS.log_interval == 0:
+        if i % FLAGS.log_interval == 0 and update_info is not None:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
             train_metrics['time/total_time'] = (time.time() - first_time)
