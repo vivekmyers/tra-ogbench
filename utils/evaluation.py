@@ -73,7 +73,7 @@ def evaluate(
             action = np.array(action)
             if eval_gaussian is not None:
                 action = np.random.normal(action, eval_gaussian)
-                action = np.clip(action, -1, 1)
+            action = np.clip(action, -1, 1)
 
             next_observation, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
