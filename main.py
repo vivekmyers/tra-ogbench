@@ -7,6 +7,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
+import jax
 import flax
 import numpy as np
 import tqdm
@@ -41,6 +42,7 @@ flags.DEFINE_float('eval_temperature', 0, 'Evaluation temperature')
 flags.DEFINE_float('eval_gaussian', None, 'Evaluation Gaussian noise')
 flags.DEFINE_integer('video_episodes', 2, 'Number of video episodes for each task')
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for video')
+flags.DEFINE_string('eval_on_cpu', 1, 'Whether to evaluate on CPU')
 
 config_flags.DEFINE_config_file('agent', 'algos/gciql.py', lock_config=False)
 
@@ -128,6 +130,10 @@ def main(_):
             train_logger.log(train_metrics, step=i)
 
         if i == 1 or i % FLAGS.eval_interval == 0:
+            if FLAGS.eval_on_cpu:
+                eval_agent = jax.device_put(agent, device=jax.devices('cpu')[0])
+            else:
+                eval_agent = agent
             renders = []
             eval_metrics = {}
             overall_metrics = defaultdict(list)
@@ -135,7 +141,7 @@ def main(_):
             for task_idx in tqdm.trange(num_tasks):
                 task_name = env.task_infos[task_idx]['task_name']
                 eval_info, trajs, cur_renders = evaluate(
-                    agent=agent,
+                    agent=eval_agent,
                     env=env,
                     task_idx=task_idx,
                     config=config,
