@@ -94,8 +94,7 @@ def main(_):
 
             agent_ob = np.concatenate([ob[2:], subgoal_dir])
             action = actor_fn(agent_ob, temperature=0)
-            # action = action + np.random.normal(0, FLAGS.noise, action.shape)
-            action = np.random.normal(0, FLAGS.noise, action.shape)
+            action = action + np.random.normal(0, FLAGS.noise, action.shape)
             action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated

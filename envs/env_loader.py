@@ -1,6 +1,7 @@
 import os
 import platform
 
+import h5py
 import numpy as np
 
 from envs.antmaze.wrappers import AntMazeGoalWrapper
@@ -42,7 +43,18 @@ def truncate_dataset(dataset, ratio, return_both=False):
         return trunc_dataset
 
 
-def make_env_and_dataset(env_name):
+def get_hdf5_dataset(dataset_path, obs_dtype=np.float32):
+    file = h5py.File(dataset_path, 'r')
+
+    dataset = dict()
+    for k in ['observations', 'actions', 'next_observations', 'terminals']:
+        dtype = obs_dtype if 'observation' in k else np.float32
+        dataset[k] = file[k][...].astype(dtype)
+
+    return Dataset.create(**dataset)
+
+
+def make_env_and_dataset(env_name, dataset_path=None):
     if 'antmaze' in env_name:
         env = d4rl_utils.make_env(env_name)
         env = AntMazeGoalWrapper(env)
@@ -61,6 +73,12 @@ def make_env_and_dataset(env_name):
             'observations': dataset['observations'][:, :30],
             'next_observations': dataset['next_observations'][:, :30],
         })
+    elif 'quadmaze' in env_name:
+        import gymnasium
+        import envs.locomaze  # noqa
+
+        env = gymnasium.make(env_name, render_mode='rgb_array', width=200, height=200)
+        dataset = get_hdf5_dataset(dataset_path)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
 

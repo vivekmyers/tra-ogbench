@@ -70,7 +70,7 @@ def main(_):
     config = FLAGS.agent
     agent_class = algos[config.agent_name]
 
-    env, train_dataset, val_dataset = make_env_and_dataset(FLAGS.env_name)
+    env, train_dataset, val_dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.dataset_path)
 
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
@@ -146,9 +146,11 @@ def main(_):
                     eval_gaussian=FLAGS.eval_gaussian,
                 )
                 renders.extend(cur_renders)
-                eval_metrics.update({f'evaluation/{task_name}_{k}': v for k, v in eval_info.items()})
+                metric_names = ['success']
+                eval_metrics.update({f'evaluation/{task_name}_{k}': v for k, v in eval_info.items() if k in metric_names})
                 for k, v in eval_info.items():
-                    overall_metrics[k].append(v)
+                    if k in metric_names:
+                        overall_metrics[k].append(v)
             for k, v in overall_metrics.items():
                 eval_metrics[f'evaluation/overall_{k}'] = np.mean(v)
 
