@@ -134,7 +134,7 @@ class HGCDataset(GCDataset):
         # Set low actor goals
         final_state_idxs = self.terminal_locs[np.searchsorted(self.terminal_locs, idxs)]
         low_goal_idxs = np.minimum(idxs + self.config['subgoal_steps'], final_state_idxs)
-        batch['low_actor_goals'] = jax.tree_map(lambda arr: arr[low_goal_idxs], self.dataset['observations'])
+        batch['low_actor_goals'] = jax.tree_util.tree_map(lambda arr: arr[low_goal_idxs], self.dataset['observations'])
 
         # Sample high actor goals and prediction targets
         if self.config['actor_geom_sample']:
@@ -152,8 +152,8 @@ class HGCDataset(GCDataset):
         high_goal_idxs = np.where(pick_random, high_random_goal_idxs, high_traj_goal_idxs)
         high_target_idxs = np.where(pick_random, high_random_target_idxs, high_traj_target_idxs)
 
-        batch['high_actor_goals'] = jax.tree_map(lambda arr: arr[high_goal_idxs], self.dataset['observations'])
-        batch['high_actor_targets'] = jax.tree_map(lambda arr: arr[high_target_idxs], self.dataset['observations'])
+        batch['high_actor_goals'] = jax.tree_util.tree_map(lambda arr: arr[high_goal_idxs], self.dataset['observations'])
+        batch['high_actor_targets'] = jax.tree_util.tree_map(lambda arr: arr[high_target_idxs], self.dataset['observations'])
 
         if self.config['p_aug'] is not None and not evaluation:
             if np.random.rand() < self.config['p_aug']:
