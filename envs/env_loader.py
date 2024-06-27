@@ -105,8 +105,11 @@ def make_online_env(env_name, eval=False):
             raise ValueError(f'Unknown environment: {env_name}')
 
         if env_name.endswith('-xy'):
-            from envs.locomotion.wrappers import XYWrapper
-            env = XYWrapper(env, resample_interval=500 if eval else (100 if 'ant' in env_name else 200))
+            from envs.locomotion.wrappers import GymXYWrapper, DMCHumanoidXYWrapper
+            if 'ant' in env_name or 'gymhum' in env_name:
+                env = GymXYWrapper(env, resample_interval=500 if eval else (100 if 'ant' in env_name else 200))
+            else:
+                env = DMCHumanoidXYWrapper(env, resample_interval=500 if eval else 200)
 
         env = EpisodeMonitor(env)
     else:
