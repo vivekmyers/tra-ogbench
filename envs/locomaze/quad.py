@@ -55,8 +55,6 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
 
         return observation, 0., False, False, {
             'xy': self.get_xy(),
-            'qpos': self.data.qpos.copy(),
-            'qvel': self.data.qvel.copy(),
         }
 
     def _get_obs(self):

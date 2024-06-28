@@ -28,7 +28,14 @@ flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
 
 
 def main(_):
-    env = gymnasium.make(FLAGS.env_name, render_mode='rgb_array', width=200, height=200, terminate_at_goal=False)
+    env = gymnasium.make(
+        FLAGS.env_name,
+        render_mode='rgb_array',
+        width=200,
+        height=200,
+        terminate_at_goal=False,
+        max_episode_steps=1001,
+    )
     ob_dim = 27
 
     restore_path = FLAGS.restore_path
@@ -58,7 +65,8 @@ def main(_):
     dataset = defaultdict(list)
 
     total_steps = 0
-    for _ in trange(FLAGS.num_episodes):
+    num_episodes = FLAGS.num_episodes * 11 // 10
+    for _ in trange(num_episodes):
         if FLAGS.dataset_type == 'standard':
             valid_init_cells = []
             valid_goal_cells = []
@@ -102,10 +110,7 @@ def main(_):
 
             dataset['observations'].append(ob)
             dataset['actions'].append(action)
-            dataset['next_observations'].append(next_ob)
             dataset['terminals'].append(done)
-            dataset['infos/qpos'].append(info['qpos'])
-            dataset['infos/qvel'].append(info['qvel'])
 
             ob = next_ob
             step += 1
@@ -113,11 +118,18 @@ def main(_):
         total_steps += step
 
     print('Total steps:', total_steps)
-    file = h5py.File(FLAGS.save_path, 'w')
-    for k in dataset:
-        dataset[k] = np.array(dataset[k], dtype=np.float32 if k != 'terminals' else bool)
-    for k in dataset:
-        file.create_dataset(k, data=dataset[k], compression='gzip')
+
+    train_path = FLAGS.save_path.replace('.hdf5', '-train.hdf5')
+    val_path = FLAGS.save_path.replace('.hdf5', '-val.hdf5')
+
+    split = total_steps * 10 // 11
+    train_dataset = {k: np.array(v[:split], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
+    val_dataset = {k: np.array(v[split:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
+
+    for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
+        file = h5py.File(path, 'w')
+        for k in dataset:
+            file.create_dataset(k, data=dataset[k], compression='gzip')
 
 
 if __name__ == '__main__':

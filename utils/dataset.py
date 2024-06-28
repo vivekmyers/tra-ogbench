@@ -7,12 +7,11 @@ import jax.numpy as jnp
 import numpy as np
 from flax.core import freeze
 from flax.core.frozen_dict import FrozenDict
-from jax import tree_util
 
 
 def get_size(data):
-    sizes = tree_util.tree_map(lambda arr: len(arr), data)
-    return max(tree_util.tree_leaves(sizes))
+    sizes = jax.tree_util.tree_map(lambda arr: len(arr), data)
+    return max(jax.tree_util.tree_leaves(sizes))
 
 
 @partial(jax.jit, static_argnames=('padding',))
@@ -30,22 +29,33 @@ class Dataset(FrozenDict):
     @classmethod
     def create(cls, freeze=True, **fields):
         data = fields
-        # Force freeze
+        assert 'observations' in data
         if freeze:
-            tree_util.tree_map(lambda arr: arr.setflags(write=False), data)
+            jax.tree_util.tree_map(lambda arr: arr.setflags(write=False), data)
         return cls(data)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.size = get_size(self._dict)
+        if 'valids' in self._dict:
+            self.valid_idxs, = np.nonzero(self['valids'] > 0)
+
+    def get_random_idxs(self, num_idxs):
+        if 'valids' in self._dict:
+            return self.valid_idxs[np.random.randint(len(self.valid_idxs), size=num_idxs)]
+        else:
+            return np.random.randint(self.size, size=num_idxs)
 
     def sample(self, batch_size: int, idxs=None):
         if idxs is None:
-            idxs = np.random.randint(self.size, size=batch_size)
+            idxs = self.get_random_idxs(batch_size)
         return self.get_subset(idxs)
 
     def get_subset(self, idxs):
-        return tree_util.tree_map(lambda arr: arr[idxs], self._dict)
+        result = jax.tree_util.tree_map(lambda arr: arr[idxs], self._dict)
+        if 'next_observations' not in result:
+            result['next_observations'] = self._dict['observations'][np.minimum(idxs + 1, self.size - 1)]
+        return result
 
 
 @dataclasses.dataclass
@@ -71,7 +81,7 @@ class GCDataset:
         batch_size = len(idxs)
 
         # Random goals
-        random_goal_idxs = np.random.randint(self.size, size=batch_size)
+        random_goal_idxs = self.dataset.get_random_idxs(batch_size)
 
         # Goals from the same trajectory (excluding the current state, unless it is the final state)
         final_state_idxs = self.terminal_locs[np.searchsorted(self.terminal_locs, idxs)]
@@ -90,7 +100,7 @@ class GCDataset:
 
     def sample(self, batch_size: int, idxs=None, evaluation=False):
         if idxs is None:
-            idxs = np.random.randint(self.dataset.size - 1, size=batch_size)
+            idxs = self.dataset.get_random_idxs(batch_size)
 
         batch = self.dataset.sample(batch_size, idxs)
 
@@ -107,11 +117,6 @@ class GCDataset:
             if np.random.rand() < self.config['p_aug']:
                 self.augment(batch, ['observations', 'next_observations', 'value_goals', 'actor_goals'])
 
-        if isinstance(batch['value_goals'], FrozenDict):
-            # Freeze the other observations
-            batch['observations'] = freeze(batch['observations'])
-            batch['next_observations'] = freeze(batch['next_observations'])
-
         return batch
 
 
@@ -119,7 +124,7 @@ class GCDataset:
 class HGCDataset(GCDataset):
     def sample(self, batch_size: int, idxs=None, evaluation=False):
         if idxs is None:
-            idxs = np.random.randint(self.dataset.size - 1, size=batch_size)
+            idxs = self.dataset.get_random_idxs(batch_size)
 
         batch = self.dataset.sample(batch_size, idxs)
 
@@ -145,7 +150,7 @@ class HGCDataset(GCDataset):
             high_traj_goal_idxs = np.round((np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))).astype(int)
         high_traj_target_idxs = np.minimum(idxs + self.config['subgoal_steps'], high_traj_goal_idxs)
 
-        high_random_goal_idxs = np.random.randint(self.dataset.size, size=batch_size)
+        high_random_goal_idxs = self.dataset.get_random_idxs(batch_size)
         high_random_target_idxs = np.minimum(idxs + self.config['subgoal_steps'], final_state_idxs)
 
         pick_random = (np.random.rand(batch_size) < self.config['actor_p_randomgoal'])
@@ -159,11 +164,6 @@ class HGCDataset(GCDataset):
             if np.random.rand() < self.config['p_aug']:
                 self.augment(batch, ['observations', 'next_observations', 'value_goals', 'low_actor_goals', 'high_actor_goals', 'high_actor_targets'])
 
-        if isinstance(batch['value_goals'], FrozenDict):
-            # Freeze the other observations
-            batch['observations'] = freeze(batch['observations'])
-            batch['next_observations'] = freeze(batch['next_observations'])
-
         return batch
 
 
@@ -174,7 +174,7 @@ class ReplayBuffer(Dataset):
             example = np.array(example)
             return np.zeros((size, *example.shape), dtype=example.dtype)
 
-        buffer_dict = tree_util.tree_map(create_buffer, transition)
+        buffer_dict = jax.tree_util.tree_map(create_buffer, transition)
         return cls(buffer_dict)
 
     @classmethod
@@ -184,7 +184,7 @@ class ReplayBuffer(Dataset):
             buffer[: len(init_buffer)] = init_buffer
             return buffer
 
-        buffer_dict = tree_util.tree_map(create_buffer, init_dataset)
+        buffer_dict = jax.tree_util.tree_map(create_buffer, init_dataset)
         dataset = cls(buffer_dict)
         dataset.size = dataset.pointer = get_size(init_dataset)
         return dataset
@@ -200,7 +200,7 @@ class ReplayBuffer(Dataset):
         def set_idx(buffer, new_element):
             buffer[self.pointer] = new_element
 
-        tree_util.tree_map(set_idx, self._dict, transition)
+        jax.tree_util.tree_map(set_idx, self._dict, transition)
         self.pointer = (self.pointer + 1) % self.max_size
         self.size = max(self.pointer, self.size)
 

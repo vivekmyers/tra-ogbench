@@ -43,15 +43,28 @@ def truncate_dataset(dataset, ratio, return_both=False):
         return trunc_dataset
 
 
-def get_hdf5_dataset(dataset_path, obs_dtype=np.float32):
-    file = h5py.File(dataset_path, 'r')
+def get_dataset(dataset_path, obs_dtype=np.float32):
+    train_path = dataset_path.replace('.hdf5', '-train.hdf5')
+    val_path = dataset_path.replace('.hdf5', '-val.hdf5')
+    train_dataset = dict()
+    val_dataset = dict()
+    for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
+        file = h5py.File(path, 'r')
 
-    dataset = dict()
-    for k in ['observations', 'actions', 'next_observations', 'terminals']:
-        dtype = obs_dtype if 'observation' in k else np.float32
-        dataset[k] = file[k][...].astype(dtype)
+        for k in ['observations', 'actions', 'terminals']:
+            dtype = obs_dtype if 'observation' in k else np.float32
+            dataset[k] = file[k][...].astype(dtype)
 
-    return Dataset.create(**dataset)
+        # Since the dataset doesn't contain next_observations, we need to invalidate the last state of each trajectory
+        # so that we can safely get next_observations[t] by using observations[t + 1].
+        dataset['valids'] = 1.0 - dataset['terminals']
+        new_terminals = np.concatenate([dataset['terminals'][1:], [1.0]])
+        dataset['terminals'] = np.minimum(dataset['terminals'] + new_terminals, 1.0)
+        # Now, we have the following:
+        # terminals: [0, 0, ..., 0, 1, 1, 0, 0, 0, ..., 0, 1, 1, 0, 0, ..., 1, 1]
+        # valids   : [1, 1, ..., 1, 1, 0, 1, 1, 1, ..., 1, 0, 1, 1, 1, ..., 1, 0]
+
+    return Dataset.create(**train_dataset), Dataset.create(**val_dataset)
 
 
 def make_env_and_dataset(env_name, dataset_path=None):
@@ -59,6 +72,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
         env = d4rl_utils.make_env(env_name)
         env = AntMazeGoalWrapper(env)
         dataset = d4rl_utils.get_dataset(env, env_name)
+        train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'kitchen' in env_name:
         # HACK: Monkey patching to make it compatible with Python 3.10.
         import collections
@@ -73,17 +87,17 @@ def make_env_and_dataset(env_name, dataset_path=None):
             'observations': dataset['observations'][:, :30],
             'next_observations': dataset['next_observations'][:, :30],
         })
+        train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'quadmaze' in env_name:
         import gymnasium
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name, render_mode='rgb_array', width=200, height=200)
-        dataset = get_hdf5_dataset(dataset_path)
+        train_dataset, val_dataset = get_dataset(dataset_path)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
 
     env.reset()
-    train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
 
     return env, train_dataset, val_dataset
 

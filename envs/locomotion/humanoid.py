@@ -132,8 +132,6 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
 
         return observation, reward, False, False, {
             'xy': self.get_xy(),
-            'qpos': self.data.qpos.copy(),
-            'qvel': self.data.qvel.copy(),
         }
 
     def _step_mujoco_simulation(self, ctrl, n_frames):
