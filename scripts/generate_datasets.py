@@ -19,7 +19,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('run_group', 'Debug', 'Run group')
 flags.DEFINE_integer('seed', 0, 'Random seed')
 flags.DEFINE_string('env_name', 'quadmaze-large-v0', 'Environment name')
-flags.DEFINE_string('dataset_type', 'standard', 'Dataset type')
+flags.DEFINE_string('dataset_type', 'path', 'Dataset type')
 flags.DEFINE_string('restore_path', None, 'Expert agent paht')
 flags.DEFINE_integer('restore_epoch', None, 'Expert agent paht')
 flags.DEFINE_string('save_path', None, 'Save path')
@@ -62,38 +62,39 @@ def main(_):
     agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
     actor_fn = supply_rng(agent.sample_actions, rng=agent.rng)
 
+    all_cells = []
+    vertex_cells = []
+    maze_map = env.unwrapped.maze_map
+
+    for i in range(maze_map.shape[0]):
+        for j in range(maze_map.shape[1]):
+            if maze_map[i, j] == 0:
+                all_cells.append((i, j))
+
+                # Exclude hallway cells
+                if maze_map[i - 1, j] == 0 and maze_map[i + 1, j] == 0 and maze_map[i, j - 1] == 1 and maze_map[i, j + 1] == 1:
+                    continue
+                if maze_map[i, j - 1] == 0 and maze_map[i, j + 1] == 0 and maze_map[i - 1, j] == 1 and maze_map[i + 1, j] == 1:
+                    continue
+
+                vertex_cells.append((i, j))
+
     dataset = defaultdict(list)
 
     total_steps = 0
-    num_episodes = FLAGS.num_episodes * 11 // 10
-    for _ in trange(num_episodes):
-        if FLAGS.dataset_type == 'standard':
-            valid_init_cells = []
-            valid_goal_cells = []
-            maze_map = env.unwrapped.maze_map
-
-            for i in range(maze_map.shape[0]):
-                for j in range(maze_map.shape[1]):
-                    if maze_map[i, j] == 0:
-                        valid_init_cells.append((i, j))
-
-                        # Exclude hallway cells
-                        if maze_map[i - 1, j] == 0 and maze_map[i + 1, j] == 0 and maze_map[i, j - 1] == 1 and maze_map[i, j + 1] == 1:
-                            continue
-                        if maze_map[i, j - 1] == 0 and maze_map[i, j + 1] == 0 and maze_map[i - 1, j] == 1 and maze_map[i + 1, j] == 1:
-                            continue
-
-                        valid_goal_cells.append((i, j))
-
-            init_ij = valid_init_cells[np.random.randint(len(valid_init_cells))]
-            goal_ij = valid_goal_cells[np.random.randint(len(valid_goal_cells))]
+    total_train_steps = 0
+    num_train_episodes = FLAGS.num_episodes
+    num_val_episodes = FLAGS.num_episodes // 10
+    for i in trange(num_train_episodes + num_val_episodes):
+        if FLAGS.dataset_type in ['path', 'play']:
+            init_ij = all_cells[np.random.randint(len(all_cells))]
+            goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
             ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
         else:
             ob, _ = env.reset()
 
         done = False
         step = 0
-        success = False
 
         while not done:
             subgoal_xy = env.unwrapped.get_oracle_subgoal()
@@ -106,7 +107,12 @@ def main(_):
             action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
-            success = success or info['success']
+            success = info['success']
+
+            if success and FLAGS.dataset_type == 'play':
+                # Resample a new goal
+                goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
+                env.unwrapped.set_goal(goal_ij)
 
             dataset['observations'].append(ob)
             dataset['actions'].append(action)
@@ -116,15 +122,16 @@ def main(_):
             step += 1
 
         total_steps += step
+        if i < num_train_episodes:
+            total_train_steps += step
 
     print('Total steps:', total_steps)
 
     train_path = FLAGS.save_path.replace('.hdf5', '-train.hdf5')
     val_path = FLAGS.save_path.replace('.hdf5', '-val.hdf5')
 
-    split = total_steps * 10 // 11
-    train_dataset = {k: np.array(v[:split], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
-    val_dataset = {k: np.array(v[split:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
+    train_dataset = {k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
+    val_dataset = {k: np.array(v[total_train_steps:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
 
     for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
         file = h5py.File(path, 'w')

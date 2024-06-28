@@ -1,6 +1,5 @@
 import tempfile
 import xml.etree.ElementTree as ET
-from copy import deepcopy
 
 import numpy as np
 
@@ -52,14 +51,15 @@ def make_maze_env(loco_env_type, *args, **kwargs):
                     # [(1, 1), (3, 10)],
                     # [(7, 4), (5, 2)],
                     # [(6, 4), (3, 10)],
+
                     [(1, 1), (7, 10)],
                     [(5, 4), (7, 1)],
-                    [(1, 1), (3, 10)],
-                    [(7, 4), (1, 10)],
-                    [(7, 1), (3, 10)],
+                    # [(1, 1), (3, 10)],
+                    # [(7, 4), (1, 10)],
+                    # [(7, 1), (3, 10)],
                     [(3, 8), (5, 4)],
-                    [(7, 10), (5, 1)],
-                    [(3, 8), (1, 1)],
+                    # [(7, 10), (5, 1)],
+                    # [(3, 8), (1, 1)],
                     [(1, 1), (5, 4)],
                 ]
             else:
@@ -164,6 +164,9 @@ def make_maze_env(loco_env_type, *args, **kwargs):
                 info['success'] = False
 
             return ob, reward, terminated, truncated, info
+
+        def set_goal(self, goal_ij):
+            self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
 
         def get_oracle_subgoal(self):
             # Run BFS to find the next subgoal
