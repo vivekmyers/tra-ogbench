@@ -57,12 +57,6 @@ def evaluate(
     for i in trange(num_eval_episodes + num_video_episodes):
         traj = defaultdict(list)
 
-        # if task_idx is not None:
-        #     observation, info = env.reset(task_idx=task_idx)
-        #     goal = info['goal']
-        # else:
-        #     observation, info = env.reset()
-        #     goal = None
         observation, info = env.reset(options=dict(task_idx=task_idx))
         goal = info.get('goal')
         done = False
