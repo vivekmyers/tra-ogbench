@@ -75,6 +75,7 @@ def make_maze_env(loco_env_type, *args, **kwargs):
             )
             self._offset_x = 4
             self._offset_y = 4
+            self._noise = 1
             for i in range(self.maze_map.shape[0]):
                 for j in range(self.maze_map.shape[1]):
                     struct = self.maze_map[i, j]
@@ -206,8 +207,8 @@ def make_maze_env(loco_env_type, *args, **kwargs):
             return x, y
 
         def _add_noise(self, xy):
-            random_x = np.random.uniform(low=-1, high=1) * self._maze_unit / 4
-            random_y = np.random.uniform(low=-1, high=1) * self._maze_unit / 4
+            random_x = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
+            random_y = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
             return xy[0] + random_x, xy[1] + random_y
 
     return MazeEnv(*args, **kwargs)

@@ -25,6 +25,7 @@ flags.DEFINE_integer('restore_epoch', None, 'Expert agent paht')
 flags.DEFINE_string('save_path', None, 'Save path')
 flags.DEFINE_float('noise', 0.2, 'Action noise')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
+flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 
 
 def main(_):
@@ -34,7 +35,7 @@ def main(_):
         width=200,
         height=200,
         terminate_at_goal=False,
-        max_episode_steps=1001,
+        max_episode_steps=FLAGS.max_episode_steps,
     )
     ob_dim = 27
 
@@ -85,10 +86,38 @@ def main(_):
     total_train_steps = 0
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
-    for i in trange(num_train_episodes + num_val_episodes):
+    for ep_idx in trange(num_train_episodes + num_val_episodes):
         if FLAGS.dataset_type in ['path', 'play']:
             init_ij = all_cells[np.random.randint(len(all_cells))]
             goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
+            ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
+        elif FLAGS.dataset_type == 'random':
+            init_ij = all_cells[np.random.randint(len(all_cells))]
+            goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
+            env.unwrapped._noise = 2
+            ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
+        elif FLAGS.dataset_type == 'stitch':
+            init_ij = all_cells[np.random.randint(len(all_cells))]
+
+            adj_cells = []
+            adj_steps = 4
+            bfs_map = maze_map.copy()
+            for i in range(bfs_map.shape[0]):
+                for j in range(bfs_map.shape[1]):
+                    bfs_map[i][j] = -1
+            bfs_map[init_ij[0], init_ij[1]] = 0
+            queue = [init_ij]
+            while len(queue) > 0:
+                i, j = queue.pop(0)
+                for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+                    ni, nj = i + di, j + dj
+                    if 0 <= ni < bfs_map.shape[0] and 0 <= nj < bfs_map.shape[1] and maze_map[ni, nj] == 0 and bfs_map[ni, nj] == -1:
+                        bfs_map[ni][nj] = bfs_map[i][j] + 1
+                        queue.append((ni, nj))
+                        if bfs_map[ni][nj] == adj_steps:
+                            adj_cells.append((ni, nj))
+
+            goal_ij = adj_cells[np.random.randint(len(adj_cells))]
             ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
         else:
             ob, _ = env.reset()
@@ -102,8 +131,11 @@ def main(_):
             subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
 
             agent_ob = np.concatenate([ob[2:], subgoal_dir])
-            action = actor_fn(agent_ob, temperature=0)
-            action = action + np.random.normal(0, FLAGS.noise, action.shape)
+            if FLAGS.dataset_type == 'random':
+                action = env.action_space.sample()
+            else:
+                action = actor_fn(agent_ob, temperature=0)
+                action = action + np.random.normal(0, FLAGS.noise, action.shape)
             action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
@@ -122,7 +154,7 @@ def main(_):
             step += 1
 
         total_steps += step
-        if i < num_train_episodes:
+        if ep_idx < num_train_episodes:
             total_train_steps += step
 
     print('Total steps:', total_steps)
