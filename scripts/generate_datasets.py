@@ -126,7 +126,7 @@ def main(_):
         step = 0
 
         while not done:
-            subgoal_xy = env.unwrapped.get_oracle_subgoal()
+            subgoal_xy, _ = env.unwrapped.get_oracle_subgoal(env.unwrapped.get_xy(), env.unwrapped.cur_goal_xy)
             subgoal_dir = subgoal_xy - ob[:2]
             subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
 
