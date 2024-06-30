@@ -7,6 +7,18 @@ register(
     max_episode_steps=1000,
     kwargs=dict(
         loco_env_type='quad',
+        maze_env_type='maze',
         maze_type='large',
+    )
+)
+
+register(
+    id='quadball-medium-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='quad',
+        maze_env_type='ball',
+        maze_type='medium',
     )
 )

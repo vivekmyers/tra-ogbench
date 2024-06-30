@@ -2,12 +2,13 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 import numpy as np
+from gymnasium.spaces import Box
 
 from envs.locomaze.quad import QuadEnv
 from envs.locomaze.humanoid import HumanoidEnv
 
 
-def make_maze_env(loco_env_type, *args, **kwargs):
+def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
     if loco_env_type == 'quad':
         loco_env_class = QuadEnv
     elif loco_env_type == 'humanoid':
@@ -18,7 +19,7 @@ def make_maze_env(loco_env_type, *args, **kwargs):
     class MazeEnv(loco_env_class):
         def __init__(
                 self,
-                maze_type,
+                maze_type='large',
                 maze_unit=4.0,
                 maze_height=0.5,
                 terminate_at_goal=True,
@@ -30,11 +31,21 @@ def make_maze_env(loco_env_type, *args, **kwargs):
             self._maze_height = maze_height
             self._terminate_at_goal = terminate_at_goal
 
-            xml_file = self.xml_file
-            tree = ET.parse(xml_file)
-            worldbody = tree.find('.//worldbody')
-
-            if self._maze_type == 'large':
+            if self._maze_type == 'medium':
+                maze_map = [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 1, 1, 0, 0, 1],
+                    [1, 0, 0, 1, 0, 0, 0, 1],
+                    [1, 1, 0, 0, 0, 1, 1, 1],
+                    [1, 0, 0, 1, 0, 0, 0, 1],
+                    [1, 0, 1, 0, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 1, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1]
+                ]
+                tasks = [
+                    [(1, 1), (6, 6)],
+                ]
+            elif self._maze_type == 'large':
                 maze_map = [
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
@@ -47,19 +58,14 @@ def make_maze_env(loco_env_type, *args, **kwargs):
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ]
                 tasks = [
-                    # [(1, 1), (7, 9)],
-                    # [(1, 1), (3, 10)],
-                    # [(7, 4), (5, 2)],
-                    # [(6, 4), (3, 10)],
-
                     [(1, 1), (7, 10)],
                     [(5, 4), (7, 1)],
-                    [(1, 1), (3, 10)],
+                    # [(1, 1), (3, 10)],
                     [(7, 4), (1, 10)],
-                    [(7, 1), (3, 10)],
+                    # [(7, 1), (3, 10)],
                     [(3, 8), (5, 4)],
-                    [(7, 10), (5, 1)],
-                    [(3, 8), (1, 1)],
+                    # [(7, 10), (5, 1)],
+                    # [(3, 8), (1, 1)],
                     [(1, 1), (5, 4)],
                 ]
             else:
@@ -67,15 +73,44 @@ def make_maze_env(loco_env_type, *args, **kwargs):
 
             self.maze_map = np.array(maze_map)
 
-            ET.SubElement(
-                tree.find('.//asset'),
-                'material',
-                name='wall',
-                rgba='0.6 0.6 0.6 1',
-            )
             self._offset_x = 4
             self._offset_y = 4
             self._noise = 1
+
+            xml_file = self.xml_file
+            tree = ET.parse(xml_file)
+            self.update_tree(tree)
+            _, maze_xml_file = tempfile.mkstemp(text=True, suffix='.xml')
+            tree.write(maze_xml_file)
+
+            super().__init__(xml_file=maze_xml_file, *args, **kwargs)
+
+            self.task_infos = []
+            for i, task in enumerate(tasks):
+                self.task_infos.append(dict(
+                    task_name=f'task{i + 1}',
+                    init_ij=task[0],
+                    init_xy=self._ij_to_xy(task[0]),
+                    goal_ij=task[1],
+                    goal_xy=self._ij_to_xy(task[1]),
+                ))
+            self.num_tasks = len(self.task_infos)
+            self.cur_task_idx = None
+            self.cur_task_info = None
+            self.cur_goal_xy = np.zeros(2)
+
+            # Set up camera
+            if self.render_mode == 'rgb_array':
+                self.reset()
+                self.render()
+                self.mujoco_renderer.viewer.cam.lookat[0] = 2 * (self.maze_map.shape[1] - 3)
+                self.mujoco_renderer.viewer.cam.lookat[1] = 2 * (self.maze_map.shape[0] - 3)
+                self.mujoco_renderer.viewer.cam.distance = 50
+                self.mujoco_renderer.viewer.cam.elevation = -90
+
+        def update_tree(self, tree):
+            worldbody = tree.find('.//worldbody')
+
             for i in range(self.maze_map.shape[0]):
                 for j in range(self.maze_map.shape[1]):
                     struct = self.maze_map[i, j]
@@ -91,34 +126,6 @@ def make_maze_env(loco_env_type, *args, **kwargs):
                             conaffinity='1',
                             material='wall',
                         )
-
-            _, maze_xml_file = tempfile.mkstemp(text=True, suffix='.xml')
-            tree.write(maze_xml_file)
-
-            QuadEnv.__init__(self, xml_file=maze_xml_file, *args, **kwargs)
-
-            self.task_infos = []
-            for i, task in enumerate(tasks):
-                self.task_infos.append(dict(
-                    task_name=f'task{i + 1}',
-                    init_ij=task[0],
-                    init_xy=self._ij_to_xy(task[0]),
-                    goal_ij=task[1],
-                    goal_xy=self._ij_to_xy(task[1]),
-                ))
-            self.num_tasks = len(self.task_infos)
-            self.cur_task_idx = None
-            self.cur_task_info = None
-            self.cur_goal_xy = None
-
-            # Set up camera
-            if self._maze_type == 'large' and self.render_mode == 'rgb_array':
-                self.reset()
-                self.render()
-                self.mujoco_renderer.viewer.cam.lookat[0] = 18
-                self.mujoco_renderer.viewer.cam.lookat[1] = 12
-                self.mujoco_renderer.viewer.cam.distance = 50
-                self.mujoco_renderer.viewer.cam.elevation = -90
 
         def reset(self, options=None, *args, **kwargs):
             goal_ob, _ = super().reset(*args, **kwargs)
@@ -211,4 +218,85 @@ def make_maze_env(loco_env_type, *args, **kwargs):
             random_y = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
             return xy[0] + random_x, xy[1] + random_y
 
-    return MazeEnv(*args, **kwargs)
+    class BallEnv(MazeEnv):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+            # TODO: Make two versions
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 2,), dtype=np.float64)
+
+        def update_tree(self, tree):
+            super().update_tree(tree)
+
+            worldbody = tree.find('.//worldbody')
+            ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 3')
+            ET.SubElement(ball, 'freejoint', name='ball_root')
+            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6', friction='.7 .005 .005', solref='-10000 -30')
+            ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
+
+        def reset(self, options=None, *args, **kwargs):
+            ob, info = super(MazeEnv, self).reset(*args, **kwargs)
+
+            all_cells = []
+            for i in range(self.maze_map.shape[0]):
+                for j in range(self.maze_map.shape[1]):
+                    if self.maze_map[i, j] == 0:
+                        all_cells.append((i, j))
+            agent_init_idx, ball_init_idx, goal_idx = np.random.choice(len(all_cells), 3, replace=False)
+            agent_init_xy = self._add_noise(self._ij_to_xy(all_cells[agent_init_idx]))
+            ball_init_xy = self._add_noise(self._ij_to_xy(all_cells[ball_init_idx]))
+            goal_xy = self._add_noise(self._ij_to_xy(all_cells[goal_idx]))
+
+            self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
+            ob = self._get_obs()
+            self.cur_goal_xy = goal_xy
+
+            return ob, info
+
+        def step(self, action):
+            ob, reward, terminated, truncated, info = super(MazeEnv, self).step(action)
+
+            if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= 0.5:
+                if self._terminate_at_goal:
+                    terminated = True
+                info['success'] = True
+            else:
+                info['success'] = False
+
+            agent_xy, ball_xy = self.get_agent_ball_xy()
+            goal_xy = self.cur_goal_xy
+            agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
+            ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
+            maze_size = ((self.maze_map.shape[0] - 2) ** 2 + (self.maze_map.shape[1] - 2) ** 2) ** 0.5 * self._maze_unit
+            agent_ball_reward = max(1 - max(agent_ball_dist - 1, 0) / maze_size, 0)
+            ball_goal_reward = max(1 - max(ball_goal_dist - 0.5, 0) / maze_size, 0)
+            reward = agent_ball_reward * (0.5 + ball_goal_reward * 0.5)
+
+            return ob, reward, terminated, truncated, info
+
+        def set_goal(self, goal_ij):
+            self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
+
+        def get_agent_ball_xy(self):
+            agent_xy = self.data.qpos[:2].copy()
+            ball_xy = self.data.qpos[-7:-5].copy()
+
+            return agent_xy, ball_xy
+
+        def set_agent_ball_xy(self, agent_xy, ball_xy):
+            qpos = self.data.qpos.copy()
+            qvel = self.data.qvel.copy()
+            qpos[:2] = agent_xy
+            qpos[-7:-5] = ball_xy
+            self.set_state(qpos, qvel)
+
+        def _get_obs(self):
+            ob = super()._get_obs()
+            return np.concatenate([ob, self.cur_goal_xy])
+
+    if maze_env_type == 'maze':
+        return MazeEnv(*args, **kwargs)
+    elif maze_env_type == 'ball':
+        return BallEnv(*args, **kwargs)
+    else:
+        raise ValueError(f'Unknown maze environment type: {maze_env_type}')

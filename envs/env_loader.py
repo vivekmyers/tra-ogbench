@@ -1,12 +1,48 @@
+import collections
 import os
 import platform
+import time
 
+import gymnasium
 import h5py
 import numpy as np
 
-from envs.antmaze.wrappers import AntMazeGoalWrapper
-from envs.d4rl import d4rl_utils
 from utils.dataset import Dataset
+
+
+class EpisodeMonitor(gymnasium.ActionWrapper):
+    def __init__(self, env):
+        super().__init__(env)
+        self._reset_stats()
+        self.total_timesteps = 0
+
+    def _reset_stats(self):
+        self.reward_sum = 0.0
+        self.episode_length = 0
+        self.start_time = time.time()
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+
+        self.reward_sum += reward
+        self.episode_length += 1
+        self.total_timesteps += 1
+        info['total'] = {'timesteps': self.total_timesteps}
+
+        if terminated or truncated:
+            info['episode'] = {}
+            info['episode']['return'] = self.reward_sum
+            info['episode']['length'] = self.episode_length
+            info['episode']['duration'] = time.time() - self.start_time
+
+            if hasattr(self, 'get_normalized_score'):
+                info['episode']['normalized_return'] = self.get_normalized_score(info['episode']['return']) * 100.0
+
+        return observation, reward, terminated, truncated, info
+
+    def reset(self, *args, **kwargs):
+        self._reset_stats()
+        return self.env.reset(*args, **kwargs)
 
 
 def setup_egl():
@@ -69,13 +105,15 @@ def get_dataset(dataset_path, obs_dtype=np.float32):
 
 def make_env_and_dataset(env_name, dataset_path=None):
     if 'antmaze' in env_name:
+        from envs.d4rl import d4rl_utils
+        from envs.antmaze.wrappers import AntMazeGoalWrapper
         env = d4rl_utils.make_env(env_name)
         env = AntMazeGoalWrapper(env)
         dataset = d4rl_utils.get_dataset(env, env_name)
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'kitchen' in env_name:
         # HACK: Monkey patching to make it compatible with Python 3.10.
-        import collections
+        from envs.d4rl import d4rl_utils
         if not hasattr(collections, 'Mapping'):
             collections.Mapping = collections.abc.Mapping
 
@@ -105,7 +143,6 @@ def make_env_and_dataset(env_name, dataset_path=None):
 def make_online_env(env_name, eval=False):
     if 'ant' in env_name or 'gymhum' in env_name or 'humanoid' in env_name:
         import envs.locomotion  # noqa
-        from envs.d4rl.d4rl_utils import EpisodeMonitor
         import gymnasium
 
         if 'ant' in env_name:
@@ -125,6 +162,12 @@ def make_online_env(env_name, eval=False):
             else:
                 env = DMCHumanoidXYWrapper(env, resample_interval=500 if eval else 200)
 
+        env = EpisodeMonitor(env)
+    elif 'quadball' in env_name:
+        import gymnasium
+        import envs.locomaze  # noqa
+
+        env = gymnasium.make(env_name, render_mode='rgb_array', width=400, height=400)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
