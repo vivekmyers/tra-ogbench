@@ -264,9 +264,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def reset(self, options=None, *args, **kwargs):
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
 
-            agent_init_xy = np.array([12, 12]) + np.random.uniform(low=-1, high=1, size=2)
-            ball_init_xy = np.array([12, 12]) + np.random.uniform(low=-2, high=2, size=2)
-            goal_xy = np.array([12, 12]) + np.random.uniform(low=-12, high=12, size=2)
+            agent_init_xy = np.array([10, 10]) + np.random.uniform(low=-1, high=1, size=2)
+            ball_init_xy = np.array([10, 10]) + np.random.uniform(low=-2, high=2, size=2)
+            goal_xy = np.array([10, 10]) + np.random.uniform(low=-12, high=12, size=2)
 
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
             ob = self._get_obs()
