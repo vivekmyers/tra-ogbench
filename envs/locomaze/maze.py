@@ -224,37 +224,40 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
             # TODO: Make two versions
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 4,), dtype=np.float64)
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 2,), dtype=np.float64)
 
         def update_tree(self, tree):
-            super().update_tree(tree)
+            # super().update_tree(tree)
 
             worldbody = tree.find('.//worldbody')
             ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 3')
             ET.SubElement(ball, 'freejoint', name='ball_root')
-            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6', friction='.7 .005 .005', solref='-10000 -30')
+            # ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6', friction='.7 .05 .05', solref='-10000 -30')
+            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6')
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
         def reset(self, options=None, *args, **kwargs):
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
 
-            all_cells = []
-            for i in range(self.maze_map.shape[0]):
-                for j in range(self.maze_map.shape[1]):
-                    if self.maze_map[i, j] == 0:
-                        all_cells.append((i, j))
-            init_ij = all_cells[np.random.randint(len(all_cells))]
+            # all_cells = []
+            # for i in range(self.maze_map.shape[0]):
+            #     for j in range(self.maze_map.shape[1]):
+            #         if self.maze_map[i, j] == 0:
+            #             all_cells.append((i, j))
+            # init_ij = all_cells[np.random.randint(len(all_cells))]
+            init_ij = 1, 1
             agent_init_xy = self._add_noise(self._ij_to_xy(init_ij))
 
             self._noise = 2
             ball_init_xy = self._add_noise(self._ij_to_xy(init_ij))
             self._noise = 1
 
-            adj_cells = []
-            for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
-                ni, nj = init_ij[0] + di, init_ij[1] + dj
-                if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0:
-                    adj_cells.append((ni, nj))
+            # adj_cells = []
+            # for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+            #     ni, nj = init_ij[0] + di, init_ij[1] + dj
+            #     if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0:
+            #         adj_cells.append((ni, nj))
+            adj_cells = [(0, 1), (1, 0), (2, 1), (1, 2)]
             goal_ij = adj_cells[np.random.randint(len(adj_cells))]
             goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
 
@@ -288,7 +291,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # agent_subgoal_dir, ball_subgoal_dir = ob[-4:-2], ob[-2:]
             # reward = np.dot(agent_subgoal_dir, agent_xy - prev_agent_xy) + np.dot(ball_subgoal_dir, ball_xy - prev_ball_xy) * 2
-            reward = -(ball_goal_dist + agent_ball_dist)
+            reward = -(ball_goal_dist + agent_ball_dist) + 7.5
 
             return ob, reward, terminated, truncated, info
 
@@ -331,7 +334,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             #     ball_subgoal_dir = np.zeros(2)
             #
             # return np.concatenate([ob, self.cur_goal_xy, agent_subgoal_dir, ball_subgoal_dir])
-            return np.concatenate([ob, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])
+            return np.concatenate([ob[2:], ball_xy - agent_xy, np.array(self.cur_goal_xy) - agent_xy])
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)
