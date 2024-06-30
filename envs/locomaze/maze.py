@@ -32,7 +32,21 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self._maze_height = maze_height
             self._terminate_at_goal = terminate_at_goal
 
-            if self._maze_type == 'medium':
+            if self._maze_type == 'arena':
+                maze_map = [
+                    [1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1]
+                ]
+                tasks = [
+                    [(1, 1), (6, 6)],
+                ]
+            elif self._maze_type == 'medium':
                 maze_map = [
                     [1, 1, 1, 1, 1, 1, 1, 1],
                     [1, 0, 0, 1, 1, 0, 0, 1],
@@ -127,6 +141,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                             conaffinity='1',
                             material='wall',
                         )
+            ET.SubElement(worldbody, 'geom', name='target', type='cylinder', size='.4 .05', pos='0 0 .05', material='target')
 
         def reset(self, options=None, *args, **kwargs):
             goal_ob, _ = super().reset(*args, **kwargs)
@@ -156,7 +171,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             self.set_xy(init_xy)
             ob = self._get_obs()
-            self.cur_goal_xy = goal_xy
+            self.set_goal(goal_xy=goal_xy)
             goal_ob = np.concatenate([goal_xy, goal_ob[2:]])
             info['goal'] = goal_ob
 
@@ -168,14 +183,18 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             if np.linalg.norm(self.get_xy() - self.cur_goal_xy) <= 0.5:
                 if self._terminate_at_goal:
                     terminated = True
-                info['success'] = True
+                info['success'] = 1.0
             else:
-                info['success'] = False
+                info['success'] = 0.0
 
             return ob, reward, terminated, truncated, info
 
-        def set_goal(self, goal_ij):
-            self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
+        def set_goal(self, goal_ij=None, goal_xy=None):
+            if goal_xy is None:
+                self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
+            else:
+                self.cur_goal_xy = goal_xy
+            self.model.geom('target').pos[:2] = goal_xy
 
         def get_oracle_subgoal(self, start_xy, goal_xy):
             # Run BFS to find the next subgoal
@@ -220,50 +239,38 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             return xy[0] + random_x, xy[1] + random_y
 
     class BallEnv(MazeEnv):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, friction_type='low', *args, **kwargs):
+            self._friction_type = friction_type
+
             super().__init__(*args, **kwargs)
 
             # TODO: Make two versions
             self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
 
         def update_tree(self, tree):
-            # super().update_tree(tree)
+            super().update_tree(tree)
 
             worldbody = tree.find('.//worldbody')
             ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 3')
             ET.SubElement(ball, 'freejoint', name='ball_root')
-            # ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6', friction='.7 .05 .05', solref='-10000 -30')
-            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6')
+            friction = dict(
+                low='.7 .005 .005',
+                medium='.7 .05 .05',
+                high='1 0.5 0.5',
+            )[self._friction_type]
+            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6', friction=friction)
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
         def reset(self, options=None, *args, **kwargs):
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
 
-            # all_cells = []
-            # for i in range(self.maze_map.shape[0]):
-            #     for j in range(self.maze_map.shape[1]):
-            #         if self.maze_map[i, j] == 0:
-            #             all_cells.append((i, j))
-            # init_ij = all_cells[np.random.randint(len(all_cells))]
-            init_ij = 1, 1
-            agent_init_xy = self._add_noise(self._ij_to_xy(init_ij))
-
-            self._noise = 2
-            ball_init_xy = self._add_noise(self._ij_to_xy(init_ij))
-            self._noise = 1
-
-            # adj_cells = []
-            # for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
-            #     ni, nj = init_ij[0] + di, init_ij[1] + dj
-            #     if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0:
-            #         adj_cells.append((ni, nj))
-            adj_cells = [(0, 1), (1, 0), (2, 1), (1, 2)]
-            goal_ij = adj_cells[np.random.randint(len(adj_cells))]
-            goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
+            agent_init_xy = np.array([12, 12]) + np.random.uniform(low=-1, high=1, size=2)
+            ball_init_xy = np.array([12, 12]) + np.random.uniform(low=-2, high=2, size=2)
+            goal_xy = np.array([12, 12]) + np.random.uniform(low=-12, high=12, size=2)
 
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
             ob = self._get_obs()
-            self.cur_goal_xy = goal_xy
+            self.set_goal(goal_xy=goal_xy)
 
             return ob, info
 
@@ -278,7 +285,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= 0.5:
                 if self._terminate_at_goal:
                     terminated = True
-                info['success'] = 1.0  # TODO: bool
+                info['success'] = 1.0
             else:
                 info['success'] = 0.0
 
@@ -286,20 +293,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
             ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
 
-            # maze_size = ((self.maze_map.shape[0] - 2) ** 2 + (self.maze_map.shape[1] - 2) ** 2) ** 0.5 * self._maze_unit
-            # agent_ball_reward = max(1 - max(agent_ball_dist - 1, 0) / maze_size, 0)
-            # ball_goal_reward = max(1 - max(ball_goal_dist - 0.5, 0) / maze_size, 0)
-            # reward = agent_ball_reward * (0.5 + ball_goal_reward * 0.5)
-
-            # agent_subgoal_dir, ball_subgoal_dir = ob[-4:-2], ob[-2:]
-            # reward = np.dot(agent_subgoal_dir, agent_xy - prev_agent_xy) + np.dot(ball_subgoal_dir, ball_xy - prev_ball_xy) * 2
-            # reward = -(ball_goal_dist + agent_ball_dist) + 7.5
-            reward = ((prev_ball_goal_dist - ball_goal_dist) * 5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
+            reward = ((prev_ball_goal_dist - ball_goal_dist) * 2.5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
 
             return ob, reward, terminated, truncated, info
-
-        def set_goal(self, goal_ij):
-            self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
 
         def get_agent_ball_xy(self):
             agent_xy = self.data.qpos[:2].copy()
@@ -315,28 +311,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.set_state(qpos, qvel)
 
         def _get_obs(self):
-            ob = super()._get_obs()
-
             agent_xy, ball_xy = self.get_agent_ball_xy()
-            # goal_xy = self.cur_goal_xy
-            # agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
-            # agent_subgoal_xy, _ = self.get_oracle_subgoal(agent_xy, ball_xy)
-            # if self._xy_to_ij(agent_subgoal_xy) == self._xy_to_ij(ball_xy):
-            #     agent_subgoal_xy = ball_xy
-            # agent_subgoal_dir = agent_subgoal_xy - agent_xy
-            # agent_subgoal_dir = agent_subgoal_dir / (np.linalg.norm(agent_subgoal_dir) + 1e-6)
-            # if agent_ball_dist <= 2:
-            #     agent_subgoal_dir = np.zeros(2)
-            #
-            # ball_subgoal_xy, _ = self.get_oracle_subgoal(ball_xy, goal_xy)
-            # if self._xy_to_ij(ball_subgoal_xy) == self._xy_to_ij(goal_xy):
-            #     ball_subgoal_xy = goal_xy
-            # ball_subgoal_dir = ball_subgoal_xy - ball_xy
-            # ball_subgoal_dir = ball_subgoal_dir / (np.linalg.norm(ball_subgoal_dir) + 1e-6)
-            # if agent_ball_dist > 2:
-            #     ball_subgoal_dir = np.zeros(2)
-            #
-            # return np.concatenate([ob, self.cur_goal_xy, agent_subgoal_dir, ball_subgoal_dir])
             qpos = self.data.qpos.flat.copy()
             qvel = self.data.qvel.flat.copy()
             return np.concatenate([qpos[2:-7], qpos[-5:], qvel, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])

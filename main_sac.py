@@ -37,6 +37,7 @@ flags.DEFINE_integer('train_interval', 1, 'Train interval')
 flags.DEFINE_integer('log_interval', 1000, 'Log interval')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
 flags.DEFINE_integer('save_interval', 100000, 'Save interval')
+flags.DEFINE_integer('terminate_at_end', 0, 'Whether to set terminated=True when truncated=True')
 
 flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all)')
 flags.DEFINE_integer('eval_episodes', 50, 'Number of episodes for each task')
@@ -130,6 +131,8 @@ def main(_):
             action = agent.sample_actions(observations=ob, seed=key)
 
         next_ob, reward, terminated, truncated, info = env.step(action)
+        if FLAGS.terminate_at_end and truncated:
+            terminated = True
 
         replay_buffer.add_transition(dict(
             observations=ob,
