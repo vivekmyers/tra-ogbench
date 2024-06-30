@@ -167,7 +167,7 @@ def make_online_env(env_name, eval=False):
         import gymnasium
         import envs.locomaze  # noqa
 
-        env = gymnasium.make(env_name, render_mode='rgb_array', width=400, height=400)
+        env = gymnasium.make(env_name, render_mode='rgb_array', width=400, height=400, max_episode_steps=200)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')

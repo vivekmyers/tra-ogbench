@@ -224,7 +224,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
             # TODO: Make two versions
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 6,), dtype=np.float64)
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 2,), dtype=np.float64)
 
         def update_tree(self, tree):
             super().update_tree(tree)
@@ -243,10 +243,20 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 for j in range(self.maze_map.shape[1]):
                     if self.maze_map[i, j] == 0:
                         all_cells.append((i, j))
-            agent_init_idx, ball_init_idx, goal_idx = np.random.choice(len(all_cells), 3, replace=False)
-            agent_init_xy = self._add_noise(self._ij_to_xy(all_cells[agent_init_idx]))
-            ball_init_xy = self._add_noise(self._ij_to_xy(all_cells[ball_init_idx]))
-            goal_xy = self._add_noise(self._ij_to_xy(all_cells[goal_idx]))
+            init_ij = all_cells[np.random.randint(len(all_cells))]
+            agent_init_xy = self._add_noise(self._ij_to_xy(init_ij))
+
+            self._noise = 2
+            ball_init_xy = self._add_noise(self._ij_to_xy(init_ij))
+            self._noise = 1
+
+            adj_cells = []
+            for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
+                ni, nj = init_ij[0] + di, init_ij[1] + dj
+                if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0:
+                    adj_cells.append((ni, nj))
+            goal_ij = adj_cells[np.random.randint(len(adj_cells))]
+            goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
 
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
             ob = self._get_obs()
@@ -276,8 +286,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             # ball_goal_reward = max(1 - max(ball_goal_dist - 0.5, 0) / maze_size, 0)
             # reward = agent_ball_reward * (0.5 + ball_goal_reward * 0.5)
 
-            agent_subgoal_dir, ball_subgoal_dir = ob[-4:-2], ob[-2:]
-            reward = np.dot(agent_subgoal_dir, agent_xy - prev_agent_xy) + np.dot(ball_subgoal_dir, ball_xy - prev_ball_xy) * 2
+            # agent_subgoal_dir, ball_subgoal_dir = ob[-4:-2], ob[-2:]
+            # reward = np.dot(agent_subgoal_dir, agent_xy - prev_agent_xy) + np.dot(ball_subgoal_dir, ball_xy - prev_ball_xy) * 2
+            reward = -ball_goal_dist
 
             return ob, reward, terminated, truncated, info
 
@@ -301,25 +312,26 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             ob = super()._get_obs()
 
             agent_xy, ball_xy = self.get_agent_ball_xy()
-            goal_xy = self.cur_goal_xy
-            agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
-            agent_subgoal_xy, _ = self.get_oracle_subgoal(agent_xy, ball_xy)
-            if self._xy_to_ij(agent_subgoal_xy) == self._xy_to_ij(ball_xy):
-                agent_subgoal_xy = ball_xy
-            agent_subgoal_dir = agent_subgoal_xy - agent_xy
-            agent_subgoal_dir = agent_subgoal_dir / (np.linalg.norm(agent_subgoal_dir) + 1e-6)
-            if agent_ball_dist <= 2:
-                agent_subgoal_dir = np.zeros(2)
-
-            ball_subgoal_xy, _ = self.get_oracle_subgoal(ball_xy, goal_xy)
-            if self._xy_to_ij(ball_subgoal_xy) == self._xy_to_ij(goal_xy):
-                ball_subgoal_xy = goal_xy
-            ball_subgoal_dir = ball_subgoal_xy - ball_xy
-            ball_subgoal_dir = ball_subgoal_dir / (np.linalg.norm(ball_subgoal_dir) + 1e-6)
-            if agent_ball_dist > 2:
-                ball_subgoal_dir = np.zeros(2)
-
-            return np.concatenate([ob, self.cur_goal_xy, agent_subgoal_dir, ball_subgoal_dir])
+            # goal_xy = self.cur_goal_xy
+            # agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
+            # agent_subgoal_xy, _ = self.get_oracle_subgoal(agent_xy, ball_xy)
+            # if self._xy_to_ij(agent_subgoal_xy) == self._xy_to_ij(ball_xy):
+            #     agent_subgoal_xy = ball_xy
+            # agent_subgoal_dir = agent_subgoal_xy - agent_xy
+            # agent_subgoal_dir = agent_subgoal_dir / (np.linalg.norm(agent_subgoal_dir) + 1e-6)
+            # if agent_ball_dist <= 2:
+            #     agent_subgoal_dir = np.zeros(2)
+            #
+            # ball_subgoal_xy, _ = self.get_oracle_subgoal(ball_xy, goal_xy)
+            # if self._xy_to_ij(ball_subgoal_xy) == self._xy_to_ij(goal_xy):
+            #     ball_subgoal_xy = goal_xy
+            # ball_subgoal_dir = ball_subgoal_xy - ball_xy
+            # ball_subgoal_dir = ball_subgoal_dir / (np.linalg.norm(ball_subgoal_dir) + 1e-6)
+            # if agent_ball_dist > 2:
+            #     ball_subgoal_dir = np.zeros(2)
+            #
+            # return np.concatenate([ob, self.cur_goal_xy, agent_subgoal_dir, ball_subgoal_dir])
+            return np.concatenate([ob, np.array(self.cur_goal_xy) - ball_xy])
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)
