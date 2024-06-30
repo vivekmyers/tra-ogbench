@@ -44,6 +44,7 @@ flags.DEFINE_float('eval_temperature', 0, 'Evaluation temperature')
 flags.DEFINE_float('eval_gaussian', None, 'Evaluation Gaussian noise')
 flags.DEFINE_integer('video_episodes', 2, 'Number of video episodes for each task')
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for video')
+flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU')
 
 config_flags.DEFINE_config_file('agent', 'algos/sac.py', lock_config=False)
 
@@ -160,9 +161,13 @@ def main(_):
             train_logger.log(train_metrics, step=i)
 
         if i % FLAGS.eval_interval == 0:
+            if FLAGS.eval_on_cpu:
+                eval_agent = jax.device_put(agent, device=jax.devices('cpu')[0])
+            else:
+                eval_agent = agent
             eval_metrics = {}
             eval_info, trajs, renders = evaluate(
-                agent=agent,
+                agent=eval_agent,
                 env=eval_env,
                 task_idx=None,
                 config=config,
