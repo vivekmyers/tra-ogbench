@@ -224,7 +224,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
             # TODO: Make two versions
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 2,), dtype=np.float64)
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 4,), dtype=np.float64)
 
         def update_tree(self, tree):
             super().update_tree(tree)
@@ -288,7 +288,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # agent_subgoal_dir, ball_subgoal_dir = ob[-4:-2], ob[-2:]
             # reward = np.dot(agent_subgoal_dir, agent_xy - prev_agent_xy) + np.dot(ball_subgoal_dir, ball_xy - prev_ball_xy) * 2
-            reward = -ball_goal_dist
+            reward = -(ball_goal_dist + agent_ball_dist)
 
             return ob, reward, terminated, truncated, info
 
@@ -331,7 +331,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             #     ball_subgoal_dir = np.zeros(2)
             #
             # return np.concatenate([ob, self.cur_goal_xy, agent_subgoal_dir, ball_subgoal_dir])
-            return np.concatenate([ob, np.array(self.cur_goal_xy) - ball_xy])
+            return np.concatenate([ob, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)
