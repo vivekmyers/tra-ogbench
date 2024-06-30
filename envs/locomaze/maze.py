@@ -224,7 +224,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
             # TODO: Make two versions
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0] + 2,), dtype=np.float64)
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
 
         def update_tree(self, tree):
             # super().update_tree(tree)
@@ -269,18 +269,20 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
         def step(self, action):
             prev_agent_xy, prev_ball_xy = self.get_agent_ball_xy()
+            goal_xy = self.cur_goal_xy
+            prev_agent_ball_dist = np.linalg.norm(prev_agent_xy - prev_ball_xy)
+            prev_ball_goal_dist = np.linalg.norm(prev_ball_xy - goal_xy)
 
             ob, reward, terminated, truncated, info = super(MazeEnv, self).step(action)
 
             if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= 0.5:
                 if self._terminate_at_goal:
                     terminated = True
-                info['success'] = True
+                info['success'] = 1.0  # TODO: bool
             else:
-                info['success'] = False
+                info['success'] = 0.0
 
             agent_xy, ball_xy = self.get_agent_ball_xy()
-            goal_xy = self.cur_goal_xy
             agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
             ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
 
@@ -291,7 +293,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # agent_subgoal_dir, ball_subgoal_dir = ob[-4:-2], ob[-2:]
             # reward = np.dot(agent_subgoal_dir, agent_xy - prev_agent_xy) + np.dot(ball_subgoal_dir, ball_xy - prev_ball_xy) * 2
-            reward = -(ball_goal_dist + agent_ball_dist) + 7.5
+            # reward = -(ball_goal_dist + agent_ball_dist) + 7.5
+            reward = ((prev_ball_goal_dist - ball_goal_dist) * 5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
 
             return ob, reward, terminated, truncated, info
 
@@ -334,7 +337,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             #     ball_subgoal_dir = np.zeros(2)
             #
             # return np.concatenate([ob, self.cur_goal_xy, agent_subgoal_dir, ball_subgoal_dir])
-            return np.concatenate([ob[2:], ball_xy - agent_xy, np.array(self.cur_goal_xy) - agent_xy])
+            qpos = self.data.qpos.flat.copy()
+            qvel = self.data.qvel.flat.copy()
+            return np.concatenate([qpos[2:-7], qpos[-5:], qvel, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)
