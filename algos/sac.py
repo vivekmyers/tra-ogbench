@@ -22,7 +22,10 @@ class SACAgent(flax.struct.PyTreeNode):
         next_actions, next_log_probs = next_dist.sample_and_log_prob(seed=rng)
 
         next_qs = self.network.select('target_critic')(batch['next_observations'], next_actions)
-        next_q = jnp.min(next_qs, axis=0)
+        if self.config['min_q']:
+            next_q = jnp.min(next_qs, axis=0)
+        else:
+            next_q = jnp.mean(next_qs, axis=0)
 
         target_q = batch['rewards'] + self.config['discount'] * batch['masks'] * next_q
         target_q = target_q - self.config['discount'] * batch['masks'] * next_log_probs * self.network.select('alpha')()
@@ -43,7 +46,10 @@ class SACAgent(flax.struct.PyTreeNode):
         actions, log_probs = dist.sample_and_log_prob(seed=rng)
 
         qs = self.network.select('critic')(batch['observations'], actions)
-        q = jnp.min(qs, axis=0)
+        if self.config['min_q']:
+            q = jnp.min(qs, axis=0)
+        else:
+            q = jnp.mean(qs, axis=0)
 
         actor_loss = (log_probs * self.network.select('alpha')() - q).mean()
 
@@ -192,5 +198,6 @@ def get_config():
         tanh_squash=True,
         state_dependent_std=True,
         actor_fc_scale=0.01,
+        min_q=True,  # Use min or mean for target critic value
     ))
     return config

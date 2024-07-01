@@ -34,9 +34,11 @@ flags.DEFINE_integer('restore_epoch', None, 'Restore epoch')
 flags.DEFINE_integer('seed_steps', 10000, 'Number of seed steps')
 flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps')
 flags.DEFINE_integer('train_interval', 1, 'Train interval')
+flags.DEFINE_integer('num_epochs', 1, 'Number of updates per train interval')
 flags.DEFINE_integer('log_interval', 1000, 'Log interval')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
 flags.DEFINE_integer('save_interval', 100000, 'Save interval')
+flags.DEFINE_integer('reset_interval', None, 'Full parameter reset interval')
 flags.DEFINE_integer('terminate_at_end', 0, 'Whether to set terminated=True when truncated=True')
 
 flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all)')
@@ -151,8 +153,9 @@ def main(_):
             continue
 
         if i % FLAGS.train_interval == 0:
-            batch = replay_buffer.sample(config.batch_size)
-            agent, update_info = agent.update(batch)
+            for _ in range(FLAGS.num_epochs):
+                batch = replay_buffer.sample(config.batch_size)
+                agent, update_info = agent.update(batch)
 
         if i % FLAGS.log_interval == 0 and update_info is not None:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
@@ -202,6 +205,14 @@ def main(_):
             print(f'Saving to {fname}')
             with open(fname, 'wb') as f:
                 pickle.dump(save_dict, f)
+
+        if FLAGS.reset_interval is not None and i % FLAGS.reset_interval == 0:
+            agent = agent_class.create(
+                FLAGS.seed,
+                example_transition['observations'],
+                example_transition['actions'],
+                config,
+            )
     train_logger.close()
     eval_logger.close()
 
