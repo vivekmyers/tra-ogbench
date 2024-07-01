@@ -158,9 +158,9 @@ def make_online_env(env_name, eval=False):
         if env_name.endswith('-xy'):
             from envs.locomotion.wrappers import GymXYWrapper, DMCHumanoidXYWrapper
             if 'ant' in env_name or 'gymhum' in env_name:
-                env = GymXYWrapper(env, resample_interval=500 if eval else (100 if 'ant' in env_name else 200))
+                env = GymXYWrapper(env, resample_interval=100 if 'ant' in env_name else 200)
             else:
-                env = DMCHumanoidXYWrapper(env, resample_interval=500 if eval else 200)
+                env = DMCHumanoidXYWrapper(env, resample_interval=200)
 
         env = EpisodeMonitor(env)
     elif 'quadball' in env_name:

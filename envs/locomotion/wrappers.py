@@ -55,7 +55,7 @@ class DMCHumanoidXYWrapper(GymXYWrapper):
         upright = tolerance(torso_upright, bounds=(0.9, float('inf')), margin=1.9, sigmoid='linear', value_at_margin=0)
         stand_reward = standing * upright
 
-        reward = stand_reward * (next_xy - cur_xy).dot(self.z)
+        reward = stand_reward * (1 + (next_xy - cur_xy).dot(self.z) * 5)
         info['xy'] = next_xy
         info['direction'] = self.z
 
