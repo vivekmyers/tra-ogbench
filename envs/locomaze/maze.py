@@ -239,9 +239,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             return xy[0] + random_x, xy[1] + random_y
 
     class BallEnv(MazeEnv):
-        def __init__(self, friction_type='low', *args, **kwargs):
-            self._friction_type = friction_type
-
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
             # TODO: Make two versions
@@ -253,12 +251,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             worldbody = tree.find('.//worldbody')
             ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 3')
             ET.SubElement(ball, 'freejoint', name='ball_root')
-            friction = dict(
-                low='.7 .005 .005',
-                medium='.7 .05 .05',
-                high='1 0.5 0.5',
-            )[self._friction_type]
-            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6', friction=friction)
+            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6')
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
         def reset(self, options=None, *args, **kwargs):
