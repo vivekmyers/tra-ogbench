@@ -94,7 +94,7 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
     def __init__(
             self,
             xml_file=None,
-            task='walk',
+            task='run',
             **kwargs,
     ):
         if xml_file is None:
