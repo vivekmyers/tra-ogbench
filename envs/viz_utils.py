@@ -1,5 +1,5 @@
 import matplotlib
-import matplotlib.pyplot as plt
+from matplotlib import figure
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
@@ -20,7 +20,7 @@ def get_2d_colors(points, min_point, max_point):
 
 
 def visualize_trajs(env_name, trajs):
-    fig = plt.figure(tight_layout=True)
+    fig = figure.Figure(tight_layout=True)
     canvas = FigureCanvas(fig)
     if env_name in ['ant-xy', 'gymhum-xy', 'humanoid-xy']:
         ax = fig.add_subplot()
@@ -40,7 +40,7 @@ def visualize_trajs(env_name, trajs):
     else:
         return None
 
-    plt.tight_layout()
+    fig.tight_layout()
     canvas.draw()
     out_image = np.frombuffer(canvas.tostring_rgb(), dtype='uint8')
     out_image = out_image.reshape(fig.canvas.get_width_height()[::-1] + (3,))
