@@ -179,8 +179,9 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
             dont_move = tolerance(horizontal_velocity, margin=2).mean()
             return small_control * stand_reward * dont_move
         else:
-            com_velocity = np.linalg.norm(center_of_mass_velocity[[0, 1]])
-            move = tolerance(com_velocity, bounds=(self._move_speed, float('inf')), margin=self._move_speed, value_at_margin=0, sigmoid='linear')
+            # com_velocity = np.linalg.norm(center_of_mass_velocity[[0, 1]])
+            # move = tolerance(com_velocity, bounds=(self._move_speed, float('inf')), margin=self._move_speed, value_at_margin=0, sigmoid='linear')
+            move = center_of_mass_velocity[0]
             move = (5 * move + 1) / 6
             return small_control * stand_reward * move
 
