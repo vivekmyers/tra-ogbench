@@ -35,8 +35,8 @@ class EpisodeMonitor(gymnasium.ActionWrapper):
             info['episode']['length'] = self.episode_length
             info['episode']['duration'] = time.time() - self.start_time
 
-            if hasattr(self, 'get_normalized_score'):
-                info['episode']['normalized_return'] = self.get_normalized_score(info['episode']['return']) * 100.0
+            if hasattr(self.unwrapped, 'get_normalized_score'):
+                info['episode']['normalized_return'] = self.unwrapped.get_normalized_score(info['episode']['return']) * 100.0
 
         return observation, reward, terminated, truncated, info
 

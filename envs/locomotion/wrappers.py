@@ -49,8 +49,8 @@ class DMCHumanoidXYWrapper(GymXYWrapper):
         next_xy = self.unwrapped.data.qpos[:2].copy()
         self.num_steps += 1
 
-        head_height = self.data.xpos[2, 2]  # ['head', 'z']
-        torso_upright = self.data.xmat[1, 8]  # ['torso', 'zz']
+        head_height = self.unwrapped.data.xpos[2, 2]  # ['head', 'z']
+        torso_upright = self.unwrapped.data.xmat[1, 8]  # ['torso', 'zz']
         standing = tolerance(head_height, bounds=(1.4, float('inf')), margin=1.4 / 4)
         upright = tolerance(torso_upright, bounds=(0.9, float('inf')), margin=1.9, sigmoid='linear', value_at_margin=0)
         stand_reward = standing * upright

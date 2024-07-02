@@ -38,7 +38,7 @@ flags.DEFINE_integer('num_epochs', 1, 'Number of updates per train interval')
 flags.DEFINE_integer('log_interval', 1000, 'Log interval')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
 flags.DEFINE_integer('save_interval', 100000, 'Save interval')
-flags.DEFINE_integer('reset_interval', None, 'Full parameter reset interval')
+flags.DEFINE_integer('reset_interval', 0, 'Full parameter reset interval')
 flags.DEFINE_integer('terminate_at_end', 0, 'Whether to set terminated=True when truncated=True')
 
 flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all)')
@@ -206,13 +206,15 @@ def main(_):
             with open(fname, 'wb') as f:
                 pickle.dump(save_dict, f)
 
-        if FLAGS.reset_interval is not None and i % FLAGS.reset_interval == 0:
-            agent = agent_class.create(
-                FLAGS.seed,
+        if FLAGS.reset_interval > 0 and i % FLAGS.reset_interval == 0:
+            new_agent = agent_class.create(
+                FLAGS.seed + i,
                 example_transition['observations'],
                 example_transition['actions'],
                 config,
             )
+            agent = agent.replace(network=agent.network.replace(params=new_agent.network.params, opt_state=new_agent.network.opt_state))
+            del new_agent
     train_logger.close()
     eval_logger.close()
 
