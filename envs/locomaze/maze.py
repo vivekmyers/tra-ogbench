@@ -208,7 +208,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
             else:
                 self.cur_goal_xy = goal_xy
-            # self.model.geom('target').pos[:2] = goal_xy
+            self.model.geom('target').pos[:2] = goal_xy
 
         def get_oracle_subgoal(self, start_xy, goal_xy):
             # Run BFS to find the next subgoal
