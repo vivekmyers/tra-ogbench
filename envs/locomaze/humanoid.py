@@ -110,17 +110,20 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
             self.model.opt.disableflags = old_bitmask
 
     def reset_model(self):
-        quat = self.np_random.uniform(size=4)
-        quat /= np.linalg.norm(quat)
-        self.data.qpos[3:7] = quat
-        self.data.qvel = self.init_qvel
+        penetrating = True
+        while penetrating:
+            quat = self.np_random.uniform(size=4)
+            quat /= np.linalg.norm(quat)
+            self.data.qpos[3:7] = quat
+            self.data.qvel = 0.1 * self.np_random.standard_normal(self.model.nv)
 
-        for joint_id in range(1, self.model.njnt):
-            range_min, range_max = self.model.jnt_range[joint_id]
-            self.data.qpos[6 + joint_id] = self.np_random.uniform(range_min, range_max)
+            for joint_id in range(1, self.model.njnt):
+                range_min, range_max = self.model.jnt_range[joint_id]
+                self.data.qpos[6 + joint_id] = self.np_random.uniform(range_min, range_max)
 
-        with self.disable('actuation'):
-            mujoco.mj_forward(self.model, self.data)
+            with self.disable('actuation'):
+                mujoco.mj_forward(self.model, self.data)
+            penetrating = self.data.ncon > 0
 
         observation = self._get_obs()
 
