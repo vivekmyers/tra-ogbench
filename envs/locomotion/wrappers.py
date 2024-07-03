@@ -51,11 +51,18 @@ class DMCHumanoidXYWrapper(GymXYWrapper):
 
         head_height = self.unwrapped.data.xpos[2, 2]  # ['head', 'z']
         torso_upright = self.unwrapped.data.xmat[1, 8]  # ['torso', 'zz']
+        center_of_mass_velocity = self.unwrapped.data.sensordata[0:3]  # ['torso_subtreelinvel']
+        control = self.unwrapped.data.ctrl.copy()
+
         standing = tolerance(head_height, bounds=(1.4, float('inf')), margin=1.4 / 4)
         upright = tolerance(torso_upright, bounds=(0.9, float('inf')), margin=1.9, sigmoid='linear', value_at_margin=0)
         stand_reward = standing * upright
+        small_control = tolerance(control, margin=1, value_at_margin=0, sigmoid='quadratic').mean()
+        small_control = (4 + small_control) / 5
+        move = center_of_mass_velocity[0:2].dot(self.z)
+        move = (5 * move + 1) / 6
+        reward = small_control * stand_reward * move
 
-        reward = stand_reward * (1 + (next_xy - cur_xy).dot(self.z) * 100)
         info['xy'] = next_xy
         info['direction'] = self.z
 
