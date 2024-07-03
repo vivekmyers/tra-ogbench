@@ -31,3 +31,23 @@ register(
         maze_type='medium',
     )
 )
+register(
+    id='humanoidmaze-medium-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='humanoid',
+        maze_env_type='maze',
+        maze_type='medium',
+    )
+)
+register(
+    id='humanoidmaze-large-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='humanoid',
+        maze_env_type='maze',
+        maze_type='large',
+    )
+)

@@ -37,7 +37,7 @@ def main(_):
         terminate_at_goal=False,
         max_episode_steps=FLAGS.max_episode_steps,
     )
-    ob_dim = 27
+    ob_dim = env.observation_space.shape[0] - 2
 
     restore_path = FLAGS.restore_path
     candidates = glob.glob(restore_path)
@@ -149,6 +149,8 @@ def main(_):
             dataset['observations'].append(ob)
             dataset['actions'].append(action)
             dataset['terminals'].append(done)
+            dataset['infos/qpos'].append(info['prev_qpos'])
+            dataset['infos/qvel'].append(info['prev_qvel'])
 
             ob = next_ob
             step += 1

@@ -16,7 +16,7 @@
         <material name="self" rgba=".7 .5 .3 1" />
         <material name="wall" rgba=".6 .6 .6 1" />
         <material name="ball" texture="ball" />
-        <material name="target" rgba=".6 .3 .3 1"/>
+        <material name="target" rgba=".6 .3 .3 1" />
     </asset>
 
     <worldbody>

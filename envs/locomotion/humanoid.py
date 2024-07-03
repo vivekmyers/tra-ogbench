@@ -204,7 +204,6 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
     def reset_model(self):
         penetrating = True
         while penetrating:
-            # quat = self.np_random.normal(size=4)  # This is the only difference from DMC Humanoid. DMC uses np_random.uniform (which is incorrect).
             quat = self.np_random.uniform(size=4)
             quat /= np.linalg.norm(quat)
             self.data.qpos[3:7] = quat

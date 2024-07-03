@@ -59,6 +59,10 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 ]
                 tasks = [
                     [(1, 1), (6, 6)],
+                    [(6, 1), (1, 6)],
+                    [(5, 3), (4, 2)],
+                    [(6, 5), (6, 1)],
+                    [(2, 6), (1, 1)],
                 ]
             elif self._maze_type == 'large':
                 maze_map = [
@@ -141,7 +145,17 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                             conaffinity='1',
                             material='wall',
                         )
-            ET.SubElement(worldbody, 'geom', name='target', type='cylinder', size='.4 .05', pos='0 0 .05', material='target')
+            ET.SubElement(
+                worldbody,
+                'geom',
+                name='target',
+                type='cylinder',
+                size='.4 .05',
+                pos='0 0 .05',
+                material='target',
+                contype='0',
+                conaffinity='0',
+            )
 
         def reset(self, options=None, *args, **kwargs):
             goal_ob, _ = super().reset(*args, **kwargs)
@@ -194,7 +208,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
             else:
                 self.cur_goal_xy = goal_xy
-            self.model.geom('target').pos[:2] = goal_xy
+            # self.model.geom('target').pos[:2] = goal_xy
 
         def get_oracle_subgoal(self, start_xy, goal_xy):
             # Run BFS to find the next subgoal

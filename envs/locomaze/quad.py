@@ -30,9 +30,7 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
 
         self._reset_noise_scale = reset_noise_scale
 
-        obs_shape = 29
-
-        observation_space = Box(low=-np.inf, high=np.inf, shape=(obs_shape,), dtype=np.float64)
+        observation_space = Box(low=-np.inf, high=np.inf, shape=(29,), dtype=np.float64)
 
         MujocoEnv.__init__(
             self,
