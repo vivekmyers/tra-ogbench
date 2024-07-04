@@ -22,6 +22,17 @@ register(
     )
 )
 register(
+    id=f'quadball-arena-online-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='quad',
+        maze_env_type='ball',
+        maze_type='arena',
+        mode='online',
+    )
+)
+register(
     id='quadball-medium-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
@@ -29,6 +40,17 @@ register(
         loco_env_type='quad',
         maze_env_type='ball',
         maze_type='medium',
+    )
+)
+register(
+    id='quadball-medium-online-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='quad',
+        maze_env_type='ball',
+        maze_type='medium',
+        mode='online',
     )
 )
 register(

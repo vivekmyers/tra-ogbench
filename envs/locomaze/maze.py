@@ -43,9 +43,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 0, 0, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1]
                 ]
-                tasks = [
-                    [(1, 1), (6, 6)],
-                ]
             elif self._maze_type == 'medium':
                 maze_map = [
                     [1, 1, 1, 1, 1, 1, 1, 1],
@@ -56,13 +53,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 1, 0, 0, 1, 0, 1],
                     [1, 0, 0, 0, 1, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1]
-                ]
-                tasks = [
-                    [(1, 1), (6, 6)],
-                    [(6, 1), (1, 6)],
-                    [(5, 3), (4, 2)],
-                    [(6, 5), (6, 1)],
-                    [(2, 6), (1, 1)],
                 ]
             elif self._maze_type == 'large':
                 maze_map = [
@@ -75,17 +65,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1],
                     [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                ]
-                tasks = [
-                    [(1, 1), (7, 10)],
-                    [(5, 4), (7, 1)],
-                    # [(1, 1), (3, 10)],
-                    [(7, 4), (1, 10)],
-                    # [(7, 1), (3, 10)],
-                    [(3, 8), (5, 4)],
-                    # [(7, 10), (5, 1)],
-                    # [(3, 8), (1, 1)],
-                    [(1, 1), (5, 4)],
                 ]
             else:
                 raise ValueError(f'Unknown maze type: {self._maze_type}')
@@ -104,18 +83,11 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             super().__init__(xml_file=maze_xml_file, *args, **kwargs)
 
-            self.task_infos = []
-            for i, task in enumerate(tasks):
-                self.task_infos.append(dict(
-                    task_name=f'task{i + 1}',
-                    init_ij=task[0],
-                    init_xy=self._ij_to_xy(task[0]),
-                    goal_ij=task[1],
-                    goal_xy=self._ij_to_xy(task[1]),
-                ))
-            self.num_tasks = len(self.task_infos)
+            self.task_infos = None
+            self.num_tasks = None
             self.cur_task_idx = None
             self.cur_task_info = None
+            self.set_tasks()
             self.cur_goal_xy = np.zeros(2)
 
             # Set up camera
@@ -156,6 +128,45 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 contype='0',
                 conaffinity='0',
             )
+
+        def set_tasks(self):
+            if self._maze_type == 'arena':
+                tasks = [
+                    [(1, 1), (6, 6)],
+                ]
+            elif self._maze_type == 'medium':
+                tasks = [
+                    [(1, 1), (6, 6)],
+                    [(6, 1), (1, 6)],
+                    [(5, 3), (4, 2)],
+                    [(6, 5), (6, 1)],
+                    [(2, 6), (1, 1)],
+                ]
+            elif self._maze_type == 'large':
+                tasks = [
+                    [(1, 1), (7, 10)],
+                    [(5, 4), (7, 1)],
+                    # [(1, 1), (3, 10)],
+                    [(7, 4), (1, 10)],
+                    # [(7, 1), (3, 10)],
+                    [(3, 8), (5, 4)],
+                    # [(7, 10), (5, 1)],
+                    # [(3, 8), (1, 1)],
+                    [(1, 1), (5, 4)],
+                ]
+            else:
+                raise ValueError(f'Unknown maze type: {self._maze_type}')
+
+            self.task_infos = []
+            for i, task in enumerate(tasks):
+                self.task_infos.append(dict(
+                    task_name=f'task{i + 1}',
+                    init_ij=task[0],
+                    init_xy=self._ij_to_xy(task[0]),
+                    goal_ij=task[1],
+                    goal_xy=self._ij_to_xy(task[1]),
+                ))
+            self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):
             goal_ob, _ = super().reset(*args, **kwargs)
@@ -253,11 +264,19 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             return xy[0] + random_x, xy[1] + random_y
 
     class BallEnv(MazeEnv):
-        def __init__(self, *args, **kwargs):
+        def __init__(self, mode='offline', *args, **kwargs):
+            self._mode = mode
+
             super().__init__(*args, **kwargs)
 
-            # TODO: Make two versions
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
+            if mode == 'offline':
+                # [qpos, qvel]
+                self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
+            elif mode == 'online':
+                # [qpos (without agent xy and ball xy), qvel, ball_xy - agent_xy, goal_xy - ball_xy]
+                self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
+            else:
+                raise ValueError(f'Unknown mode: {mode}')
 
         def update_tree(self, tree):
             super().update_tree(tree)
@@ -268,16 +287,74 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6')
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
+        def set_tasks(self):
+            if self._maze_type == 'arena':
+                tasks = [
+                    [(2, 2), (5, 5), (2, 2)],
+                    [(6, 1), (2, 3), (6, 6)],
+                    [(1, 6), (2, 3), (5, 2)],
+                    [(6, 6), (1, 1), (6, 1)],
+                    [(4, 6), (6, 2), (1, 6)],
+                ]
+            elif self._maze_type == 'medium':
+                raise NotImplementedError
+            else:
+                raise ValueError(f'Unknown maze type: {self._maze_type}')
+
+            self.task_infos = []
+            for i, task in enumerate(tasks):
+                self.task_infos.append(dict(
+                    task_name=f'task{i + 1}',
+                    agent_init_ij=task[0],
+                    agent_init_xy=self._ij_to_xy(task[0]),
+                    ball_init_ij=task[1],
+                    ball_init_xy=self._ij_to_xy(task[1]),
+                    goal_ij=task[2],
+                    goal_xy=self._ij_to_xy(task[2])
+                ))
+            self.num_tasks = len(self.task_infos)
+
         def reset(self, options=None, *args, **kwargs):
+            goal_ob, _ = super(MazeEnv, self).reset(*args, **kwargs)
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
 
-            agent_init_xy = np.array([10, 10]) + np.random.uniform(low=-1, high=1, size=2)
-            ball_init_xy = np.array([10, 10]) + np.random.uniform(low=-2, high=2, size=2)
-            goal_xy = np.array([10, 10]) + np.random.uniform(low=-12, high=12, size=2)
+            if self._mode == 'offline':
+                if options is not None:
+                    # Set either task_idx or (agent_init_ij, ball_init_ij, and goal_ij)
+                    task_idx = options.pop('task_idx', None)
+                    agent_init_ij = options.pop('agent_init_ij', None)
+                    ball_init_ij = options.pop('ball_init_ij', None)
+                    goal_ij = options.pop('goal_ij', None)
+                else:
+                    task_idx = None
+                    agent_init_ij = None
+                    ball_init_ij = None
+                    goal_ij = None
+
+                if agent_init_ij is not None and ball_init_ij is not None and goal_ij is not None:
+                    agent_init_xy = self._add_noise(self._ij_to_xy(agent_init_ij))
+                    ball_init_xy = self._add_noise(self._ij_to_xy(ball_init_ij))
+                    goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
+                else:
+                    if task_idx is None:
+                        task_idx = np.random.randint(self.num_tasks)
+                    self.cur_task_idx = task_idx
+                    self.cur_task_info = self.task_infos[task_idx]
+
+                    agent_init_xy = self._add_noise(self.cur_task_info['agent_init_xy'])
+                    ball_init_xy = self._add_noise(self.cur_task_info['ball_init_xy'])
+                    goal_xy = self._add_noise(self.cur_task_info['goal_xy'])
+            else:
+                agent_init_xy = np.array([10, 10]) + np.random.uniform(low=-1, high=1, size=2)
+                ball_init_xy = np.array([10, 10]) + np.random.uniform(low=-2, high=2, size=2)
+                goal_xy = np.array([10, 10]) + np.random.uniform(low=-12, high=12, size=2)
 
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
             ob = self._get_obs()
             self.set_goal(goal_xy=goal_xy)
+            if self._mode == 'offline':
+                goal_ob = np.concatenate([goal_xy, goal_ob[2:15], goal_xy, goal_ob[17:]])
+                info['goal'] = goal_ob
 
             return ob, info
 
@@ -296,11 +373,12 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             else:
                 info['success'] = 0.0
 
-            agent_xy, ball_xy = self.get_agent_ball_xy()
-            agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
-            ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
+            if self._mode == 'online':
+                agent_xy, ball_xy = self.get_agent_ball_xy()
+                agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
+                ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
 
-            reward = ((prev_ball_goal_dist - ball_goal_dist) * 2.5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
+                reward = ((prev_ball_goal_dist - ball_goal_dist) * 2.5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
 
             return ob, reward, terminated, truncated, info
 
@@ -318,10 +396,13 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.set_state(qpos, qvel)
 
         def _get_obs(self):
-            agent_xy, ball_xy = self.get_agent_ball_xy()
-            qpos = self.data.qpos.flat.copy()
-            qvel = self.data.qvel.flat.copy()
-            return np.concatenate([qpos[2:-7], qpos[-5:], qvel, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])
+            if self._mode == 'offline':
+                return super()._get_obs()
+            else:
+                agent_xy, ball_xy = self.get_agent_ball_xy()
+                qpos = self.data.qpos.flat.copy()
+                qvel = self.data.qvel.flat.copy()
+                return np.concatenate([qpos[2:-7], qpos[-5:], qvel, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)

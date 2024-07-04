@@ -44,7 +44,13 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
         )
 
     def step(self, action):
+        prev_qpos = self.data.qpos.copy()
+        prev_qvel = self.data.qvel.copy()
+
         self.do_simulation(action, self.frame_skip)
+
+        qpos = self.data.qpos.copy()
+        qvel = self.data.qvel.copy()
 
         observation = self._get_obs()
 
@@ -53,6 +59,10 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
 
         return observation, 0., False, False, {
             'xy': self.get_xy(),
+            'prev_qpos': prev_qpos,
+            'prev_qvel': prev_qvel,
+            'qpos': qpos,
+            'qvel': qvel,
         }
 
     def _get_obs(self):
