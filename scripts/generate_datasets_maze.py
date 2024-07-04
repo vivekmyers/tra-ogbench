@@ -87,7 +87,7 @@ def main(_):
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
     for ep_idx in trange(num_train_episodes + num_val_episodes):
-        if FLAGS.dataset_type in ['path', 'play']:
+        if FLAGS.dataset_type in ['path', 'play', 'explore']:
             init_ij = all_cells[np.random.randint(len(all_cells))]
             goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
             ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
@@ -125,10 +125,18 @@ def main(_):
         done = False
         step = 0
 
+        cur_subgoal_dir = None  # Only used for 'explore'
+
         while not done:
-            subgoal_xy, _ = env.unwrapped.get_oracle_subgoal(env.unwrapped.get_xy(), env.unwrapped.cur_goal_xy)
-            subgoal_dir = subgoal_xy - ob[:2]
-            subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
+            if FLAGS.dataset_type == 'explore':
+                if step % 10 == 0:
+                    cur_subgoal_dir = np.random.randn(2)
+                    cur_subgoal_dir = cur_subgoal_dir / (np.linalg.norm(cur_subgoal_dir) + 1e-6)
+                subgoal_dir = cur_subgoal_dir
+            else:
+                subgoal_xy, _ = env.unwrapped.get_oracle_subgoal(env.unwrapped.get_xy(), env.unwrapped.cur_goal_xy)
+                subgoal_dir = subgoal_xy - ob[:2]
+                subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
 
             agent_ob = np.concatenate([ob[2:], subgoal_dir])
             if FLAGS.dataset_type == 'random':
