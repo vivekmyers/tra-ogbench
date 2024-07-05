@@ -169,7 +169,7 @@ def main(_):
 
     print('Total steps:', total_steps)
 
-    train_path = FLAGS.save_path.replace('.hdf5', '-train.hdf5')
+    train_path = FLAGS.save_path
     val_path = FLAGS.save_path.replace('.hdf5', '-val.hdf5')
 
     train_dataset = {k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}

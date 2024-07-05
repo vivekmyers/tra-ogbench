@@ -80,7 +80,7 @@ def truncate_dataset(dataset, ratio, return_both=False):
 
 
 def get_dataset(dataset_path, obs_dtype=np.float32):
-    train_path = dataset_path.replace('.hdf5', '-train.hdf5')
+    train_path = dataset_path
     val_path = dataset_path.replace('.hdf5', '-val.hdf5')
     train_dataset = dict()
     val_dataset = dict()

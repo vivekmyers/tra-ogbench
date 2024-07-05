@@ -75,7 +75,9 @@ def main(_):
     ball_actor_fn = supply_rng(ball_agent.sample_actions, rng=ball_agent.rng)
 
     def get_agent_action(ob, goal_xy):
-        # Get an action to move the agent to the goal
+        # Move the agent to the goal
+        if 'arena' not in FLAGS.env_name:
+            goal_xy, _ = env.unwrapped.get_oracle_subgoal(ob[:2], goal_xy)
         goal_dir = goal_xy - ob[:2]
         goal_dir = goal_dir / (np.linalg.norm(goal_dir) + 1e-6)
         agent_ob = np.concatenate([ob[2:15], ob[22:36], goal_dir])
@@ -83,9 +85,12 @@ def main(_):
         return action
 
     def get_ball_action(ob, ball_xy, goal_xy):
-        # Get an action to move the ball to the goal
-        if np.linalg.norm(goal_xy - ball_xy) > 10:
-            goal_xy = ball_xy + 10 * (goal_xy - ball_xy) / np.linalg.norm(goal_xy - ball_xy)
+        # Move the ball to the goal
+        if 'arena' in FLAGS.env_name:
+            if np.linalg.norm(goal_xy - ball_xy) > 10:
+                goal_xy = ball_xy + 10 * (goal_xy - ball_xy) / np.linalg.norm(goal_xy - ball_xy)
+        else:
+            goal_xy, _ = env.unwrapped.get_oracle_subgoal(ball_xy, goal_xy)
         agent_ob = np.concatenate([ob[2:15], ob[17:], ball_xy - agent_xy, goal_xy - ball_xy])
         action = ball_actor_fn(agent_ob, temperature=0)
         return action
@@ -113,7 +118,6 @@ def main(_):
             ob, _ = env.reset(options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij)))
         elif FLAGS.dataset_type == 'stitch':
             cur_mode = 'navigate' if np.random.randint(2) == 0 else 'dribble'
-            print(cur_mode)
 
             agent_init_idx, ball_init_idx, goal_idx = np.random.choice(len(all_cells), 3, replace=False)
             agent_init_ij = all_cells[agent_init_idx]
@@ -180,7 +184,7 @@ def main(_):
 
     print('Total steps:', total_steps)
 
-    train_path = FLAGS.save_path.replace('.hdf5', '-train.hdf5')
+    train_path = FLAGS.save_path
     val_path = FLAGS.save_path.replace('.hdf5', '-val.hdf5')
 
     train_dataset = {k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
