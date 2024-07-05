@@ -66,6 +66,21 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ]
+            elif self._maze_type == 'giant':
+                maze_map = [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0, 1],
+                    [1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1],
+                    [1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+                    [1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 0, 1],
+                    [1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 1],
+                    [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ]
             else:
                 raise ValueError(f'Unknown maze type: {self._maze_type}')
 
@@ -96,7 +111,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.render()
                 self.mujoco_renderer.viewer.cam.lookat[0] = 2 * (self.maze_map.shape[1] - 3)
                 self.mujoco_renderer.viewer.cam.lookat[1] = 2 * (self.maze_map.shape[0] - 3)
-                self.mujoco_renderer.viewer.cam.distance = 50
+                self.mujoco_renderer.viewer.cam.distance = 5 * (self.maze_map.shape[1] - 2)
                 self.mujoco_renderer.viewer.cam.elevation = -90
 
         def update_tree(self, tree):
@@ -149,6 +164,14 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [(7, 4), (1, 10)],
                     [(3, 8), (5, 4)],
                     [(1, 1), (5, 4)],
+                ]
+            elif self._maze_type == 'giant':
+                tasks = [
+                    [(7, 1), (1, 14)],
+                    [(2, 10), (1, 9)],
+                    [(9, 1), (7, 1)],
+                    [(1, 1), (10, 14)],
+                    [(3, 13), (10, 10)],
                 ]
             else:
                 raise ValueError(f'Unknown maze type: {self._maze_type}')
