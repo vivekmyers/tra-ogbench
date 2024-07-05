@@ -19,7 +19,7 @@ def setup_wandb(
         project='project',
         group=None,
         name=None,
-        offline=False,
+        mode='online',
 ):
     wandb_output_dir = tempfile.mkdtemp()
     tags = [group] if group is not None else None
@@ -36,7 +36,7 @@ def setup_wandb(
             start_method='thread',
             _disable_stats=False,
         ),
-        mode='offline' if offline else 'online',
+        mode=mode,
         save_code=True,
     )
 

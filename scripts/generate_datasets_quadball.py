@@ -94,7 +94,7 @@ def main(_):
             agent_init_ij = all_cells[agent_init_idx]
             ball_init_ij = all_cells[ball_init_idx]
             goal_ij = all_cells[goal_idx]
-            ob, _ = env.reset(options=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij))
+            ob, _ = env.reset(options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij)))
         elif FLAGS.dataset_type == 'stitch':
             raise NotImplementedError
             init_ij = all_cells[np.random.randint(len(all_cells))]
@@ -170,7 +170,8 @@ def main(_):
                     env.unwrapped.set_goal(goal_ij)
                 if step > 150 and virtual_agent_goal_xy is None and np.linalg.norm(np.array(dataset['observations'][-150:])[:, :2] - next_ob[:2], axis=1).max() <= 2:
                     # If stuck, move the agent to a random position
-                    virtual_agent_goal_xy = np.array(all_cells[np.random.randint(len(all_cells))])
+                    virtual_agent_goal_ij = all_cells[np.random.randint(len(all_cells))]
+                    virtual_agent_goal_xy = np.array(env.unwrapped.ij_to_xy(virtual_agent_goal_ij))
 
             dataset['observations'].append(ob)
             dataset['actions'].append(action)

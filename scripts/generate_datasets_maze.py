@@ -90,12 +90,12 @@ def main(_):
         if FLAGS.dataset_type in ['path', 'play', 'explore']:
             init_ij = all_cells[np.random.randint(len(all_cells))]
             goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
-            ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
+            ob, _ = env.reset(options=dict(task_info=dict(init_ij=init_ij, goal_ij=goal_ij)))
         elif FLAGS.dataset_type == 'random':
             init_ij = all_cells[np.random.randint(len(all_cells))]
             goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
             env.unwrapped._noise = 2
-            ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
+            ob, _ = env.reset(options=dict(task_info=dict(init_ij=init_ij, goal_ij=goal_ij)))
         elif FLAGS.dataset_type == 'stitch':
             init_ij = all_cells[np.random.randint(len(all_cells))]
 
@@ -118,7 +118,7 @@ def main(_):
                             adj_cells.append((ni, nj))
 
             goal_ij = adj_cells[np.random.randint(len(adj_cells))]
-            ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
+            ob, _ = env.reset(options=dict(task_info=dict(init_ij=init_ij, goal_ij=goal_ij)))
         else:
             ob, _ = env.reset()
 

@@ -162,9 +162,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.task_infos.append(dict(
                     task_name=f'task{i + 1}',
                     init_ij=task[0],
-                    init_xy=self._ij_to_xy(task[0]),
+                    init_xy=self.ij_to_xy(task[0]),
                     goal_ij=task[1],
-                    goal_xy=self._ij_to_xy(task[1]),
+                    goal_xy=self.ij_to_xy(task[1]),
                 ))
             self.num_tasks = len(self.task_infos)
 
@@ -173,26 +173,21 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             ob, info = super().reset(*args, **kwargs)
 
             if options is not None:
-                # Set either task_idx or (init_ij and goal_ij)
-                task_idx = options.pop('task_idx', None)
-                init_ij = options.pop('init_ij', None)
-                goal_ij = options.pop('goal_ij', None)
+                if 'task_idx' in options:
+                    self.cur_task_idx = options['task_idx']
+                    self.cur_task_info = self.task_infos[self.cur_task_idx]
+                elif 'task_info' in options:
+                    self.cur_task_idx = None
+                    self.cur_task_info = options['task_info']
+                else:
+                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
             else:
-                task_idx = None
-                init_ij = None
-                goal_ij = None
+                # Randomly sample task
+                self.cur_task_idx = np.random.randint(self.num_tasks)
+                self.cur_task_info = self.task_infos[self.cur_task_idx]
 
-            if init_ij is not None and goal_ij is not None:
-                init_xy = self._add_noise(self._ij_to_xy(init_ij))
-                goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
-            else:
-                if task_idx is None:
-                    task_idx = np.random.randint(self.num_tasks)
-                self.cur_task_idx = task_idx
-                self.cur_task_info = self.task_infos[task_idx]
-
-                init_xy = self._add_noise(self.cur_task_info['init_xy'])
-                goal_xy = self._add_noise(self.cur_task_info['goal_xy'])
+            init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['init_ij']))
+            goal_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
 
             self.set_xy(init_xy)
             ob = self._get_obs()
@@ -216,15 +211,15 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
         def set_goal(self, goal_ij=None, goal_xy=None):
             if goal_xy is None:
-                self.cur_goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
+                self.cur_goal_xy = self._add_noise(self.ij_to_xy(goal_ij))
             else:
                 self.cur_goal_xy = goal_xy
             self.model.geom('target').pos[:2] = goal_xy
 
         def get_oracle_subgoal(self, start_xy, goal_xy):
             # Run BFS to find the next subgoal
-            start_ij = self._xy_to_ij(start_xy)
-            goal_ij = self._xy_to_ij(goal_xy)
+            start_ij = self.xy_to_ij(start_xy)
+            goal_ij = self.xy_to_ij(goal_xy)
             bfs_map = self.maze_map.copy()
             for i in range(self.maze_map.shape[0]):
                 for j in range(self.maze_map.shape[1]):
@@ -243,16 +238,16 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 ni, nj = start_ij[0] + di, start_ij[1] + dj
                 if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0 and bfs_map[ni, nj] < bfs_map[subgoal_ij[0], subgoal_ij[1]]:
                     subgoal_ij = (ni, nj)
-            subgoal_xy = self._ij_to_xy(subgoal_ij)
+            subgoal_xy = self.ij_to_xy(subgoal_ij)
             return np.array(subgoal_xy), bfs_map
 
-        def _xy_to_ij(self, xy):
+        def xy_to_ij(self, xy):
             maze_unit = self._maze_unit
             i = int((xy[1] + self._offset_y + 0.5 * maze_unit) / maze_unit)
             j = int((xy[0] + self._offset_x + 0.5 * maze_unit) / maze_unit)
             return i, j
 
-        def _ij_to_xy(self, ij):
+        def ij_to_xy(self, ij):
             i, j = ij
             x = j * self._maze_unit - self._offset_x
             y = i * self._maze_unit - self._offset_y
@@ -306,11 +301,11 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.task_infos.append(dict(
                     task_name=f'task{i + 1}',
                     agent_init_ij=task[0],
-                    agent_init_xy=self._ij_to_xy(task[0]),
+                    agent_init_xy=self.ij_to_xy(task[0]),
                     ball_init_ij=task[1],
-                    ball_init_xy=self._ij_to_xy(task[1]),
+                    ball_init_xy=self.ij_to_xy(task[1]),
                     goal_ij=task[2],
-                    goal_xy=self._ij_to_xy(task[2])
+                    goal_xy=self.ij_to_xy(task[2])
                 ))
             self.num_tasks = len(self.task_infos)
 
@@ -320,30 +315,22 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             if self._mode == 'offline':
                 if options is not None:
-                    # Set either task_idx or (agent_init_ij, ball_init_ij, and goal_ij)
-                    task_idx = options.pop('task_idx', None)
-                    agent_init_ij = options.pop('agent_init_ij', None)
-                    ball_init_ij = options.pop('ball_init_ij', None)
-                    goal_ij = options.pop('goal_ij', None)
+                    if 'task_idx' in options:
+                        self.cur_task_idx = options['task_idx']
+                        self.cur_task_info = self.task_infos[self.cur_task_idx]
+                    elif 'task_info' in options:
+                        self.cur_task_idx = None
+                        self.cur_task_info = options['task_info']
+                    else:
+                        raise ValueError('`options` must contain either `task_idx` or `task_info`')
                 else:
-                    task_idx = None
-                    agent_init_ij = None
-                    ball_init_ij = None
-                    goal_ij = None
+                    # Randomly sample task
+                    self.cur_task_idx = np.random.randint(self.num_tasks)
+                    self.cur_task_info = self.task_infos[self.cur_task_idx]
 
-                if agent_init_ij is not None and ball_init_ij is not None and goal_ij is not None:
-                    agent_init_xy = self._add_noise(self._ij_to_xy(agent_init_ij))
-                    ball_init_xy = self._add_noise(self._ij_to_xy(ball_init_ij))
-                    goal_xy = self._add_noise(self._ij_to_xy(goal_ij))
-                else:
-                    if task_idx is None:
-                        task_idx = np.random.randint(self.num_tasks)
-                    self.cur_task_idx = task_idx
-                    self.cur_task_info = self.task_infos[task_idx]
-
-                    agent_init_xy = self._add_noise(self.cur_task_info['agent_init_xy'])
-                    ball_init_xy = self._add_noise(self.cur_task_info['ball_init_xy'])
-                    goal_xy = self._add_noise(self.cur_task_info['goal_xy'])
+                agent_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
+                ball_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
+                goal_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
             else:
                 agent_init_xy = np.array([10, 10]) + np.random.uniform(low=-1, high=1, size=2)
                 ball_init_xy = np.array([10, 10]) + np.random.uniform(low=-2, high=2, size=2)
