@@ -19,7 +19,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('run_group', 'Debug', 'Run group')
 flags.DEFINE_integer('seed', 0, 'Random seed')
 flags.DEFINE_string('env_name', 'quadmaze-large-v0', 'Environment name')
-flags.DEFINE_string('dataset_type', 'path', 'Dataset type')
+flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
 flags.DEFINE_string('restore_path', None, 'Expert agent restore path')
 flags.DEFINE_integer('restore_epoch', None, 'Expert agent restore epoch')
 flags.DEFINE_string('save_path', None, 'Save path')

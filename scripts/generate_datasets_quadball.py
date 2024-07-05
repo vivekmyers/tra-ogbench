@@ -19,7 +19,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('run_group', 'Debug', 'Run group')
 flags.DEFINE_integer('seed', 0, 'Random seed')
 flags.DEFINE_string('env_name', 'quadball-arena-v0', 'Environment name')
-flags.DEFINE_string('dataset_type', 'path', 'Dataset type')
+flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
 flags.DEFINE_string('loco_restore_path', None, 'Locomotion agent restore path')
 flags.DEFINE_integer('loco_restore_epoch', None, 'Locomotion agent restore epoch')
 flags.DEFINE_string('ball_restore_path', None, 'Ball agent restore path')
@@ -74,6 +74,22 @@ def main(_):
     loco_actor_fn = supply_rng(loco_agent.sample_actions, rng=loco_agent.rng)
     ball_actor_fn = supply_rng(ball_agent.sample_actions, rng=ball_agent.rng)
 
+    def get_agent_action(ob, goal_xy):
+        # Get an action to move the agent to the goal
+        goal_dir = goal_xy - ob[:2]
+        goal_dir = goal_dir / (np.linalg.norm(goal_dir) + 1e-6)
+        agent_ob = np.concatenate([ob[2:15], ob[22:36], goal_dir])
+        action = loco_actor_fn(agent_ob, temperature=0)
+        return action
+
+    def get_ball_action(ob, ball_xy, goal_xy):
+        # Get an action to move the ball to the goal
+        if np.linalg.norm(goal_xy - ball_xy) > 10:
+            goal_xy = ball_xy + 10 * (goal_xy - ball_xy) / np.linalg.norm(goal_xy - ball_xy)
+        agent_ob = np.concatenate([ob[2:15], ob[17:], ball_xy - agent_xy, goal_xy - ball_xy])
+        action = ball_actor_fn(agent_ob, temperature=0)
+        return action
+
     all_cells = []
     maze_map = env.unwrapped.maze_map
 
@@ -89,38 +105,23 @@ def main(_):
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
     for ep_idx in trange(num_train_episodes + num_val_episodes):
-        if FLAGS.dataset_type in ['path', 'play']:
+        if FLAGS.dataset_type == 'play':
             agent_init_idx, ball_init_idx, goal_idx = np.random.choice(len(all_cells), 3, replace=False)
             agent_init_ij = all_cells[agent_init_idx]
             ball_init_ij = all_cells[ball_init_idx]
             goal_ij = all_cells[goal_idx]
             ob, _ = env.reset(options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij)))
         elif FLAGS.dataset_type == 'stitch':
-            raise NotImplementedError
-            init_ij = all_cells[np.random.randint(len(all_cells))]
+            cur_mode = 'navigate' if np.random.randint(2) == 0 else 'dribble'
+            print(cur_mode)
 
-            adj_cells = []
-            adj_steps = 4
-            bfs_map = maze_map.copy()
-            for i in range(bfs_map.shape[0]):
-                for j in range(bfs_map.shape[1]):
-                    bfs_map[i][j] = -1
-            bfs_map[init_ij[0], init_ij[1]] = 0
-            queue = [init_ij]
-            while len(queue) > 0:
-                i, j = queue.pop(0)
-                for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
-                    ni, nj = i + di, j + dj
-                    if 0 <= ni < bfs_map.shape[0] and 0 <= nj < bfs_map.shape[1] and maze_map[ni, nj] == 0 and bfs_map[ni, nj] == -1:
-                        bfs_map[ni][nj] = bfs_map[i][j] + 1
-                        queue.append((ni, nj))
-                        if bfs_map[ni][nj] == adj_steps:
-                            adj_cells.append((ni, nj))
-
-            goal_ij = adj_cells[np.random.randint(len(adj_cells))]
-            ob, _ = env.reset(options=dict(init_ij=init_ij, goal_ij=goal_ij))
+            agent_init_idx, ball_init_idx, goal_idx = np.random.choice(len(all_cells), 3, replace=False)
+            agent_init_ij = all_cells[agent_init_idx]
+            ball_init_ij = all_cells[ball_init_idx] if cur_mode == 'navigate' else agent_init_ij
+            goal_ij = all_cells[goal_idx]
+            ob, _ = env.reset(options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij)))
         else:
-            ob, _ = env.reset()
+            raise ValueError(f'Unsupported dataset_type: {FLAGS.dataset_type}')
 
         done = False
         step = 0
@@ -128,32 +129,23 @@ def main(_):
         virtual_agent_goal_xy = None
 
         while not done:
-            # subgoal_xy, _ = env.unwrapped.get_oracle_subgoal(env.unwrapped.get_xy(), env.unwrapped.cur_goal_xy)
-            # subgoal_dir = subgoal_xy - ob[:2]
-            # subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
-
             agent_xy, ball_xy = env.unwrapped.get_agent_ball_xy()
             agent_xy, ball_xy = np.array(agent_xy), np.array(ball_xy)
             goal_xy = np.array(env.unwrapped.cur_goal_xy)
-            if virtual_agent_goal_xy is None:
-                if np.linalg.norm(agent_xy - ball_xy) > 2:
-                    # Move the agent to the ball
-                    ball_dir = ball_xy - agent_xy
-                    ball_dir = ball_dir / (np.linalg.norm(ball_dir) + 1e-6)
-                    agent_ob = np.concatenate([ob[2:15], ob[22:36], ball_dir])
-                    action = loco_actor_fn(agent_ob, temperature=0)
+
+            if FLAGS.dataset_type == 'play':
+                if virtual_agent_goal_xy is None:
+                    if np.linalg.norm(agent_xy - ball_xy) > 2:
+                        action = get_agent_action(ob, ball_xy)
+                    else:
+                        action = get_ball_action(ob, ball_xy, goal_xy)
                 else:
-                    # Move the ball to the goal
-                    if np.linalg.norm(goal_xy - ball_xy) > 10:
-                        goal_xy = ball_xy + 10 * (goal_xy - ball_xy) / np.linalg.norm(goal_xy - ball_xy)
-                    agent_ob = np.concatenate([ob[2:15], ob[17:], ball_xy - agent_xy, goal_xy - ball_xy])
-                    action = ball_actor_fn(agent_ob, temperature=0)
-            else:
-                # Move the agent to the virtual goal
-                agent_goal_dir = virtual_agent_goal_xy - ob[:2]
-                agent_goal_dir = agent_goal_dir / (np.linalg.norm(agent_goal_dir) + 1e-6)
-                agent_ob = np.concatenate([ob[2:15], ob[22:36], agent_goal_dir])
-                action = loco_actor_fn(agent_ob, temperature=0)
+                    action = get_agent_action(ob, virtual_agent_goal_xy)
+            elif FLAGS.dataset_type == 'stitch':
+                if cur_mode == 'navigate':
+                    action = get_agent_action(ob, goal_xy)
+                else:
+                    action = get_ball_action(ob, ball_xy, goal_xy)
             action = action + np.random.normal(0, FLAGS.noise, action.shape)
             action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)

@@ -146,12 +146,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 tasks = [
                     [(1, 1), (7, 10)],
                     [(5, 4), (7, 1)],
-                    # [(1, 1), (3, 10)],
                     [(7, 4), (1, 10)],
-                    # [(7, 1), (3, 10)],
                     [(3, 8), (5, 4)],
-                    # [(7, 10), (5, 1)],
-                    # [(3, 8), (1, 1)],
                     [(1, 1), (5, 4)],
                 ]
             else:
@@ -285,14 +281,20 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def set_tasks(self):
             if self._maze_type == 'arena':
                 tasks = [
+                    [(1, 6), (2, 3), (5, 2)],
                     [(2, 2), (5, 5), (2, 2)],
                     [(6, 1), (2, 3), (6, 6)],
-                    [(1, 6), (2, 3), (5, 2)],
                     [(6, 6), (1, 1), (6, 1)],
                     [(4, 6), (6, 2), (1, 6)],
                 ]
             elif self._maze_type == 'medium':
-                raise NotImplementedError
+                tasks = [
+                    [(1, 1), (3, 4), (6, 6)],
+                    [(6, 1), (6, 5), (1, 1)],
+                    [(5, 3), (4, 2), (6, 5)],
+                    [(6, 5), (1, 1), (5, 3)],
+                    [(1, 6), (6, 1), (1, 6)],
+                ]
             else:
                 raise ValueError(f'Unknown maze type: {self._maze_type}')
 
