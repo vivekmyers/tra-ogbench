@@ -1,7 +1,6 @@
 import tempfile
 import xml.etree.ElementTree as ET
 
-import numba
 import numpy as np
 from gymnasium.spaces import Box
 
@@ -261,8 +260,10 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 if self._terminate_at_goal:
                     terminated = True
                 info['success'] = 1.0
+                reward = 1.0
             else:
                 info['success'] = 0.0
+                reward = 0.0
 
             return ob, reward, terminated, truncated, info
 
@@ -317,19 +318,10 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             return xy[0] + random_x, xy[1] + random_y
 
     class BallEnv(MazeEnv):
-        def __init__(self, mode='offline', *args, **kwargs):
-            self._mode = mode
-
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
 
-            if mode == 'offline':
-                # [qpos, qvel]
-                self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
-            elif mode == 'online':
-                # [qpos (without agent xy and ball xy), qvel, ball_xy - agent_xy, goal_xy - ball_xy]
-                self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
-            else:
-                raise ValueError(f'Unknown mode: {mode}')
+            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
 
         def update_tree(self, tree):
             super().update_tree(tree)
@@ -377,59 +369,43 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             goal_ob, _ = super(MazeEnv, self).reset(*args, **kwargs)
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
 
-            if self._mode == 'offline':
-                if options is not None:
-                    if 'task_idx' in options:
-                        self.cur_task_idx = options['task_idx']
-                        self.cur_task_info = self.task_infos[self.cur_task_idx]
-                    elif 'task_info' in options:
-                        self.cur_task_idx = None
-                        self.cur_task_info = options['task_info']
-                    else:
-                        raise ValueError('`options` must contain either `task_idx` or `task_info`')
-                else:
-                    # Randomly sample task
-                    self.cur_task_idx = np.random.randint(self.num_tasks)
+            if options is not None:
+                if 'task_idx' in options:
+                    self.cur_task_idx = options['task_idx']
                     self.cur_task_info = self.task_infos[self.cur_task_idx]
-
-                agent_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
-                ball_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
-                goal_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
+                elif 'task_info' in options:
+                    self.cur_task_idx = None
+                    self.cur_task_info = options['task_info']
+                else:
+                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
             else:
-                agent_init_xy = np.array([10, 10]) + np.random.uniform(low=-1, high=1, size=2)
-                ball_init_xy = np.array([10, 10]) + np.random.uniform(low=-2, high=2, size=2)
-                goal_xy = np.array([10, 10]) + np.random.uniform(low=-12, high=12, size=2)
+                # Randomly sample task
+                self.cur_task_idx = np.random.randint(self.num_tasks)
+                self.cur_task_info = self.task_infos[self.cur_task_idx]
+
+            agent_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
+            ball_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
+            goal_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
 
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
             ob = self._get_obs()
             self.set_goal(goal_xy=goal_xy)
-            if self._mode == 'offline':
-                goal_ob = np.concatenate([goal_xy, goal_ob[2:15], goal_xy, goal_ob[17:]])
-                info['goal'] = goal_ob
+            goal_ob = np.concatenate([goal_xy, goal_ob[2:15], goal_xy, goal_ob[17:]])
+            info['goal'] = goal_ob
 
             return ob, info
 
         def step(self, action):
-            prev_agent_xy, prev_ball_xy = self.get_agent_ball_xy()
-            goal_xy = self.cur_goal_xy
-            prev_agent_ball_dist = np.linalg.norm(prev_agent_xy - prev_ball_xy)
-            prev_ball_goal_dist = np.linalg.norm(prev_ball_xy - goal_xy)
-
             ob, reward, terminated, truncated, info = super(MazeEnv, self).step(action)
 
             if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= 0.5:
                 if self._terminate_at_goal:
                     terminated = True
                 info['success'] = 1.0
+                reward = 1.0
             else:
                 info['success'] = 0.0
-
-            if self._mode == 'online':
-                agent_xy, ball_xy = self.get_agent_ball_xy()
-                agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
-                ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
-
-                reward = ((prev_ball_goal_dist - ball_goal_dist) * 2.5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
+                reward = 0.0
 
             return ob, reward, terminated, truncated, info
 
@@ -445,15 +421,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             qpos[:2] = agent_xy
             qpos[-7:-5] = ball_xy
             self.set_state(qpos, qvel)
-
-        def _get_obs(self):
-            if self._mode == 'offline':
-                return super()._get_obs()
-            else:
-                agent_xy, ball_xy = self.get_agent_ball_xy()
-                qpos = self.data.qpos.flat.copy()
-                qvel = self.data.qvel.flat.copy()
-                return np.concatenate([qpos[2:-7], qpos[-5:], qvel, ball_xy - agent_xy, np.array(self.cur_goal_xy) - ball_xy])
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)

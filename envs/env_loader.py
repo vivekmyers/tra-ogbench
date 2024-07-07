@@ -140,34 +140,32 @@ def make_env_and_dataset(env_name, dataset_path=None):
     return env, train_dataset, val_dataset
 
 
-def make_online_env(env_name, eval=False):
-    if 'ant' in env_name or 'gymhum' in env_name or 'humanoid' in env_name:
+def make_online_env(env_name):
+    if 'Ant' in env_name or 'Humanoid' in env_name:
         import envs.locomotion  # noqa
         import gymnasium
 
-        if 'ant' in env_name:
-            xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
-            env = gymnasium.make('AntCustom-v0', render_mode='rgb_array', height=200, width=200, xml_file=xml_file)
-        elif 'gymhum' in env_name:
-            env = gymnasium.make('Humanoid-v4', render_mode='rgb_array', height=200, width=200)
-        elif 'humanoid' in env_name:
-            env = gymnasium.make('HumanoidCustom-v0', render_mode='rgb_array', height=200, width=200, camera_id=0)
+        if '-xy' in env_name:
+            env_name = env_name.replace('-xy', '')
+            xy_wrapper = True
         else:
-            raise ValueError(f'Unknown environment: {env_name}')
+            xy_wrapper = False
 
-        if env_name.endswith('-xy'):
+        if 'Ant' in env_name:
+            xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
+            env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200, xml_file=xml_file)
+        elif 'HumanoidCustom' in env_name:
+            env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200, camera_id=0)
+        else:
+            env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200)
+
+        if xy_wrapper:
             from envs.locomotion.wrappers import GymXYWrapper, DMCHumanoidXYWrapper
-            if 'ant' in env_name or 'gymhum' in env_name:
-                env = GymXYWrapper(env, resample_interval=100 if 'ant' in env_name else 200)
-            else:
+            if 'HumanoidCustom' in env_name:
                 env = DMCHumanoidXYWrapper(env, resample_interval=200)
+            else:
+                env = GymXYWrapper(env, resample_interval=100 if 'Ant' in env_name else 200)
 
-        env = EpisodeMonitor(env)
-    elif 'quadball' in env_name:
-        import gymnasium
-        import envs.locomaze  # noqa
-
-        env = gymnasium.make(env_name, render_mode='rgb_array', width=400, height=400, max_episode_steps=200, terminate_at_goal=False)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')

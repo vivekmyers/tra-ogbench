@@ -76,8 +76,8 @@ def main(_):
 
     config = FLAGS.agent
 
-    env = make_online_env(FLAGS.env_name, eval=False)
-    eval_env = make_online_env(FLAGS.env_name, eval=True)
+    env = make_online_env(FLAGS.env_name)
+    eval_env = make_online_env(FLAGS.env_name)
 
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
