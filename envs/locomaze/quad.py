@@ -37,9 +37,6 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
             xml_file,
             frame_skip=5,
             observation_space=observation_space,
-            default_camera_config={
-                'distance': 4.0,
-            },
             **kwargs,
         )
 

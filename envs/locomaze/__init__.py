@@ -22,6 +22,17 @@ register(
     )
 )
 register(
+    id='visual-quadmaze-large-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='quad',
+        maze_env_type='maze',
+        maze_type='large',
+        ob_type='pixels',
+    )
+)
+register(
     id='quadmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=2000,

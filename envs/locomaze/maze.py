@@ -24,6 +24,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 maze_unit=4.0,
                 maze_height=0.5,
                 terminate_at_goal=True,
+                ob_type='states',
                 *args,
                 **kwargs,
         ):
@@ -31,6 +32,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self._maze_unit = maze_unit
             self._maze_height = maze_height
             self._terminate_at_goal = terminate_at_goal
+            self._ob_type = ob_type
+            assert ob_type in ['states', 'pixels']
 
             if self._maze_type == 'arena':
                 maze_map = [
@@ -105,14 +108,28 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.set_tasks()
             self.cur_goal_xy = np.zeros(2)
 
-            # Set up camera
-            if self.render_mode == 'rgb_array':
-                self.reset()
-                self.render()
-                self.mujoco_renderer.viewer.cam.lookat[0] = 2 * (self.maze_map.shape[1] - 3)
-                self.mujoco_renderer.viewer.cam.lookat[1] = 2 * (self.maze_map.shape[0] - 3)
-                self.mujoco_renderer.viewer.cam.distance = 5 * (self.maze_map.shape[1] - 2)
-                self.mujoco_renderer.viewer.cam.elevation = -90
+            if self._ob_type == 'pixels':
+                # Manually color the floor
+                tex_grid = self.model.tex('grid')
+                tex_height = tex_grid.height[0]
+                tex_width = tex_grid.width[0]
+                tex_rgb = self.model.tex_rgb[tex_grid.adr[0]:tex_grid.adr[0] + 3 * tex_height * tex_width]
+                tex_rgb = tex_rgb.reshape(tex_height, tex_width, 3)
+                for x in range(tex_height):
+                    for y in range(tex_width):
+                        min_value = 0
+                        max_value = 192
+                        r = int(x / tex_height * (max_value - min_value) + min_value)
+                        g = int(y / tex_width * (max_value - min_value) + min_value)
+                        tex_rgb[x, y, :] = [r, g, 128]
+
+            # Set camera
+            self.reset()
+            self.render()
+            self.mujoco_renderer.viewer.cam.lookat[0] = 2 * (self.maze_map.shape[1] - 3)
+            self.mujoco_renderer.viewer.cam.lookat[1] = 2 * (self.maze_map.shape[0] - 3)
+            self.mujoco_renderer.viewer.cam.distance = 5 * (self.maze_map.shape[1] - 2)
+            self.mujoco_renderer.viewer.cam.elevation = -90
 
         def update_tree(self, tree):
             worldbody = tree.find('.//worldbody')
@@ -132,17 +149,38 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                             conaffinity='1',
                             material='wall',
                         )
-            ET.SubElement(
-                worldbody,
-                'geom',
-                name='target',
-                type='cylinder',
-                size='.4 .05',
-                pos='0 0 .05',
-                material='target',
-                contype='0',
-                conaffinity='0',
-            )
+            center_x, center_y = 2 * (self.maze_map.shape[1] - 3), 2 * (self.maze_map.shape[0] - 3)
+            size_x, size_y = 2 * self.maze_map.shape[1], 2 * self.maze_map.shape[0]
+            floor = tree.find('.//geom[@name="floor"]')
+            floor.set('pos', f'{center_x} {center_y} 0')
+            floor.set('size', f'{size_x} {size_y} 0.2')
+
+            if self._ob_type == 'pixels':
+                # Remove torso_light
+                torso_light = tree.find('.//light[@name="torso_light"]')
+                torso_light_parent = tree.find('.//light[@name="torso_light"]/..')
+                torso_light_parent.remove(torso_light)
+                # Remove texture repeat
+                grid = tree.find('.//material[@name="grid"]')
+                grid.set('texuniform', 'false')
+                if loco_env_type == 'quad':
+                    # Color one leg to break symmetry
+                    tree.find('.//geom[@name="aux_1_geom"]').set('material', 'self_white')
+                    tree.find('.//geom[@name="left_leg_geom"]').set('material', 'self_white')
+                    tree.find('.//geom[@name="left_ankle_geom"]').set('material', 'self_white')
+            else:
+                # Show target only when ob_type == states
+                ET.SubElement(
+                    worldbody,
+                    'geom',
+                    name='target',
+                    type='cylinder',
+                    size='.4 .05',
+                    pos='0 0 .05',
+                    material='target',
+                    contype='0',
+                    conaffinity='0',
+                )
 
         def set_tasks(self):
             if self._maze_type == 'arena':
@@ -233,7 +271,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.cur_goal_xy = self._add_noise(self.ij_to_xy(goal_ij))
             else:
                 self.cur_goal_xy = goal_xy
-            self.model.geom('target').pos[:2] = goal_xy
+            if self._ob_type == 'states':
+                self.model.geom('target').pos[:2] = goal_xy
 
         def get_oracle_subgoal(self, start_xy, goal_xy):
             # Run BFS to find the next subgoal
