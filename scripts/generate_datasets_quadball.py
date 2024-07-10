@@ -59,9 +59,6 @@ def load_agent(restore_path, restore_epoch, ob_dim, action_dim):
 def main(_):
     env = gymnasium.make(
         FLAGS.env_name,
-        render_mode='rgb_array',
-        width=200,
-        height=200,
         terminate_at_goal=False,
         max_episode_steps=FLAGS.max_episode_steps,
     )

@@ -18,7 +18,9 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
     def __init__(
             self,
             xml_file=None,
-            task='run',
+            render_mode='rgb_array',
+            width=200,
+            height=200,
             **kwargs,
     ):
         if xml_file is None:
@@ -26,7 +28,9 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         utils.EzPickle.__init__(
             self,
             xml_file,
-            task,
+            render_mode=render_mode,
+            width=width,
+            height=height,
             **kwargs,
         )
 
@@ -49,7 +53,7 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         qpos = self.data.qpos.copy()
         qvel = self.data.qvel.copy()
 
-        observation = self._get_obs()
+        observation = self.get_ob()
 
         if self.render_mode == 'human':
             self.render()
@@ -75,7 +79,7 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
 
         mujoco.mj_step1(self.model, self.data)
 
-    def _get_obs(self):
+    def get_ob(self):
         xy = self.data.qpos[:2]
         joint_angles = self.data.qpos[7:]  # Skip the 7 DoFs of the free root joint
         head_height = self.data.xpos[2, 2]  # ['head', 'z']
@@ -125,7 +129,7 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
                 mujoco.mj_forward(self.model, self.data)
             penetrating = self.data.ncon > 0
 
-        observation = self._get_obs()
+        observation = self.get_ob()
 
         return observation
 

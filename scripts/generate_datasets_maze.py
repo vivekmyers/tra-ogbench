@@ -31,9 +31,6 @@ flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 def main(_):
     env = gymnasium.make(
         FLAGS.env_name,
-        render_mode='rgb_array',
-        width=200,
-        height=200,
         terminate_at_goal=False,
         max_episode_steps=FLAGS.max_episode_steps,
     )
@@ -135,10 +132,11 @@ def main(_):
                 subgoal_dir = cur_subgoal_dir
             else:
                 subgoal_xy, _ = env.unwrapped.get_oracle_subgoal(env.unwrapped.get_xy(), env.unwrapped.cur_goal_xy)
-                subgoal_dir = subgoal_xy - ob[:2]
+                subgoal_dir = subgoal_xy - env.unwrapped.get_xy()
                 subgoal_dir = subgoal_dir / (np.linalg.norm(subgoal_dir) + 1e-6)
 
-            agent_ob = np.concatenate([ob[2:], subgoal_dir])
+            agent_ob = env.unwrapped.get_ob(ob_type='states')
+            agent_ob = np.concatenate([agent_ob[2:], subgoal_dir])
             if FLAGS.dataset_type == 'random':
                 action = env.action_space.sample()
             else:
@@ -172,8 +170,17 @@ def main(_):
     train_path = FLAGS.save_path
     val_path = FLAGS.save_path.replace('.hdf5', '-val.hdf5')
 
-    train_dataset = {k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
-    val_dataset = {k: np.array(v[total_train_steps:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
+    train_dataset = {}
+    val_dataset = {}
+    for k, v in dataset.items():
+        if 'observations' in k and v[0].dtype == np.uint8:
+            dtype = np.uint8
+        elif k == 'terminals':
+            dtype = bool
+        else:
+            dtype = np.float32
+        train_dataset[k] = np.array(v[:total_train_steps], dtype=dtype)
+        val_dataset[k] = np.array(v[total_train_steps:], dtype=dtype)
 
     for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
         file = h5py.File(path, 'w')

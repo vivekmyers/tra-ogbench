@@ -108,6 +108,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.cur_goal_xy = np.zeros(2)
 
             if self._ob_type == 'pixels':
+                self.observation_space = Box(low=0, high=255, shape=(64, 64, 3), dtype=np.uint8)
+
                 # Manually color the floor
                 tex_grid = self.model.tex('grid')
                 tex_height = tex_grid.height[0]
@@ -155,7 +157,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             floor.set('size', f'{size_x} {size_y} 0.2')
 
             if self._ob_type == 'pixels':
-                # Remove torso_light
+                # Remove torso light
                 torso_light = tree.find('.//light[@name="torso_light"]')
                 torso_light_parent = tree.find('.//light[@name="torso_light"]/..')
                 torso_light_parent.remove(torso_light)
@@ -225,9 +227,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):
-            goal_ob, _ = super().reset(*args, **kwargs)
-            ob, info = super().reset(*args, **kwargs)
-
             if options is not None:
                 if 'task_idx' in options:
                     self.cur_task_idx = options['task_idx']
@@ -242,13 +241,20 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.cur_task_idx = np.random.randint(self.num_tasks)
                 self.cur_task_info = self.task_infos[self.cur_task_idx]
 
-            init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['init_ij']))
-            goal_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
+            init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['init_ij']))
+            goal_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
 
+            # Get goal observation
+            super().reset(*args, **kwargs)
+            for _ in range(5):
+                super().step(self.action_space.sample())
+            self.set_xy(goal_xy)
+            goal_ob = self.get_ob()
+
+            ob, info = super().reset(*args, **kwargs)
             self.set_xy(init_xy)
-            ob = self._get_obs()
+            ob = self.get_ob()
             self.set_goal(goal_xy=goal_xy)
-            goal_ob = np.concatenate([goal_xy, goal_ob[2:]])
             info['goal'] = goal_ob
 
             return ob, info
@@ -267,9 +273,17 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             return ob, reward, terminated, truncated, info
 
+        def get_ob(self, ob_type=None):
+            ob_type = self._ob_type if ob_type is None else ob_type
+            if ob_type == 'states':
+                return super().get_ob()
+            else:
+                frame = self.render()
+                return frame
+
         def set_goal(self, goal_ij=None, goal_xy=None):
             if goal_xy is None:
-                self.cur_goal_xy = self._add_noise(self.ij_to_xy(goal_ij))
+                self.cur_goal_xy = self.add_noise(self.ij_to_xy(goal_ij))
             else:
                 self.cur_goal_xy = goal_xy
             if self._ob_type == 'states':
@@ -312,17 +326,12 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             y = i * self._maze_unit - self._offset_y
             return x, y
 
-        def _add_noise(self, xy):
+        def add_noise(self, xy):
             random_x = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
             random_y = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
             return xy[0] + random_x, xy[1] + random_y
 
     class BallEnv(MazeEnv):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-
-            self.observation_space = Box(low=-np.inf, high=np.inf, shape=(super()._get_obs().shape[0],), dtype=np.float64)
-
         def update_tree(self, tree):
             super().update_tree(tree)
 
@@ -366,9 +375,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):
-            goal_ob, _ = super(MazeEnv, self).reset(*args, **kwargs)
-            ob, info = super(MazeEnv, self).reset(*args, **kwargs)
-
             if options is not None:
                 if 'task_idx' in options:
                     self.cur_task_idx = options['task_idx']
@@ -383,14 +389,22 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.cur_task_idx = np.random.randint(self.num_tasks)
                 self.cur_task_info = self.task_infos[self.cur_task_idx]
 
-            agent_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
-            ball_init_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
-            goal_xy = self._add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
+            agent_init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
+            ball_init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
+            goal_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
 
+            # Get goal observation
+            super(MazeEnv, self).reset(*args, **kwargs)
+            for _ in range(5):
+                super(MazeEnv, self).step(self.action_space.sample())
+            self.set_xy(goal_xy)
+            self.set_agent_ball_xy(goal_xy, goal_xy)
+            goal_ob = self.get_ob()
+
+            ob, info = super(MazeEnv, self).reset(*args, **kwargs)
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
-            ob = self._get_obs()
+            ob = self.get_ob()
             self.set_goal(goal_xy=goal_xy)
-            goal_ob = np.concatenate([goal_xy, goal_ob[2:15], goal_xy, goal_ob[17:]])
             info['goal'] = goal_ob
 
             return ob, info

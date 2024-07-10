@@ -17,6 +17,9 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
             self,
             xml_file=None,
             reset_noise_scale=0.1,
+            render_mode='rgb_array',
+            width=200,
+            height=200,
             **kwargs,
     ):
         if xml_file is None:
@@ -37,6 +40,9 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
             xml_file,
             frame_skip=5,
             observation_space=observation_space,
+            render_mode=render_mode,
+            width=width,
+            height=height,
             **kwargs,
         )
 
@@ -49,7 +55,7 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
         qpos = self.data.qpos.copy()
         qvel = self.data.qvel.copy()
 
-        observation = self._get_obs()
+        observation = self.get_ob()
 
         if self.render_mode == 'human':
             self.render()
@@ -62,7 +68,7 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
             'qvel': qvel,
         }
 
-    def _get_obs(self):
+    def get_ob(self):
         position = self.data.qpos.flat.copy()
         velocity = self.data.qvel.flat.copy()
 
@@ -76,7 +82,7 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
         qvel = self.init_qvel + self._reset_noise_scale * self.np_random.standard_normal(self.model.nv)
         self.set_state(qpos, qvel)
 
-        observation = self._get_obs()
+        observation = self.get_ob()
 
         return observation
 

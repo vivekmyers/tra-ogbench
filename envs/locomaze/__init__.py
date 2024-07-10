@@ -1,6 +1,14 @@
 from gymnasium.envs.registration import register
 
 
+visual_dict = dict(
+    render_mode='rgb_array',
+    width=64,
+    height=64,
+    camera_name='back',
+)
+
+
 register(
     id='quadmaze-medium-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
@@ -30,6 +38,7 @@ register(
         maze_env_type='maze',
         maze_type='large',
         ob_type='pixels',
+        **visual_dict,
     )
 )
 register(

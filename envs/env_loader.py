@@ -130,7 +130,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
         import gymnasium
         import envs.locomaze  # noqa
 
-        env = gymnasium.make(env_name, render_mode='rgb_array', width=200, height=200)
+        env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(dataset_path)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
@@ -147,9 +147,9 @@ def make_online_env(env_name):
 
         if '-xy' in env_name:
             env_name = env_name.replace('-xy', '')
-            xy_wrapper = True
+            apply_xy_wrapper = True
         else:
-            xy_wrapper = False
+            apply_xy_wrapper = False
 
         if 'Ant' in env_name:
             xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
@@ -159,7 +159,7 @@ def make_online_env(env_name):
         else:
             env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200)
 
-        if xy_wrapper:
+        if apply_xy_wrapper:
             from envs.locomotion.wrappers import GymXYWrapper, DMCHumanoidXYWrapper
             if 'HumanoidCustom' in env_name:
                 env = DMCHumanoidXYWrapper(env, resample_interval=200)
