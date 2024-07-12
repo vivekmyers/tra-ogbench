@@ -51,8 +51,8 @@ class AntBallEnv(AntEnv):
         goal_xy = np.random.uniform(low=-12, high=12, size=2)
 
         self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
-        ob = self._get_obs()
         self.set_goal(goal_xy=goal_xy)
+        ob = self._get_obs()
 
         return ob, info
 
