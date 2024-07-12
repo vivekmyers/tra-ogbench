@@ -104,6 +104,8 @@ def get_dataset(dataset_path, obs_dtype=np.float32):
 
 
 def make_env_and_dataset(env_name, dataset_path=None):
+    setup_egl()
+
     if 'antmaze' in env_name:
         from envs.d4rl import d4rl_utils
         from envs.antmaze.wrappers import AntMazeGoalWrapper
@@ -116,8 +118,6 @@ def make_env_and_dataset(env_name, dataset_path=None):
         from envs.d4rl import d4rl_utils
         if not hasattr(collections, 'Mapping'):
             collections.Mapping = collections.abc.Mapping
-
-        setup_egl()
 
         env = d4rl_utils.make_env(env_name)
         dataset = d4rl_utils.get_dataset(env, env_name, filter_terminals=True)
@@ -143,6 +143,8 @@ def make_env_and_dataset(env_name, dataset_path=None):
 
 
 def make_online_env(env_name):
+    setup_egl()
+    
     if 'Ant' in env_name or 'Humanoid' in env_name:
         import envs.locomotion  # noqa
         import gymnasium
