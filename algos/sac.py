@@ -160,18 +160,15 @@ class SACAgent(flax.struct.PyTreeNode):
 
         alpha_def = LogParam()
 
-        networks = dict(
-            critic=critic_def,
-            target_critic=copy.deepcopy(critic_def),
-            actor=actor_def,
-            alpha=alpha_def,
+        network_info = dict(
+            critic=(critic_def, (ex_observations, None, ex_actions)),
+            target_critic=(copy.deepcopy(critic_def), (ex_observations, None, ex_actions)),
+            actor=(actor_def, (ex_observations, None)),
+            alpha=(alpha_def, ()),
         )
-        network_args = dict(
-            critic=[ex_observations, None, ex_actions],
-            target_critic=[ex_observations, None, ex_actions],
-            actor=[ex_observations, None],
-            alpha=[],
-        )
+        networks = {k: v[0] for k, v in network_info.items()}
+        network_args = {k: v[1] for k, v in network_info.items()}
+
         network_def = ModuleDict(networks)
         network_tx = optax.adam(learning_rate=config['lr'])
         network_params = network_def.init(init_rng, **network_args)['params']

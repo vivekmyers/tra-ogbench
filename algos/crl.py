@@ -7,6 +7,7 @@ import jax.numpy as jnp
 import ml_collections
 import optax
 
+from utils.encoders import encoder_modules, GCEncoder
 from utils.networks import GCBilinearValue, GCActor
 from utils.train_state import TrainState, nonpytree_field, ModuleDict
 
@@ -185,6 +186,16 @@ class CRLAgent(flax.struct.PyTreeNode):
         ex_goals = ex_observations
         action_dim = ex_actions.shape[-1]
 
+        encoders = dict()
+        if config['encoder'] is not None:
+            encoder_module = encoder_modules[config['encoder']]
+            encoders['value_state'] = encoder_module()
+            encoders['value_goal'] = encoder_module()
+            encoders['actor'] = GCEncoder(concat_encoder=encoder_module())
+            if config['use_q']:
+                encoders['critic_state'] = encoder_module()
+                encoders['critic_goal'] = encoder_module()
+
         if config['use_q']:
             value_def = GCBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
@@ -192,6 +203,8 @@ class CRLAgent(flax.struct.PyTreeNode):
                 layer_norm=config['layer_norm'],
                 ensemble=False,
                 value_exp=True,
+                state_encoder=encoders.get('value_state'),
+                goal_encoder=encoders.get('value_goal'),
             )
             critic_def = GCBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
@@ -199,6 +212,8 @@ class CRLAgent(flax.struct.PyTreeNode):
                 layer_norm=config['layer_norm'],
                 ensemble=True,
                 value_exp=True,
+                state_encoder=encoders.get('critic_state'),
+                goal_encoder=encoders.get('critic_goal'),
             )
         else:
             value_def = GCBilinearValue(
@@ -207,6 +222,8 @@ class CRLAgent(flax.struct.PyTreeNode):
                 layer_norm=config['layer_norm'],
                 ensemble=True,
                 value_exp=True,
+                state_encoder=encoders.get('value_state'),
+                goal_encoder=encoders.get('value_goal'),
             )
             critic_def = None
 
@@ -215,22 +232,20 @@ class CRLAgent(flax.struct.PyTreeNode):
             action_dim=action_dim,
             state_dependent_std=False,
             const_std=config['const_std'],
+            gc_encoder=encoders.get('actor'),
         )
 
-        networks = dict(
-            value=value_def,
-            actor=actor_def,
-        )
-        network_args = dict(value=[ex_observations, ex_goals],
-            actor=[ex_observations, ex_goals],
+        network_info = dict(
+            value=(value_def, (ex_observations, ex_goals)),
+            actor=(actor_def, (ex_observations, ex_goals)),
         )
         if config['use_q']:
-            networks.update(dict(
-                critic=critic_def,
-            ))
-            network_args.update(dict(
-                critic=[ex_observations, ex_goals, ex_actions],
-            ))
+            network_info.update(
+                critic=(critic_def, (ex_observations, ex_goals, ex_actions)),
+            )
+        networks = {k: v[0] for k, v in network_info.items()}
+        network_args = {k: v[1] for k, v in network_info.items()}
+
         network_def = ModuleDict(networks)
         network_tx = optax.adam(learning_rate=config['lr'])
         network_params = network_def.init(init_rng, **network_args)['params']

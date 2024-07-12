@@ -198,14 +198,13 @@ class PPOAgent(flax.struct.PyTreeNode):
             final_fc_init_scale=config['actor_fc_scale'],
         )
 
-        networks = dict(
-            value=value_def,
-            actor=actor_def,
+        network_info = dict(
+            value=(value_def, (ex_observations, None)),
+            actor=(actor_def, (ex_observations, None)),
         )
-        network_args = dict(
-            value=[ex_observations, None],
-            actor=[ex_observations, None],
-        )
+        networks = {k: v[0] for k, v in network_info.items()}
+        network_args = {k: v[1] for k, v in network_info.items()}
+
         network_def = ModuleDict(networks)
         network_tx = optax.chain(optax.clip_by_global_norm(config['clip_grad_norm']), optax.adam(learning_rate=config['lr']))
         network_params = network_def.init(init_rng, **network_args)['params']

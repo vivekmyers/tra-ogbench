@@ -3,7 +3,6 @@ from typing import Sequence, Optional, Any
 import distrax
 import flax
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 
 
@@ -23,30 +22,17 @@ def ensemblize(cls, num_qs, out_axes=0, **kwargs):
     )
 
 
+class Identity(nn.Module):
+    def __call__(self, x):
+        return x
+
+
 class MLP(nn.Module):
     hidden_dims: Sequence[int]
     activations: Any = nn.gelu
     activate_final: bool = False
     kernel_init: Any = default_init()
-
-    def setup(self):
-        self.layers = [
-            nn.Dense(size, kernel_init=self.kernel_init) for size in self.hidden_dims
-        ]
-
-    def __call__(self, x):
-        for i, layer in enumerate(self.layers):
-            x = layer(x)
-            if i + 1 < len(self.layers) or self.activate_final:
-                x = self.activations(x)
-        return x
-
-
-class LayerNormMLP(nn.Module):
-    hidden_dims: Sequence[int]
-    activations: Any = nn.gelu
-    activate_final: bool = False
-    kernel_init: Any = default_init()
+    layer_norm: bool = False
 
     @nn.compact
     def __call__(self, x):
@@ -54,8 +40,15 @@ class LayerNormMLP(nn.Module):
             x = nn.Dense(size, kernel_init=self.kernel_init)(x)
             if i + 1 < len(self.hidden_dims) or self.activate_final:
                 x = self.activations(x)
-                x = nn.LayerNorm()(x)
+                if self.layer_norm:
+                    x = nn.LayerNorm()(x)
         return x
+
+
+class LengthNormalize(nn.Module):
+    @nn.compact
+    def __call__(self, x):
+        return x / jnp.linalg.norm(x, axis=-1, keepdims=True) * jnp.sqrt(x.shape[-1])
 
 
 class LogParam(nn.Module):
@@ -116,8 +109,7 @@ class GCActor(nn.Module):
     state_dependent_std: bool = False
     const_std: bool = True
     final_fc_init_scale: float = 1e-2
-    goal_encoder: nn.Module = None
-    state_encoder: nn.Module = None
+    gc_encoder: nn.Module = None
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
@@ -136,15 +128,13 @@ class GCActor(nn.Module):
     def __call__(
             self, observations, goals=None, goal_encoded=False, temperature=1.0,
     ):
-        if self.goal_encoder is not None and not goal_encoded:
-            goals = self.goal_encoder(targets=goals, bases=observations)
-        if self.state_encoder is not None:
-            observations = self.state_encoder(observations)
-
-        inputs = [observations]
-        if goals is not None:
-            inputs.append(goals)
-        inputs = jnp.concatenate(inputs, axis=-1)
+        if self.gc_encoder is not None:
+            inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
+        else:
+            inputs = [observations]
+            if goals is not None:
+                inputs.append(goals)
+            inputs = jnp.concatenate(inputs, axis=-1)
         outputs = self.actor_net(inputs)
 
         means = self.mean_net(outputs)
@@ -170,26 +160,23 @@ class GCValue(nn.Module):
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
-    goal_encoder: nn.Module = None
-    state_encoder: nn.Module = None
+    gc_encoder: nn.Module = None
 
     def setup(self):
-        mlp_module = LayerNormMLP if self.layer_norm else MLP
+        mlp_module = MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-        value_net = mlp_module((*self.hidden_dims, 1), activate_final=False)
+        value_net = mlp_module((*self.hidden_dims, 1), activate_final=False, layer_norm=self.layer_norm)
 
         self.value_net = value_net
 
     def __call__(self, observations, goals=None, actions=None, info=False):
-        if self.goal_encoder is not None:
-            goals = self.goal_encoder(targets=goals, bases=observations)
-        if self.state_encoder is not None:
-            observations = self.state_encoder(observations)
-
-        inputs = [observations]
-        if goals is not None:
-            inputs.append(goals)
+        if self.gc_encoder is not None:
+            inputs = [self.gc_encoder(observations, goals)]
+        else:
+            inputs = [observations]
+            if goals is not None:
+                inputs.append(goals)
         if actions is not None:
             inputs.append(actions)
         inputs = jnp.concatenate(inputs, axis=-1)
@@ -208,22 +195,22 @@ class GCBilinearValue(nn.Module):
     layer_norm: bool = True
     ensemble: bool = True
     value_exp: bool = False
-    goal_encoder: nn.Module = None
     state_encoder: nn.Module = None
+    goal_encoder: nn.Module = None
 
     def setup(self) -> None:
-        mlp_module = LayerNormMLP if self.layer_norm else MLP
+        mlp_module = MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
 
-        self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
-        self.psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False)
+        self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
+        self.psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
 
     def __call__(self, observations, goals, actions=None, info=False):
-        if self.goal_encoder is not None:
-            goals = self.goal_encoder(goals)
         if self.state_encoder is not None:
             observations = self.state_encoder(observations)
+        if self.goal_encoder is not None:
+            goals = self.goal_encoder(goals)
 
         if actions is None:
             phi_inputs = observations
@@ -242,35 +229,3 @@ class GCBilinearValue(nn.Module):
             return v, phi, psi
         else:
             return v
-
-
-class RelativeRepresentation(nn.Module):
-    hidden_dims: Sequence[int]
-    rep_dim: int
-    layer_norm: bool = True
-    kernel_init: Any = default_init()
-    rep_type: str = 'state'
-    encoder: nn.Module = None
-
-    @nn.compact
-    def __call__(self, targets, bases=None):
-        if bases is None:
-            inputs = targets
-        else:
-            if self.rep_type == 'state':
-                inputs = targets
-            elif self.rep_type == 'diff':
-                inputs = jax.tree_util.tree_map(lambda t, b: t - b + jnp.ones_like(t) * 1e-6, targets, bases)
-            elif self.rep_type == 'concat':
-                inputs = jax.tree_util.tree_map(lambda t, b: jnp.concatenate([t, b], axis=-1), targets, bases)
-            else:
-                raise ValueError(f'Unknown rep_type: {self.rep_type}')
-
-        if self.encoder is not None:
-            inputs = self.encoder()(inputs)
-
-        mlp_module = LayerNormMLP if self.layer_norm else MLP
-        reps = mlp_module((*self.hidden_dims, self.rep_dim), activate_final=False)(inputs)
-        reps = reps / jnp.linalg.norm(reps, axis=-1, keepdims=True) * jnp.sqrt(self.rep_dim)
-
-        return reps

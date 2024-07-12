@@ -82,7 +82,8 @@ def main(_):
         'HGCDataset': HGCDataset,
     }[config['dataset_class']]
     train_dataset = dataset_class(Dataset.create(**train_dataset), config)
-    val_dataset = dataset_class(Dataset.create(**val_dataset), config)
+    if val_dataset is not None:
+        val_dataset = dataset_class(Dataset.create(**val_dataset), config)
 
     example_batch = train_dataset.sample(1)
 

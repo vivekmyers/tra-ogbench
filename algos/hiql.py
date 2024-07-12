@@ -1,13 +1,16 @@
+import copy
 from functools import partial
 from typing import Any
 
 import flax
+import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import ml_collections
 import optax
 
-from utils.networks import GCValue, GCActor, RelativeRepresentation
+from utils.encoders import encoder_modules, GCEncoder
+from utils.networks import GCValue, GCActor, MLP, Identity, LengthNormalize
 from utils.train_state import TrainState, nonpytree_field, ModuleDict
 
 
@@ -56,7 +59,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
         exp_a = jnp.exp(adv * self.config['low_alpha'])
         exp_a = jnp.minimum(exp_a, 100.0)
 
-        goal_reps = self.network.select('goal_rep')(targets=batch['low_actor_goals'], bases=batch['observations'], params=grad_params)
+        goal_reps = self.network.select('goal_rep')(jnp.concatenate([batch['observations'], batch['low_actor_goals']], axis=-1), params=grad_params)
         if not self.config['low_actor_rep_grad']:
             goal_reps = jax.lax.stop_gradient(goal_reps)
         dist = self.network.select('low_actor')(batch['observations'], goal_reps, goal_encoded=True, params=grad_params)
@@ -83,7 +86,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
         exp_a = jnp.minimum(exp_a, 100.0)
 
         dist = self.network.select('high_actor')(batch['observations'], batch['high_actor_goals'], params=grad_params)
-        target = self.network.select('goal_rep')(targets=batch['high_actor_targets'], bases=batch['observations'])
+        target = self.network.select('goal_rep')(jnp.concatenate([batch['observations'], batch['high_actor_targets']], axis=-1))
         log_prob = dist.log_prob(target)
 
         actor_loss = -(exp_a * log_prob).mean()
@@ -170,29 +173,41 @@ class HIQLAgent(flax.struct.PyTreeNode):
         ex_goals = ex_observations
         action_dim = ex_actions.shape[-1]
 
-        def make_rep():
-            return RelativeRepresentation(
-                rep_dim=config['rep_dim'],
-                hidden_dims=config['value_hidden_dims'],
-                layer_norm=config['layer_norm'],
-                rep_type=config['rep_type'],
-            )
+        if config['encoder'] is not None:
+            encoder_module = encoder_modules[config['encoder']]
+            goal_rep_seq = [encoder_module()]
+        else:
+            goal_rep_seq = []
+        goal_rep_seq.append(MLP(
+            hidden_dims=(*config['value_hidden_dims'], config['rep_dim']),
+            activate_final=False,
+            layer_norm=config['layer_norm'],
+        ))
+        goal_rep_seq.append(LengthNormalize())
+        goal_rep_def = nn.Sequential(goal_rep_seq)
 
-        goal_rep_def = make_rep()
+        if config['encoder'] is not None:
+            value_encoder_def = GCEncoder(state_encoder=encoder_module(), concat_encoder=goal_rep_def)
+            target_value_encoder_def = GCEncoder(state_encoder=encoder_module(), concat_encoder=goal_rep_def)
+            low_actor_encoder_def = GCEncoder(state_encoder=encoder_module(), concat_encoder=goal_rep_def)
+            high_actor_encoder_def = GCEncoder(concat_encoder=encoder_module())
+        else:
+            value_encoder_def = GCEncoder(state_encoder=Identity(), concat_encoder=goal_rep_def)
+            target_value_encoder_def = GCEncoder(state_encoder=Identity(), concat_encoder=goal_rep_def)
+            low_actor_encoder_def = GCEncoder(state_encoder=Identity(), concat_encoder=goal_rep_def)
+            high_actor_encoder_def = None
 
         value_def = GCValue(
             hidden_dims=config['value_hidden_dims'],
             layer_norm=config['layer_norm'],
             ensemble=True,
-            state_encoder=None,
-            goal_encoder=goal_rep_def,
+            gc_encoder=value_encoder_def,
         )
         target_value_def = GCValue(
             hidden_dims=config['value_hidden_dims'],
             layer_norm=config['layer_norm'],
             ensemble=True,
-            state_encoder=None,
-            goal_encoder=goal_rep_def,
+            gc_encoder=target_value_encoder_def,
         )
 
         low_actor_def = GCActor(
@@ -200,33 +215,26 @@ class HIQLAgent(flax.struct.PyTreeNode):
             action_dim=action_dim,
             state_dependent_std=False,
             const_std=config['const_std'],
-            state_encoder=None,
-            goal_encoder=goal_rep_def,
+            gc_encoder=low_actor_encoder_def,
         )
-
         high_actor_def = GCActor(
             hidden_dims=config['actor_hidden_dims'],
             action_dim=config['rep_dim'],
             state_dependent_std=False,
             const_std=config['const_std'],
-            state_encoder=None,
-            goal_encoder=None,
+            gc_encoder=high_actor_encoder_def,
         )
 
-        networks = dict(
-            value=value_def,
-            target_value=target_value_def,
-            low_actor=low_actor_def,
-            high_actor=high_actor_def,
-            goal_rep=goal_rep_def,
+        network_info = dict(
+            goal_rep=(goal_rep_def, (jnp.concatenate([ex_observations, ex_goals], axis=-1))),
+            value=(value_def, (ex_observations, ex_goals)),
+            target_value=(target_value_def, (ex_observations, ex_goals)),
+            low_actor=(low_actor_def, (ex_observations, ex_goals)),
+            high_actor=(high_actor_def, (ex_observations, ex_goals)),
         )
-        network_args = dict(
-            value=[ex_observations, ex_goals],
-            target_value=[ex_observations, ex_goals],
-            low_actor=[ex_observations, ex_goals],
-            high_actor=[ex_observations, ex_goals],
-            goal_rep=[ex_goals, ex_observations],
-        )
+        networks = {k: v[0] for k, v in network_info.items()}
+        network_args = {k: v[1] for k, v in network_info.items()}
+
         network_def = ModuleDict(networks)
         network_tx = optax.adam(learning_rate=config['lr'])
         network_params = network_def.init(init_rng, **network_args)['params']
@@ -253,7 +261,6 @@ def get_config():
         high_alpha=1.0,
         subgoal_steps=25,
         rep_dim=10,
-        rep_type='concat',  # ['state', 'diff', 'concat']
         low_actor_rep_grad=False,  # Whether the gradient flows from the low actor to the goal representation
         const_std=True,
         encoder=ml_collections.config_dict.placeholder(str),

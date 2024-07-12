@@ -28,9 +28,6 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         utils.EzPickle.__init__(
             self,
             xml_file,
-            render_mode=render_mode,
-            width=width,
-            height=height,
             **kwargs,
         )
 
@@ -41,6 +38,9 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
             xml_file,
             frame_skip=5,
             observation_space=observation_space,
+            render_mode=render_mode,
+            width=width,
+            height=height,
             **kwargs,
         )
 

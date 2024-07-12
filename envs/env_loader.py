@@ -132,6 +132,8 @@ def make_env_and_dataset(env_name, dataset_path=None):
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(dataset_path)
+        if val_dataset.size == 0:
+            val_dataset = None
     else:
         raise ValueError(f'Unknown environment: {env_name}')
 
