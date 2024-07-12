@@ -144,7 +144,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
 
 def make_online_env(env_name):
     setup_egl()
-    
+
     if 'Ant' in env_name or 'Humanoid' in env_name:
         import envs.locomotion  # noqa
         import gymnasium
