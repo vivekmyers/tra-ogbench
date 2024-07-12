@@ -61,7 +61,8 @@ class DMCHumanoidXYWrapper(GymXYWrapper):
         small_control = (4 + small_control) / 5
         move = center_of_mass_velocity[0:2].dot(self.z)
         move = (5 * move + 1) / 6
-        reward = small_control * stand_reward * move
+        # reward = small_control * stand_reward * move
+        reward = stand_reward * (1 + (next_xy - cur_xy).dot(self.z) * 100)
 
         info['xy'] = next_xy
         info['direction'] = self.z
