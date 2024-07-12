@@ -8,7 +8,7 @@ register(
 register(
     id="AntBall-v0",
     entry_point="envs.locomotion.ant_ball:AntBallEnv",
-    max_episode_steps=1000,
+    max_episode_steps=200,
 )
 register(
     id="HumanoidCustom-v0",
