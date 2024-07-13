@@ -4,13 +4,14 @@ import platform
 import time
 
 import gymnasium
+from gymnasium.spaces import Box
 import h5py
 import numpy as np
 
 from utils.dataset import Dataset
 
 
-class EpisodeMonitor(gymnasium.ActionWrapper):
+class EpisodeMonitor(gymnasium.Wrapper):
     def __init__(self, env):
         super().__init__(env)
         self._reset_stats()
@@ -43,6 +44,35 @@ class EpisodeMonitor(gymnasium.ActionWrapper):
     def reset(self, *args, **kwargs):
         self._reset_stats()
         return self.env.reset(*args, **kwargs)
+
+
+class FrameStackWrapper(gymnasium.Wrapper):
+    def __init__(self, env, num_stack):
+        super().__init__(env)
+
+        self.num_stack = num_stack
+        self.frames = collections.deque(maxlen=num_stack)
+
+        low = np.concatenate([self.observation_space.low] * num_stack, axis=-1)
+        high = np.concatenate([self.observation_space.high] * num_stack, axis=-1)
+        self.observation_space = Box(low=low, high=high, dtype=self.observation_space.dtype)
+
+    def get_observation(self):
+        assert len(self.frames) == self.num_stack
+        return np.concatenate(list(self.frames), axis=-1)
+
+    def reset(self, **kwargs):
+        ob, info = self.env.reset(**kwargs)
+        for _ in range(self.num_stack):
+            self.frames.append(ob)
+        if 'goal' in info:
+            info['goal'] = np.concatenate([info['goal']] * self.num_stack, axis=-1)
+        return self.get_observation(), info
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        self.frames.append(observation)
+        return self.get_observation(), reward, terminated, truncated, info
 
 
 def setup_egl():
@@ -79,7 +109,7 @@ def truncate_dataset(dataset, ratio, return_both=False):
         return trunc_dataset
 
 
-def get_dataset(dataset_path, obs_dtype=np.float32):
+def get_dataset(dataset_path, ob_dtype=np.float32):
     train_path = dataset_path
     val_path = dataset_path.replace('.hdf5', '-val.hdf5')
     train_dataset = dict()
@@ -88,7 +118,7 @@ def get_dataset(dataset_path, obs_dtype=np.float32):
         file = h5py.File(path, 'r')
 
         for k in ['observations', 'actions', 'terminals']:
-            dtype = obs_dtype if 'observation' in k else np.float32
+            dtype = ob_dtype if 'observation' in k else np.float32
             dataset[k] = file[k][...].astype(dtype)
 
         # Since the dataset doesn't contain next_observations, we need to invalidate the last state of each trajectory

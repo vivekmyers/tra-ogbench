@@ -294,5 +294,6 @@ def get_config():
         actor_geom_sample=False,
         gc_negative=True,  # True for (-1, 0) rewards, False for (0, 1) rewards
         p_aug=0.0,
+        frame_stack=ml_collections.config_dict.placeholder(int),
     ))
     return config

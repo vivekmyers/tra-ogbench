@@ -17,7 +17,7 @@ def get_dataset(
         env_name,
         dataset=None,
         filter_terminals=False,
-        obs_dtype=np.float32,
+        ob_dtype=np.float32,
 ):
     if dataset is None:
         dataset = d4rl.qlearning_dataset(env)
@@ -47,8 +47,8 @@ def get_dataset(
     terminals[-1] = 1
 
     return Dataset.create(
-        observations=dataset['observations'].astype(obs_dtype),
+        observations=dataset['observations'].astype(ob_dtype),
         actions=dataset['actions'].astype(np.float32),
-        next_observations=dataset['next_observations'].astype(obs_dtype),
+        next_observations=dataset['next_observations'].astype(ob_dtype),
         terminals=terminals.astype(np.float32),
     )

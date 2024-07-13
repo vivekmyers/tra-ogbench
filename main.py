@@ -16,7 +16,7 @@ from absl import app, flags
 from ml_collections import config_flags
 
 from algos import algos
-from envs.env_loader import make_env_and_dataset
+from envs.env_loader import make_env_and_dataset, FrameStackWrapper
 from utils.dataset import Dataset, GCDataset, HGCDataset
 from utils.evaluation import evaluate
 from utils.logger import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
@@ -73,6 +73,8 @@ def main(_):
     agent_class = algos[config.agent_name]
 
     env, train_dataset, val_dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.dataset_path)
+    if config['frame_stack'] is not None:
+        env = FrameStackWrapper(env, config['frame_stack'])
 
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)

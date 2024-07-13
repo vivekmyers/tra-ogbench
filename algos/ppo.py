@@ -19,7 +19,7 @@ class PPOAgent(flax.struct.PyTreeNode):
     config: Any = nonpytree_field()
 
     def compute_gae(self, traj_batch):
-        # traj_batch: dict of (num_steps, num_envs, obs_dim)
+        # traj_batch: dict of (num_steps, num_envs, ob_dim)
         values = self.network.select('value')(traj_batch['observations'])
         next_values = self.network.select('value')(traj_batch['next_observations'])
 
@@ -117,11 +117,11 @@ class PPOAgent(flax.struct.PyTreeNode):
 
     @jax.jit
     def train(self, traj_batch):
-        assert len(traj_batch['observations'].shape) == 3  # (num_steps, num_envs, obs_dim)
+        assert len(traj_batch['observations'].shape) == 3  # (num_steps, num_envs, ob_dim)
 
         if self.config['normalize_ob']:
-            obs_dim = traj_batch['observations'].shape[-1]
-            self = self.replace(rms_ob=self.rms_ob.update(traj_batch['observations'].reshape(-1, obs_dim)))
+            ob_dim = traj_batch['observations'].shape[-1]
+            self = self.replace(rms_ob=self.rms_ob.update(traj_batch['observations'].reshape(-1, ob_dim)))
             traj_batch['observations'] = self.rms_ob.normalize(traj_batch['observations'])
             traj_batch['next_observations'] = self.rms_ob.normalize(traj_batch['next_observations'])
         if self.config['normalize_reward']:
