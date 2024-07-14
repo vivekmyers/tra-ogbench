@@ -5,7 +5,6 @@ from typing import Any
 import jax
 import jax.numpy as jnp
 import numpy as np
-from flax.core import freeze
 from flax.core.frozen_dict import FrozenDict
 
 
@@ -68,11 +67,15 @@ class GCDataset:
         self.size = self.dataset.size
         self.terminal_locs, = np.nonzero(self.dataset['terminals'] > 0)
         self.initial_locs = np.concatenate([[0], self.terminal_locs[:-1] + 1])
+        self.preprocess_frame_stack = True  # Set False to save memory
         assert self.terminal_locs[-1] == self.size - 1
         assert np.isclose(self.config['value_p_curgoal'] + self.config['value_p_trajgoal'] + self.config['value_p_randomgoal'], 1.0)
         assert np.isclose(self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0)
         if self.config['frame_stack'] is not None:
             assert 'next_observations' not in self.dataset  # Only support memory-efficient (observation-only) datasets
+            if self.preprocess_frame_stack:
+                stacked_observations = self.get_stacked_observations(np.arange(self.size))
+                self.dataset = Dataset(self.dataset.copy(dict(observations=stacked_observations)))
 
     def sample(self, batch_size: int, idxs=None, evaluation=False):
         if idxs is None:
@@ -128,15 +131,18 @@ class GCDataset:
             batch[key] = jax.tree_util.tree_map(lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(arr.shape) == 4 else arr, batch[key])
 
     def get_observations(self, idxs):
-        if self.config['frame_stack'] is None:
+        if self.config['frame_stack'] is None or self.preprocess_frame_stack:
             return jax.tree_util.tree_map(lambda arr: arr[idxs], self.dataset['observations'])
         else:
-            initial_state_idxs = self.initial_locs[np.searchsorted(self.initial_locs, idxs, side='right') - 1]
-            rets = []
-            for i in reversed(range(self.config['frame_stack'])):
-                cur_idxs = np.maximum(idxs - i, initial_state_idxs)
-                rets.append(jax.tree_util.tree_map(lambda arr: arr[cur_idxs], self.dataset['observations']))
-            return jax.tree_util.tree_map(lambda *args: np.concatenate(args, axis=-1), *rets)
+            return self.get_stacked_observations(idxs)
+
+    def get_stacked_observations(self, idxs):
+        initial_state_idxs = self.initial_locs[np.searchsorted(self.initial_locs, idxs, side='right') - 1]
+        rets = []
+        for i in reversed(range(self.config['frame_stack'])):
+            cur_idxs = np.maximum(idxs - i, initial_state_idxs)
+            rets.append(jax.tree_util.tree_map(lambda arr: arr[cur_idxs], self.dataset['observations']))
+        return jax.tree_util.tree_map(lambda *args: np.concatenate(args, axis=-1), *rets)
 
 
 @dataclasses.dataclass
