@@ -51,6 +51,7 @@ register(
         maze_type='giant',
     )
 )
+
 register(
     id=f'quadball-arena-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
@@ -71,10 +72,11 @@ register(
         maze_type='medium',
     )
 )
+
 register(
     id='humanoidmaze-medium-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=1000,
+    max_episode_steps=2000,
     kwargs=dict(
         loco_env_type='humanoid',
         maze_env_type='maze',
@@ -84,7 +86,7 @@ register(
 register(
     id='humanoidmaze-large-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=1000,
+    max_episode_steps=2000,
     kwargs=dict(
         loco_env_type='humanoid',
         maze_env_type='maze',
