@@ -111,11 +111,11 @@ def truncate_dataset(dataset, ratio, return_both=False):
 
 def get_dataset(dataset_path, ob_dtype=np.float32):
     train_path = dataset_path
-    val_path = dataset_path.replace('.hdf5', '-val.hdf5')
+    val_path = dataset_path.replace('.npz', '-val.npz')
     train_dataset = dict()
     val_dataset = dict()
     for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
-        file = h5py.File(path, 'r')
+        file = np.load(path)
 
         for k in ['observations', 'actions', 'terminals']:
             dtype = ob_dtype if 'observation' in k else np.float32

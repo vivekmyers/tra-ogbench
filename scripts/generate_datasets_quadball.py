@@ -5,7 +5,6 @@ from collections import defaultdict
 
 import flax
 import gymnasium
-import h5py
 import numpy as np
 from absl import app, flags
 from tqdm import trange
@@ -169,8 +168,8 @@ def main(_):
             dataset['observations'].append(ob)
             dataset['actions'].append(action)
             dataset['terminals'].append(done)
-            dataset['infos/qpos'].append(info['prev_qpos'])
-            dataset['infos/qvel'].append(info['prev_qvel'])
+            dataset['qpos'].append(info['prev_qpos'])
+            dataset['qvel'].append(info['prev_qvel'])
 
             ob = next_ob
             step += 1
@@ -182,15 +181,13 @@ def main(_):
     print('Total steps:', total_steps)
 
     train_path = FLAGS.save_path
-    val_path = FLAGS.save_path.replace('.hdf5', '-val.hdf5')
+    val_path = FLAGS.save_path.replace('.npz', '-val.npz')
 
     train_dataset = {k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
     val_dataset = {k: np.array(v[total_train_steps:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
 
     for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
-        file = h5py.File(path, 'w')
-        for k in dataset:
-            file.create_dataset(k, data=dataset[k], compression='gzip')
+        np.savez_compressed(path, **dataset)
 
 
 if __name__ == '__main__':
