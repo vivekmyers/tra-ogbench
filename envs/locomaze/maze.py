@@ -123,6 +123,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                         r = int(x / tex_height * (max_value - min_value) + min_value)
                         g = int(y / tex_width * (max_value - min_value) + min_value)
                         tex_rgb[x, y, :] = [r, g, 128]
+            else:
+                ex_ob = self.get_ob()
+                self.observation_space = Box(low=-np.inf, high=np.inf, shape=ex_ob.shape, dtype=ex_ob.dtype)
 
             # Set camera
             self.reset()
