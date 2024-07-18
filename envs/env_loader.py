@@ -5,7 +5,6 @@ import time
 
 import gymnasium
 from gymnasium.spaces import Box
-import h5py
 import numpy as np
 
 from utils.dataset import Dataset
