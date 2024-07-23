@@ -160,7 +160,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name)
-        train_dataset, val_dataset = get_dataset(dataset_path)
+        train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32)
         if val_dataset.size == 0:
             val_dataset = None
     else:
