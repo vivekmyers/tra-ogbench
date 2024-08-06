@@ -1,0 +1,28 @@
+<mujoco model="cylinder">
+  <default>
+    <default class="cylinder">
+      <default class="visual">
+        <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+      </default>
+      <default class="collision">
+        <geom group="3" type="cylinder" solref="0.004 1"/>
+      </default>
+      <site group="5" rgba=".9 .2 .2 1" size=".002"/>
+    </default>
+  </default>
+
+  <asset>
+    <material name="black" rgba=".2 .2 .2 1"/>
+    <material name="red" rgba="1 0 0 1"/>
+
+    <mesh file="cylinder.obj"/>
+  </asset>
+
+  <worldbody>
+    <body name="cylinder" childclass="cylinder">
+      <geom name="cylinder_visual" class="visual" material="red" mesh="cylinder" mass="0" density="0"/>
+      <geom name="cylinder_collision" class="collision" size="0.0125 0.0945" pos="0 0 0.097" density="1240"/>
+      <site name="tip" pos="0 0 0.1891"/>
+    </body>
+  </worldbody>
+</mujoco>
