@@ -98,11 +98,12 @@ class PickPlaceOracle(oracle.Oracle):
 
         return times, X_WG, grasps
 
-    def reset(self, obs) -> None:
+    def reset(self, obs, info) -> None:
+        target_block = info["target_block"]
         X_O = {
             "initial": self.to_pose(
-                pos=obs["privileged/block_pos"],
-                yaw=obs["privileged/block_yaw"][0],
+                pos=obs[f"privileged/block_{target_block}_pos"],
+                yaw=obs[f"privileged/block_{target_block}_yaw"][0],
             ),
             "goal": self.to_pose(
                 pos=obs["privileged/target_pos"],

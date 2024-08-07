@@ -9,18 +9,17 @@ from envs.robomanip.pick_place import RoboManipEnv
 def main():
     env = RoboManipEnv(
         absolute_action_space=True,
-        randomize_object_orientation=True,
-        randomize_object_position=True,
-        randomize_target_orientation=True,
-        randomize_target_position=True,
+        physics_timestep=0.004,
+        control_timestep=0.04,
     )
-    obs, _ = env.reset(seed=12345)
+    obs, info = env.reset(seed=12345)
     agent = oracles.PickPlaceOracle()
-    agent.reset(obs)
-    obs, _ = env.reset()
-    agent.reset(obs)
+    agent.reset(obs, info)
+    obs, info = env.reset()
+    agent.reset(obs, info)
     for _ in range(1000):
         action = agent.select_action(obs)
+        # action = env.action_space.sample()
         obs, *_ = env.step(action)
 
 
