@@ -17,7 +17,7 @@ register(
         loco_env_type='quad',
         maze_env_type='maze',
         maze_type='medium',
-    )
+    ),
 )
 register(
     id='visual-quadmaze-medium-v0',
@@ -29,7 +29,7 @@ register(
         maze_type='medium',
         ob_type='pixels',
         **visual_dict,
-    )
+    ),
 )
 register(
     id='quadmaze-large-v0',
@@ -39,7 +39,7 @@ register(
         loco_env_type='quad',
         maze_env_type='maze',
         maze_type='large',
-    )
+    ),
 )
 register(
     id='visual-quadmaze-large-v0',
@@ -51,7 +51,7 @@ register(
         maze_type='large',
         ob_type='pixels',
         **visual_dict,
-    )
+    ),
 )
 register(
     id='quadmaze-giant-v0',
@@ -61,7 +61,7 @@ register(
         loco_env_type='quad',
         maze_env_type='maze',
         maze_type='giant',
-    )
+    ),
 )
 register(
     id='visual-quadmaze-giant-v0',
@@ -73,7 +73,7 @@ register(
         maze_type='giant',
         ob_type='pixels',
         **visual_dict,
-    )
+    ),
 )
 
 register(
@@ -84,7 +84,7 @@ register(
         loco_env_type='quad',
         maze_env_type='ball',
         maze_type='arena',
-    )
+    ),
 )
 register(
     id='quadball-medium-v0',
@@ -94,7 +94,7 @@ register(
         loco_env_type='quad',
         maze_env_type='ball',
         maze_type='medium',
-    )
+    ),
 )
 
 register(
@@ -105,7 +105,7 @@ register(
         loco_env_type='humanoid',
         maze_env_type='maze',
         maze_type='medium',
-    )
+    ),
 )
 register(
     id='visual-humanoidmaze-medium-v0',
@@ -117,7 +117,7 @@ register(
         maze_type='medium',
         ob_type='pixels',
         **visual_dict,
-    )
+    ),
 )
 register(
     id='humanoidmaze-large-v0',
@@ -127,7 +127,7 @@ register(
         loco_env_type='humanoid',
         maze_env_type='maze',
         maze_type='large',
-    )
+    ),
 )
 register(
     id='visual-humanoidmaze-large-v0',
@@ -139,5 +139,5 @@ register(
         maze_type='large',
         ob_type='pixels',
         **visual_dict,
-    )
+    ),
 )

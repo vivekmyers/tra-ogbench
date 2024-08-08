@@ -3,7 +3,6 @@ import abc
 
 
 class Trajectory(abc.ABC):
-
     @abc.abstractmethod
     def start_time(self) -> float:
         raise NotImplementedError

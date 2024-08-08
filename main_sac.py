@@ -136,13 +136,15 @@ def main(_):
         if FLAGS.terminate_at_end and truncated:
             terminated = True
 
-        replay_buffer.add_transition(dict(
-            observations=ob,
-            actions=action,
-            rewards=reward,
-            masks=float(not terminated),
-            next_observations=next_ob,
-        ))
+        replay_buffer.add_transition(
+            dict(
+                observations=ob,
+                actions=action,
+                rewards=reward,
+                masks=float(not terminated),
+                next_observations=next_ob,
+            )
+        )
         ob = next_ob
 
         if terminated or truncated:
@@ -160,7 +162,7 @@ def main(_):
         if i % FLAGS.log_interval == 0 and update_info is not None:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
-            train_metrics['time/total_time'] = (time.time() - first_time)
+            train_metrics['time/total_time'] = time.time() - first_time
             train_metrics.update(expl_metrics)
             last_time = time.time()
             wandb.log(train_metrics, step=i)
@@ -213,7 +215,9 @@ def main(_):
                 example_transition['actions'],
                 config,
             )
-            agent = agent.replace(network=agent.network.replace(params=new_agent.network.params, opt_state=new_agent.network.opt_state))
+            agent = agent.replace(
+                network=agent.network.replace(params=new_agent.network.params, opt_state=new_agent.network.opt_state)
+            )
             del new_agent
     train_logger.close()
     eval_logger.close()

@@ -4,8 +4,8 @@ import mujoco
 
 def get_epsilon(dtype: np.dtype) -> float:
     return {
-        np.dtype("float32"): 1e-5,
-        np.dtype("float64"): 1e-10,
+        np.dtype('float32'): 1e-5,
+        np.dtype('float64'): 1e-10,
     }[dtype]
 
 

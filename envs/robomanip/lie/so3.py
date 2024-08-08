@@ -33,13 +33,11 @@ class SO3:
 
     def __post_init__(self) -> None:
         if self.wxyz.shape != (self.parameters_dim,):
-            raise ValueError(
-                f"Expeced wxyz to be a length 4 vector but got {self.wxyz.shape[0]}."
-            )
+            raise ValueError(f'Expeced wxyz to be a length 4 vector but got {self.wxyz.shape[0]}.')
 
     def __repr__(self) -> str:
         wxyz = np.round(self.wxyz, 5)
-        return f"{self.__class__.__name__}(wxyz={wxyz})"
+        return f'{self.__class__.__name__}(wxyz={wxyz})'
 
     def copy(self) -> SO3:
         return SO3(wxyz=self.wxyz.copy())
@@ -62,11 +60,7 @@ class SO3:
         pitch: float,
         yaw: float,
     ) -> SO3:
-        return (
-            SO3.from_z_radians(yaw)
-            @ SO3.from_y_radians(pitch)
-            @ SO3.from_x_radians(roll)
-        )
+        return SO3.from_z_radians(yaw) @ SO3.from_y_radians(pitch) @ SO3.from_x_radians(roll)
 
     @staticmethod
     def from_matrix(matrix: np.ndarray) -> SO3:
@@ -191,4 +185,4 @@ class SO3:
         elif isinstance(other, SO3):
             return self.multiply(other=other)
         else:
-            raise ValueError(f"Unsupported argument type for @ operator: {type(other)}")
+            raise ValueError(f'Unsupported argument type for @ operator: {type(other)}')

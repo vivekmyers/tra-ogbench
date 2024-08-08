@@ -26,6 +26,7 @@ def batched_random_crop(imgs, crop_froms, padding):
 
 class Dataset(FrozenDict):
     """A class that supports both memory-efficient (observations-only) and regular (i.e., having both observations and next_observations) datasets."""
+
     @classmethod
     def create(cls, freeze=True, **fields):
         data = fields
@@ -38,7 +39,7 @@ class Dataset(FrozenDict):
         super().__init__(*args, **kwargs)
         self.size = get_size(self._dict)
         if 'valids' in self._dict:
-            self.valid_idxs, = np.nonzero(self['valids'] > 0)
+            (self.valid_idxs,) = np.nonzero(self['valids'] > 0)
 
     def get_random_idxs(self, num_idxs):
         if 'valids' in self._dict:
@@ -65,12 +66,16 @@ class GCDataset:
 
     def __post_init__(self):
         self.size = self.dataset.size
-        self.terminal_locs, = np.nonzero(self.dataset['terminals'] > 0)
+        (self.terminal_locs,) = np.nonzero(self.dataset['terminals'] > 0)
         self.initial_locs = np.concatenate([[0], self.terminal_locs[:-1] + 1])
         self.preprocess_frame_stack = True  # Set False to save memory
         assert self.terminal_locs[-1] == self.size - 1
-        assert np.isclose(self.config['value_p_curgoal'] + self.config['value_p_trajgoal'] + self.config['value_p_randomgoal'], 1.0)
-        assert np.isclose(self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0)
+        assert np.isclose(
+            self.config['value_p_curgoal'] + self.config['value_p_trajgoal'] + self.config['value_p_randomgoal'], 1.0
+        )
+        assert np.isclose(
+            self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0
+        )
         if self.config['frame_stack'] is not None:
             assert 'next_observations' not in self.dataset  # Only support memory-efficient (observation-only) datasets
             if self.preprocess_frame_stack:
@@ -86,8 +91,20 @@ class GCDataset:
             batch['observations'] = self.get_observations(idxs)
             batch['next_observations'] = self.get_observations(idxs + 1)
 
-        value_goal_idxs = self.sample_goals(idxs, self.config['value_p_curgoal'], self.config['value_p_trajgoal'], self.config['value_p_randomgoal'], self.config['value_geom_sample'])
-        actor_goal_idxs = self.sample_goals(idxs, self.config['actor_p_curgoal'], self.config['actor_p_trajgoal'], self.config['actor_p_randomgoal'], self.config['actor_geom_sample'])
+        value_goal_idxs = self.sample_goals(
+            idxs,
+            self.config['value_p_curgoal'],
+            self.config['value_p_trajgoal'],
+            self.config['value_p_randomgoal'],
+            self.config['value_geom_sample'],
+        )
+        actor_goal_idxs = self.sample_goals(
+            idxs,
+            self.config['actor_p_curgoal'],
+            self.config['actor_p_trajgoal'],
+            self.config['actor_p_randomgoal'],
+            self.config['actor_geom_sample'],
+        )
 
         batch['value_goals'] = self.get_observations(value_goal_idxs)
         batch['actor_goals'] = self.get_observations(actor_goal_idxs)
@@ -114,8 +131,12 @@ class GCDataset:
             middle_goal_idxs = np.minimum(idxs + offsets, final_state_idxs)
         else:
             distances = np.random.rand(batch_size)  # in [0, 1)
-            middle_goal_idxs = np.round((np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))).astype(int)
-        goal_idxs = np.where(np.random.rand(batch_size) < p_trajgoal / (1.0 - p_curgoal + 1e-6), middle_goal_idxs, random_goal_idxs)
+            middle_goal_idxs = np.round(
+                (np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))
+            ).astype(int)
+        goal_idxs = np.where(
+            np.random.rand(batch_size) < p_trajgoal / (1.0 - p_curgoal + 1e-6), middle_goal_idxs, random_goal_idxs
+        )
 
         # Goals at the current state
         goal_idxs = np.where(np.random.rand(batch_size) < p_curgoal, idxs, goal_idxs)
@@ -128,7 +149,10 @@ class GCDataset:
         crop_froms = np.random.randint(0, 2 * padding + 1, (batch_size, 2))
         crop_froms = np.concatenate([crop_froms, np.zeros((batch_size, 1), dtype=np.int32)], axis=1)
         for key in keys:
-            batch[key] = jax.tree_util.tree_map(lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(arr.shape) == 4 else arr, batch[key])
+            batch[key] = jax.tree_util.tree_map(
+                lambda arr: np.array(batched_random_crop(arr, crop_froms, padding)) if len(arr.shape) == 4 else arr,
+                batch[key],
+            )
 
     def get_observations(self, idxs):
         if self.config['frame_stack'] is None or self.preprocess_frame_stack:
@@ -157,7 +181,13 @@ class HGCDataset(GCDataset):
             batch['next_observations'] = self.get_observations(idxs + 1)
 
         # Sample value goals
-        value_goal_idxs = self.sample_goals(idxs, self.config['value_p_curgoal'], self.config['value_p_trajgoal'], self.config['value_p_randomgoal'], self.config['value_geom_sample'])
+        value_goal_idxs = self.sample_goals(
+            idxs,
+            self.config['value_p_curgoal'],
+            self.config['value_p_trajgoal'],
+            self.config['value_p_randomgoal'],
+            self.config['value_geom_sample'],
+        )
         batch['value_goals'] = self.get_observations(value_goal_idxs)
 
         successes = (idxs == value_goal_idxs).astype(float)
@@ -175,13 +205,15 @@ class HGCDataset(GCDataset):
             high_traj_goal_idxs = np.minimum(idxs + offsets, final_state_idxs)
         else:
             distances = np.random.rand(batch_size)  # in [0, 1)
-            high_traj_goal_idxs = np.round((np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))).astype(int)
+            high_traj_goal_idxs = np.round(
+                (np.minimum(idxs + 1, final_state_idxs) * distances + final_state_idxs * (1 - distances))
+            ).astype(int)
         high_traj_target_idxs = np.minimum(idxs + self.config['subgoal_steps'], high_traj_goal_idxs)
 
         high_random_goal_idxs = self.dataset.get_random_idxs(batch_size)
         high_random_target_idxs = np.minimum(idxs + self.config['subgoal_steps'], final_state_idxs)
 
-        pick_random = (np.random.rand(batch_size) < self.config['actor_p_randomgoal'])
+        pick_random = np.random.rand(batch_size) < self.config['actor_p_randomgoal']
         high_goal_idxs = np.where(pick_random, high_random_goal_idxs, high_traj_goal_idxs)
         high_target_idxs = np.where(pick_random, high_random_target_idxs, high_traj_target_idxs)
 
@@ -190,7 +222,17 @@ class HGCDataset(GCDataset):
 
         if self.config['p_aug'] is not None and not evaluation:
             if np.random.rand() < self.config['p_aug']:
-                self.augment(batch, ['observations', 'next_observations', 'value_goals', 'low_actor_goals', 'high_actor_goals', 'high_actor_targets'])
+                self.augment(
+                    batch,
+                    [
+                        'observations',
+                        'next_observations',
+                        'value_goals',
+                        'low_actor_goals',
+                        'high_actor_goals',
+                        'high_actor_targets',
+                    ],
+                )
 
         return batch
 

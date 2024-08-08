@@ -27,7 +27,7 @@ def attach(
 
     if attach_site is not None:
         if isinstance(attach_site, str):
-            attachment_site = parent.find("site", attach_site)
+            attachment_site = parent.find('site', attach_site)
             assert attachment_site is not None
         else:
             assert isinstance(attach_site, mjcf.Element)
@@ -36,10 +36,10 @@ def attach(
     else:
         frame = parent.attach(child)
         if add_freejoint:
-            frame.add("freejoint")
+            frame.add('freejoint')
 
     if remove_keyframes:
-        keyframes = parent.find_all("key")
+        keyframes = parent.find_all('key')
         if keyframes is not None:
             for key in keyframes:
                 key.remove()
@@ -57,16 +57,12 @@ def to_string(
     root = etree.XML(xml_string, etree.XMLParser(remove_blank_text=True))
 
     # Remove hashes from asset filenames.
-    tags = ["mesh", "texture"]
+    tags = ['mesh', 'texture']
     for tag in tags:
-        assets = [
-            asset
-            for asset in root.find("asset").iter()
-            if asset.tag == tag and "file" in asset.attrib
-        ]
+        assets = [asset for asset in root.find('asset').iter() if asset.tag == tag and 'file' in asset.attrib]
         for asset in assets:
-            name, extension = asset.get("file").split(".")
-            asset.set("file", ".".join((name[:-41], extension)))
+            name, extension = asset.get('file').split('.')
+            asset.set('file', '.'.join((name[:-41], extension)))
 
     if not pretty:
         return etree.tostring(root, pretty_print=True).decode()
@@ -74,25 +70,25 @@ def to_string(
     # Remove auto-generated names.
     for elem in root.iter():
         for key in elem.keys():
-            if key == "name" and "unnamed" in elem.get(key):
+            if key == 'name' and 'unnamed' in elem.get(key):
                 elem.attrib.pop(key)
 
     # Get string from lxml.
     xml_string = etree.tostring(root, pretty_print=True)
 
     # Remove redundant attributes.
-    xml_string = xml_string.replace(b' gravcomp="0"', b"")
+    xml_string = xml_string.replace(b' gravcomp="0"', b'')
 
     # Insert spaces between top-level elements.
     lines = xml_string.splitlines()
     newlines = []
     for line in lines:
         newlines.append(line)
-        if line.startswith(b"  <"):
-            if line.startswith(b"  </") or line.endswith(b"/>"):
-                newlines.append(b"")
-    newlines.append(b"")
-    xml_string = b"\n".join(newlines)
+        if line.startswith(b'  <'):
+            if line.startswith(b'  </') or line.endswith(b'/>'):
+                newlines.append(b'')
+    newlines.append(b'')
+    xml_string = b'\n'.join(newlines)
 
     return xml_string.decode()
 
@@ -100,8 +96,8 @@ def to_string(
 def get_assets(root: mjcf.RootElement) -> dict[str, bytes]:
     assets = {}
     for file, payload in root.get_assets().items():
-        name, extension = file.split(".")
-        assets[".".join((name[:-41], extension))] = payload
+        name, extension = file.split('.')
+        assets['.'.join((name[:-41], extension))] = payload
     return assets
 
 
@@ -109,7 +105,7 @@ def safe_find_all(root: mjcf.RootElement, namespace: str, *args, **kwargs):
     """Find all given elements or throw an error if none are found."""
     features = root.find_all(namespace, *args, **kwargs)
     if not features:
-        raise ValueError(f"{namespace} not found in the MJCF model.")
+        raise ValueError(f'{namespace} not found in the MJCF model.')
     return features
 
 
@@ -117,15 +113,13 @@ def safe_find(root: mjcf.RootElement, namespace: str, identifier: str):
     """Find the given element or throw an error if not found."""
     feature = root.find(namespace, identifier)
     if feature is None:
-        raise ValueError(f"{namespace} {identifier} not found.")
+        raise ValueError(f'{namespace} {identifier} not found.')
     return feature
 
 
-def add_bounding_box_site(
-    body: mjcf.Element, lower: np.ndarray, upper: np.ndarray, **kwargs
-) -> mjcf.Element:
+def add_bounding_box_site(body: mjcf.Element, lower: np.ndarray, upper: np.ndarray, **kwargs) -> mjcf.Element:
     """Visualizes a bounding box as a box site attached to the given body."""
     pos = (lower + upper) / 2
     size = (upper - lower) / 2
     size += 1e-7
-    return body.add("site", type="box", pos=pos, size=size, **kwargs)
+    return body.add('site', type='box', pos=pos, size=size, **kwargs)

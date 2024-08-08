@@ -36,7 +36,9 @@ class EpisodeMonitor(gymnasium.Wrapper):
             info['episode']['duration'] = time.time() - self.start_time
 
             if hasattr(self.unwrapped, 'get_normalized_score'):
-                info['episode']['normalized_return'] = self.unwrapped.get_normalized_score(info['episode']['return']) * 100.0
+                info['episode']['normalized_return'] = (
+                    self.unwrapped.get_normalized_score(info['episode']['return']) * 100.0
+                )
 
         return observation, reward, terminated, truncated, info
 
@@ -138,6 +140,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
     if 'antmaze' in env_name:
         from envs.d4rl import d4rl_utils
         from envs.antmaze.wrappers import AntMazeGoalWrapper
+
         env = d4rl_utils.make_env(env_name)
         env = AntMazeGoalWrapper(env)
         dataset = d4rl_utils.get_dataset(env, env_name)
@@ -145,22 +148,27 @@ def make_env_and_dataset(env_name, dataset_path=None):
     elif 'kitchen' in env_name:
         # HACK: Monkey patching to make it compatible with Python 3.10.
         from envs.d4rl import d4rl_utils
+
         if not hasattr(collections, 'Mapping'):
             collections.Mapping = collections.abc.Mapping
 
         env = d4rl_utils.make_env(env_name)
         dataset = d4rl_utils.get_dataset(env, env_name, filter_terminals=True)
-        dataset = dataset.copy({
-            'observations': dataset['observations'][:, :30],
-            'next_observations': dataset['next_observations'][:, :30],
-        })
+        dataset = dataset.copy(
+            {
+                'observations': dataset['observations'][:, :30],
+                'next_observations': dataset['next_observations'][:, :30],
+            }
+        )
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'quadmaze' in env_name or 'quadball' in env_name or 'humanoidmaze' in env_name:
         import gymnasium
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name)
-        train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32)
+        train_dataset, val_dataset = get_dataset(
+            dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
+        )
         if val_dataset.size == 0:
             val_dataset = None
     else:
@@ -194,6 +202,7 @@ def make_online_env(env_name):
 
         if apply_xy_wrapper:
             from envs.locomotion.wrappers import GymXYWrapper, DMCHumanoidXYWrapper
+
             if 'HumanoidCustom' in env_name:
                 env = DMCHumanoidXYWrapper(env, resample_interval=200)
             else:
@@ -208,6 +217,7 @@ def make_online_env(env_name):
 
 def make_vec_env(env_name, num_envs, **kwargs):
     from gymnasium.vector import SyncVectorEnv
+
     envs = [lambda: make_online_env(env_name, **kwargs) for _ in range(num_envs)]
     env = SyncVectorEnv(envs)
     return env

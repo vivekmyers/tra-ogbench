@@ -30,7 +30,9 @@ class PPOAgent(flax.struct.PyTreeNode):
             return advantage, advantage
 
         zeros = jnp.zeros(traj_batch['rewards'].shape[1])
-        _, advs = jax.lax.scan(scan_fn, zeros, (traj_batch['rewards'], traj_batch['masks'], values, next_values), reverse=True)
+        _, advs = jax.lax.scan(
+            scan_fn, zeros, (traj_batch['rewards'], traj_batch['masks'], values, next_values), reverse=True
+        )
         returns = values + advs
         normalized_advs = (advs - jnp.mean(advs)) / (jnp.std(advs) + 1e-6)
 
@@ -60,7 +62,9 @@ class PPOAgent(flax.struct.PyTreeNode):
         ratio = jnp.exp(log_ratio)
 
         pg_loss1 = -batch['normalized_advs'] * ratio
-        pg_loss2 = -batch['normalized_advs'] * jnp.clip(ratio, 1 - self.config['clip_ratio'], 1 + self.config['clip_ratio'])
+        pg_loss2 = -batch['normalized_advs'] * jnp.clip(
+            ratio, 1 - self.config['clip_ratio'], 1 + self.config['clip_ratio']
+        )
         actor_loss = jnp.maximum(pg_loss1, pg_loss2).mean()
 
         entropy = dist.entropy()
@@ -152,12 +156,12 @@ class PPOAgent(flax.struct.PyTreeNode):
 
     @partial(jax.jit, static_argnames=('info'))
     def sample_actions(
-            self,
-            observations,
-            goals=None,
-            seed=None,
-            temperature=1.0,
-            info=False,
+        self,
+        observations,
+        goals=None,
+        seed=None,
+        temperature=1.0,
+        info=False,
     ):
         if self.config['normalize_ob']:
             observations = self.rms_ob.normalize(observations)
@@ -171,11 +175,11 @@ class PPOAgent(flax.struct.PyTreeNode):
 
     @classmethod
     def create(
-            cls,
-            seed,
-            ex_observations,
-            ex_actions,
-            config,
+        cls,
+        seed,
+        ex_observations,
+        ex_actions,
+        config,
     ):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
@@ -206,7 +210,9 @@ class PPOAgent(flax.struct.PyTreeNode):
         network_args = {k: v[1] for k, v in network_info.items()}
 
         network_def = ModuleDict(networks)
-        network_tx = optax.chain(optax.clip_by_global_norm(config['clip_grad_norm']), optax.adam(learning_rate=config['lr']))
+        network_tx = optax.chain(
+            optax.clip_by_global_norm(config['clip_grad_norm']), optax.adam(learning_rate=config['lr'])
+        )
         network_params = network_def.init(init_rng, **network_args)['params']
         network = TrainState.create(network_def, network_params, tx=network_tx)
 
@@ -214,32 +220,30 @@ class PPOAgent(flax.struct.PyTreeNode):
         rms_reward = RunningMeanStd()
 
         return cls(
-            rng=rng,
-            network=network,
-            rms_ob=rms_ob,
-            rms_reward=rms_reward,
-            config=flax.core.FrozenDict(**config)
+            rng=rng, network=network, rms_ob=rms_ob, rms_reward=rms_reward, config=flax.core.FrozenDict(**config)
         )
 
 
 def get_config():
-    config = ml_collections.ConfigDict(dict(
-        agent_name='ppo',
-        lr=3e-4,
-        batch_size=64,
-        num_epochs=2,
-        actor_hidden_dims=(512, 512, 512),
-        value_hidden_dims=(512, 512, 512),
-        layer_norm=False,
-        discount=0.99,
-        tanh_squash=False,
-        state_dependent_std=False,
-        actor_fc_scale=0.01,
-        lam=0.95,
-        ent_coef=0.0,
-        clip_grad_norm=0.5,
-        clip_ratio=0.2,
-        normalize_ob=True,
-        normalize_reward=True,
-    ))
+    config = ml_collections.ConfigDict(
+        dict(
+            agent_name='ppo',
+            lr=3e-4,
+            batch_size=64,
+            num_epochs=2,
+            actor_hidden_dims=(512, 512, 512),
+            value_hidden_dims=(512, 512, 512),
+            layer_norm=False,
+            discount=0.99,
+            tanh_squash=False,
+            state_dependent_std=False,
+            actor_fc_scale=0.01,
+            lam=0.95,
+            ent_coef=0.0,
+            clip_grad_norm=0.5,
+            clip_ratio=0.2,
+            normalize_ob=True,
+            normalize_reward=True,
+        )
+    )
     return config

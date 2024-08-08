@@ -25,13 +25,13 @@ def visualize_trajs(env_name, trajs):
     if 'xy' in trajs[0]['info'][0]:
         ax = fig.add_subplot()
 
-        max_xy = 0.
+        max_xy = 0.0
         for traj in trajs:
             xy = np.array([info['xy'] for info in traj['info']])
             direction = np.array([info['direction'] for info in traj['info']])
             color = get_2d_colors(direction, [-1, -1], [1, 1])
             for i in range(len(xy) - 1):
-                ax.plot(xy[i:i + 2, 0], xy[i:i + 2, 1], color=color[i], linewidth=0.7)
+                ax.plot(xy[i : i + 2, 0], xy[i : i + 2, 1], color=color[i], linewidth=0.7)
             max_xy = max(max_xy, np.abs(xy).max() * 1.2)
 
         plot_axis = [-max_xy, max_xy, -max_xy, max_xy]

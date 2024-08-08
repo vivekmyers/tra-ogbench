@@ -12,9 +12,7 @@ class GymXYWrapper(gymnasium.Wrapper):
         self.resample_interval = resample_interval
 
         ob, _ = self.reset()
-        self.observation_space = Box(
-            low=-np.inf, high=np.inf, shape=ob.shape, dtype=np.float64
-        )
+        self.observation_space = Box(low=-np.inf, high=np.inf, shape=ob.shape, dtype=np.float64)
 
     def reset(self, *args, **kwargs):
         ob, info = self.env.reset(*args, **kwargs)
@@ -44,6 +42,7 @@ class GymXYWrapper(gymnasium.Wrapper):
 class DMCHumanoidXYWrapper(GymXYWrapper):
     def step(self, action):
         from envs.locomotion.humanoid import tolerance
+
         cur_xy = self.unwrapped.data.qpos[:2].copy()
         ob, reward, terminated, truncated, info = self.env.step(action)
         next_xy = self.unwrapped.data.qpos[:2].copy()

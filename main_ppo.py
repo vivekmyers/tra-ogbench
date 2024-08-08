@@ -129,14 +129,16 @@ def main(_):
 
         next_obs, rewards, terminateds, truncateds, infos = env.step(np.clip(actions, -1.0, 1.0))
 
-        replay_buffer.add_transition(dict(
-            observations=obs,
-            actions=actions,
-            rewards=rewards,
-            masks=(~terminateds).astype(np.float64),
-            next_observations=next_obs,
-            log_probs=log_probs,
-        ))
+        replay_buffer.add_transition(
+            dict(
+                observations=obs,
+                actions=actions,
+                rewards=rewards,
+                masks=(~terminateds).astype(np.float64),
+                next_observations=next_obs,
+                log_probs=log_probs,
+            )
+        )
         obs = next_obs
 
         if terminateds[0] or truncateds[0]:
@@ -151,7 +153,7 @@ def main(_):
         if i % FLAGS.log_interval == 0 and update_info is not None:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
-            train_metrics['time/total_time'] = (time.time() - first_time)
+            train_metrics['time/total_time'] = time.time() - first_time
             train_metrics.update(expl_metrics)
             last_time = time.time()
             wandb.log(train_metrics, step=i)

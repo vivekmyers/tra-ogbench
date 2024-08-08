@@ -18,50 +18,48 @@ _RUN_SPEED = 10
 def _sigmoids(x, value_at_1, sigmoid):
     if sigmoid in ('cosine', 'linear', 'quadratic'):
         if not 0 <= value_at_1 < 1:
-            raise ValueError('`value_at_1` must be nonnegative and smaller than 1, '
-                             'got {}.'.format(value_at_1))
+            raise ValueError('`value_at_1` must be nonnegative and smaller than 1, ' 'got {}.'.format(value_at_1))
     else:
         if not 0 < value_at_1 < 1:
-            raise ValueError('`value_at_1` must be strictly between 0 and 1, '
-                             'got {}.'.format(value_at_1))
+            raise ValueError('`value_at_1` must be strictly between 0 and 1, ' 'got {}.'.format(value_at_1))
 
     if sigmoid == 'gaussian':
         scale = np.sqrt(-2 * np.log(value_at_1))
-        return np.exp(-0.5 * (x*scale)**2)
+        return np.exp(-0.5 * (x * scale) ** 2)
 
     elif sigmoid == 'hyperbolic':
-        scale = np.arccosh(1/value_at_1)
-        return 1 / np.cosh(x*scale)
+        scale = np.arccosh(1 / value_at_1)
+        return 1 / np.cosh(x * scale)
 
     elif sigmoid == 'long_tail':
-        scale = np.sqrt(1/value_at_1 - 1)
-        return 1 / ((x*scale)**2 + 1)
+        scale = np.sqrt(1 / value_at_1 - 1)
+        return 1 / ((x * scale) ** 2 + 1)
 
     elif sigmoid == 'reciprocal':
-        scale = 1/value_at_1 - 1
-        return 1 / (abs(x)*scale + 1)
+        scale = 1 / value_at_1 - 1
+        return 1 / (abs(x) * scale + 1)
 
     elif sigmoid == 'cosine':
-        scale = np.arccos(2*value_at_1 - 1) / np.pi
-        scaled_x = x*scale
+        scale = np.arccos(2 * value_at_1 - 1) / np.pi
+        scaled_x = x * scale
         with warnings.catch_warnings():
             warnings.filterwarnings(action='ignore', message='invalid value encountered in cos')
-            cos_pi_scaled_x = np.cos(np.pi*scaled_x)
-        return np.where(abs(scaled_x) < 1, (1 + cos_pi_scaled_x)/2, 0.0)
+            cos_pi_scaled_x = np.cos(np.pi * scaled_x)
+        return np.where(abs(scaled_x) < 1, (1 + cos_pi_scaled_x) / 2, 0.0)
 
     elif sigmoid == 'linear':
-        scale = 1-value_at_1
-        scaled_x = x*scale
+        scale = 1 - value_at_1
+        scaled_x = x * scale
         return np.where(abs(scaled_x) < 1, 1 - scaled_x, 0.0)
 
     elif sigmoid == 'quadratic':
-        scale = np.sqrt(1-value_at_1)
-        scaled_x = x*scale
+        scale = np.sqrt(1 - value_at_1)
+        scaled_x = x * scale
         return np.where(abs(scaled_x) < 1, 1 - scaled_x**2, 0.0)
 
     elif sigmoid == 'tanh_squared':
-        scale = np.arctanh(np.sqrt(1-value_at_1))
-        return 1 - np.tanh(x*scale)**2
+        scale = np.arctanh(np.sqrt(1 - value_at_1))
+        return 1 - np.tanh(x * scale) ** 2
 
     else:
         raise ValueError('Unknown sigmoid type {!r}.'.format(sigmoid))
@@ -92,10 +90,10 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
     }
 
     def __init__(
-            self,
-            xml_file=None,
-            task='run',
-            **kwargs,
+        self,
+        xml_file=None,
+        task='run',
+        **kwargs,
     ):
         if xml_file is None:
             xml_file = self.xml_file
@@ -130,9 +128,15 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         if self.render_mode == 'human':
             self.render()
 
-        return observation, reward, False, False, {
-            'xy': self.get_xy(),
-        }
+        return (
+            observation,
+            reward,
+            False,
+            False,
+            {
+                'xy': self.get_xy(),
+            },
+        )
 
     def _step_mujoco_simulation(self, ctrl, n_frames):
         self.data.ctrl[:] = ctrl
@@ -161,7 +165,9 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         center_of_mass_velocity = self.data.sensordata[0:3]  # ['torso_subtreelinvel']
         velocity = self.data.qvel
 
-        return np.concatenate([joint_angles, [head_height], extremities, torso_vertical_orientation, center_of_mass_velocity, velocity])
+        return np.concatenate(
+            [joint_angles, [head_height], extremities, torso_vertical_orientation, center_of_mass_velocity, velocity]
+        )
 
     def _get_reward(self):
         head_height = self.data.xpos[2, 2]  # ['head', 'z']
@@ -180,7 +186,13 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
             return small_control * stand_reward * dont_move
         else:
             com_velocity = np.linalg.norm(center_of_mass_velocity[[0, 1]])
-            move = tolerance(com_velocity, bounds=(self._move_speed, float('inf')), margin=self._move_speed, value_at_margin=0, sigmoid='linear')
+            move = tolerance(
+                com_velocity,
+                bounds=(self._move_speed, float('inf')),
+                margin=self._move_speed,
+                value_at_margin=0,
+                sigmoid='linear',
+            )
             move = (5 * move + 1) / 6
             return small_control * stand_reward * move
 

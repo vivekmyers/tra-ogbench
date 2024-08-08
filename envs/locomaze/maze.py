@@ -18,14 +18,14 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
     class MazeEnv(loco_env_class):
         def __init__(
-                self,
-                maze_type='large',
-                maze_unit=4.0,
-                maze_height=0.5,
-                terminate_at_goal=True,
-                ob_type='states',
-                *args,
-                **kwargs,
+            self,
+            maze_type='large',
+            maze_unit=4.0,
+            maze_height=0.5,
+            terminate_at_goal=True,
+            ob_type='states',
+            *args,
+            **kwargs,
         ):
             self._maze_type = maze_type
             self._maze_unit = maze_unit
@@ -43,7 +43,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 0, 0, 0, 0, 0, 1],
                     [1, 0, 0, 0, 0, 0, 0, 1],
                     [1, 0, 0, 0, 0, 0, 0, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1]
+                    [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             elif self._maze_type == 'medium':
                 maze_map = [
@@ -54,7 +54,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 0, 1, 0, 0, 0, 1],
                     [1, 0, 1, 0, 0, 1, 0, 1],
                     [1, 0, 0, 0, 1, 0, 0, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1]
+                    [1, 1, 1, 1, 1, 1, 1, 1],
                 ]
             elif self._maze_type == 'large':
                 maze_map = [
@@ -114,7 +114,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 tex_grid = self.model.tex('grid')
                 tex_height = tex_grid.height[0]
                 tex_width = tex_grid.width[0]
-                tex_rgb = self.model.tex_rgb[tex_grid.adr[0]:tex_grid.adr[0] + 3 * tex_height * tex_width]
+                tex_rgb = self.model.tex_rgb[tex_grid.adr[0] : tex_grid.adr[0] + 3 * tex_height * tex_width]
                 tex_rgb = tex_rgb.reshape(tex_height, tex_width, 3)
                 for x in range(tex_height):
                     for y in range(tex_width):
@@ -220,13 +220,15 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             self.task_infos = []
             for i, task in enumerate(tasks):
-                self.task_infos.append(dict(
-                    task_name=f'task{i + 1}',
-                    init_ij=task[0],
-                    init_xy=self.ij_to_xy(task[0]),
-                    goal_ij=task[1],
-                    goal_xy=self.ij_to_xy(task[1]),
-                ))
+                self.task_infos.append(
+                    dict(
+                        task_name=f'task{i + 1}',
+                        init_ij=task[0],
+                        init_xy=self.ij_to_xy(task[0]),
+                        goal_ij=task[1],
+                        goal_xy=self.ij_to_xy(task[1]),
+                    )
+                )
             self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):
@@ -306,13 +308,23 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 i, j = queue.pop(0)
                 for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
                     ni, nj = i + di, j + dj
-                    if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0 and bfs_map[ni, nj] == -1:
+                    if (
+                        0 <= ni < self.maze_map.shape[0]
+                        and 0 <= nj < self.maze_map.shape[1]
+                        and self.maze_map[ni, nj] == 0
+                        and bfs_map[ni, nj] == -1
+                    ):
                         bfs_map[ni][nj] = bfs_map[i][j] + 1
                         queue.append((ni, nj))
             subgoal_ij = start_ij
             for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
                 ni, nj = start_ij[0] + di, start_ij[1] + dj
-                if 0 <= ni < self.maze_map.shape[0] and 0 <= nj < self.maze_map.shape[1] and self.maze_map[ni, nj] == 0 and bfs_map[ni, nj] < bfs_map[subgoal_ij[0], subgoal_ij[1]]:
+                if (
+                    0 <= ni < self.maze_map.shape[0]
+                    and 0 <= nj < self.maze_map.shape[1]
+                    and self.maze_map[ni, nj] == 0
+                    and bfs_map[ni, nj] < bfs_map[subgoal_ij[0], subgoal_ij[1]]
+                ):
                     subgoal_ij = (ni, nj)
             subgoal_xy = self.ij_to_xy(subgoal_ij)
             return np.array(subgoal_xy), bfs_map
@@ -341,7 +353,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             worldbody = tree.find('.//worldbody')
             ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 3')
             ET.SubElement(ball, 'freejoint', name='ball_root')
-            ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6')
+            ET.SubElement(
+                ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6'
+            )
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
         def set_tasks(self):
@@ -366,15 +380,17 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             self.task_infos = []
             for i, task in enumerate(tasks):
-                self.task_infos.append(dict(
-                    task_name=f'task{i + 1}',
-                    agent_init_ij=task[0],
-                    agent_init_xy=self.ij_to_xy(task[0]),
-                    ball_init_ij=task[1],
-                    ball_init_xy=self.ij_to_xy(task[1]),
-                    goal_ij=task[2],
-                    goal_xy=self.ij_to_xy(task[2])
-                ))
+                self.task_infos.append(
+                    dict(
+                        task_name=f'task{i + 1}',
+                        agent_init_ij=task[0],
+                        agent_init_xy=self.ij_to_xy(task[0]),
+                        ball_init_ij=task[1],
+                        ball_init_xy=self.ij_to_xy(task[1]),
+                        goal_ij=task[2],
+                        goal_xy=self.ij_to_xy(task[2]),
+                    )
+                )
             self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):

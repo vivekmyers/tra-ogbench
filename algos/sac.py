@@ -95,7 +95,8 @@ class SACAgent(flax.struct.PyTreeNode):
     def target_update(self, network, module_name):
         new_target_params = jax.tree_util.tree_map(
             lambda p, tp: p * self.config['tau'] + tp * (1 - self.config['tau']),
-            self.network.params[f'modules_{module_name}'], self.network.params[f'modules_target_{module_name}']
+            self.network.params[f'modules_{module_name}'],
+            self.network.params[f'modules_target_{module_name}'],
         )
         network.params[f'modules_target_{module_name}'] = new_target_params
 
@@ -113,12 +114,12 @@ class SACAgent(flax.struct.PyTreeNode):
 
     @partial(jax.jit, static_argnames=('discrete',))
     def sample_actions(
-            self,
-            observations,
-            goals=None,
-            seed=None,
-            temperature=1.0,
-            discrete=False,
+        self,
+        observations,
+        goals=None,
+        seed=None,
+        temperature=1.0,
+        discrete=False,
     ):
         dist = self.network.select('actor')(observations, goals, temperature=temperature)
         actions = dist.sample(seed=seed)
@@ -128,11 +129,11 @@ class SACAgent(flax.struct.PyTreeNode):
 
     @classmethod
     def create(
-            cls,
-            seed,
-            ex_observations,
-            ex_actions,
-            config,
+        cls,
+        seed,
+        ex_observations,
+        ex_actions,
+        config,
     ):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
@@ -181,20 +182,22 @@ class SACAgent(flax.struct.PyTreeNode):
 
 
 def get_config():
-    config = ml_collections.ConfigDict(dict(
-        agent_name='sac',
-        lr=3e-4,
-        batch_size=1024,
-        actor_hidden_dims=(512, 512, 512),
-        value_hidden_dims=(512, 512, 512),
-        layer_norm=False,
-        discount=0.99,
-        tau=0.005,  # Target network update rate
-        target_entropy=ml_collections.config_dict.placeholder(float),
-        target_entropy_multiplier=0.5,
-        tanh_squash=True,
-        state_dependent_std=True,
-        actor_fc_scale=0.01,
-        min_q=True,  # Use min or mean for target critic value
-    ))
+    config = ml_collections.ConfigDict(
+        dict(
+            agent_name='sac',
+            lr=3e-4,
+            batch_size=1024,
+            actor_hidden_dims=(512, 512, 512),
+            value_hidden_dims=(512, 512, 512),
+            layer_norm=False,
+            discount=0.99,
+            tau=0.005,  # Target network update rate
+            target_entropy=ml_collections.config_dict.placeholder(float),
+            target_entropy_multiplier=0.5,
+            tanh_squash=True,
+            state_dependent_std=True,
+            actor_fc_scale=0.01,
+            min_q=True,  # Use min or mean for target critic value
+        )
+    )
     return config

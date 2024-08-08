@@ -25,9 +25,7 @@ class FirstOrderHold(PiecewisePolynomial):
     def __init__(self, breaks, samples):
         super().__init__(breaks, samples)
 
-        self._interp = interp1d(
-            self.breaks, self.samples, kind="linear", axis=0, assume_sorted=True
-        )
+        self._interp = interp1d(self.breaks, self.samples, kind='linear', axis=0, assume_sorted=True)
 
     def value(self, t):
         return self._interp(t)

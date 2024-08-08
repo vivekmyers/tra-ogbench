@@ -32,22 +32,23 @@ def add_to(dict_of_lists, single_dict):
 
 def kitchen_render(kitchen_env, wh=64):
     from dm_control.mujoco import engine
+
     camera = engine.MovableCamera(kitchen_env.sim, wh, wh)
-    camera.set_pose(distance=1.86, lookat=[-0.3, .5, 2.], azimuth=90, elevation=-60)
+    camera.set_pose(distance=1.86, lookat=[-0.3, 0.5, 2.0], azimuth=90, elevation=-60)
     img = camera.render()
     return img
 
 
 def evaluate(
-        agent,
-        env,
-        task_idx=None,
-        config=None,
-        num_eval_episodes=50,
-        num_video_episodes=0,
-        video_frame_skip=3,
-        eval_temperature=0,
-        eval_gaussian=None,
+    agent,
+    env,
+    task_idx=None,
+    config=None,
+    num_eval_episodes=50,
+    num_video_episodes=0,
+    video_frame_skip=3,
+    eval_temperature=0,
+    eval_gaussian=None,
 ):
     actor_fn = supply_rng(agent.sample_actions, rng=agent.rng)
     trajs = []

@@ -23,7 +23,7 @@ class PiecewiseTrajectory(trajectory.Trajectory, abc.ABC):
         return np.where(
             t >= self.breaks[-1],
             self.n_segments - 1,
-            np.searchsorted(self.breaks, t, side="right") - 1,
+            np.searchsorted(self.breaks, t, side='right') - 1,
         )
 
     @property

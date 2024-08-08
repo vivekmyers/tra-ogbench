@@ -127,7 +127,7 @@ def main(_):
                 _, val_info = agent.total_loss(val_batch, grad_params=None)
                 train_metrics.update({f'validation/{k}': v for k, v in val_info.items()})
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
-            train_metrics['time/total_time'] = (time.time() - first_time)
+            train_metrics['time/total_time'] = time.time() - first_time
             last_time = time.time()
             wandb.log(train_metrics, step=i)
             train_logger.log(train_metrics, step=i)
@@ -156,7 +156,9 @@ def main(_):
                 )
                 renders.extend(cur_renders)
                 metric_names = ['success']
-                eval_metrics.update({f'evaluation/{task_name}_{k}': v for k, v in eval_info.items() if k in metric_names})
+                eval_metrics.update(
+                    {f'evaluation/{task_name}_{k}': v for k, v in eval_info.items() if k in metric_names}
+                )
                 for k, v in eval_info.items():
                     if k in metric_names:
                         overall_metrics[k].append(v)

@@ -14,13 +14,13 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
     }
 
     def __init__(
-            self,
-            xml_file=None,
-            reset_noise_scale=0.1,
-            render_mode='rgb_array',
-            width=200,
-            height=200,
-            **kwargs,
+        self,
+        xml_file=None,
+        reset_noise_scale=0.1,
+        render_mode='rgb_array',
+        width=200,
+        height=200,
+        **kwargs,
     ):
         if xml_file is None:
             xml_file = self.xml_file
@@ -60,13 +60,19 @@ class QuadEnv(MujocoEnv, utils.EzPickle):
         if self.render_mode == 'human':
             self.render()
 
-        return observation, 0., False, False, {
-            'xy': self.get_xy(),
-            'prev_qpos': prev_qpos,
-            'prev_qvel': prev_qvel,
-            'qpos': qpos,
-            'qvel': qvel,
-        }
+        return (
+            observation,
+            0.0,
+            False,
+            False,
+            {
+                'xy': self.get_xy(),
+                'prev_qpos': prev_qpos,
+                'prev_qvel': prev_qvel,
+                'qpos': qpos,
+                'qvel': qvel,
+            },
+        )
 
     def get_ob(self):
         position = self.data.qpos.flat.copy()

@@ -16,12 +16,12 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
     }
 
     def __init__(
-            self,
-            xml_file=None,
-            render_mode='rgb_array',
-            width=200,
-            height=200,
-            **kwargs,
+        self,
+        xml_file=None,
+        render_mode='rgb_array',
+        width=200,
+        height=200,
+        **kwargs,
     ):
         if xml_file is None:
             xml_file = self.xml_file
@@ -58,13 +58,19 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         if self.render_mode == 'human':
             self.render()
 
-        return observation, 0., False, False, {
-            'xy': self.get_xy(),
-            'prev_qpos': prev_qpos,
-            'prev_qvel': prev_qvel,
-            'qpos': qpos,
-            'qvel': qvel,
-        }
+        return (
+            observation,
+            0.0,
+            False,
+            False,
+            {
+                'xy': self.get_xy(),
+                'prev_qpos': prev_qpos,
+                'prev_qvel': prev_qvel,
+                'qpos': qpos,
+                'qvel': qvel,
+            },
+        )
 
     def _step_mujoco_simulation(self, ctrl, n_frames):
         self.data.ctrl[:] = ctrl
@@ -94,7 +100,17 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         center_of_mass_velocity = self.data.sensordata[0:3]  # ['torso_subtreelinvel']
         velocity = self.data.qvel
 
-        return np.concatenate([xy, joint_angles, [head_height], extremities, torso_vertical_orientation, center_of_mass_velocity, velocity])
+        return np.concatenate(
+            [
+                xy,
+                joint_angles,
+                [head_height],
+                extremities,
+                torso_vertical_orientation,
+                center_of_mass_velocity,
+                velocity,
+            ]
+        )
 
     @contextlib.contextmanager
     def disable(self, *flags):

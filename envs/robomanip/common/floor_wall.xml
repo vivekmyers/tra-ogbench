@@ -1,0 +1,22 @@
+<mujoco>
+  <statistic center="0 0 0"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.1 0.1 0.1" specular="0 0 0"/>
+  </visual>
+
+  <asset>
+    <texture name="grid" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2" width="512" height="512"
+      mark="cross" markrgb=".8 .8 .8"/>
+    <material name="grid" texture="grid" texrepeat="1 1" texuniform="true"/>
+  </asset>
+
+  <worldbody>
+    <light pos="0 0 2" directional="true"/>
+    <geom name="floor" size="1 1 0.01" type="plane" material="grid"/>
+    <geom name="wall_0" size="0.001 0.5 0.2" pos="0.25 0 0.1" type="box" rgba="0.5 0.5 0.5 0.04" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_1" size="0.2 0.001 0.2" pos="0.45 -0.5 0.1" type="box" rgba="0.5 0.5 0.5 0.04" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_2" size="0.001 0.5 0.2" pos="0.65 0 0.1" type="box" rgba="0.5 0.5 0.5 0.04" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_3" size="0.2 0.001 0.2" pos="0.45 0.5 0.1" type="box" rgba="0.5 0.5 0.5 0.04" contype="0" conaffinity="2" group="4"/>
+  </worldbody>
+</mujoco>

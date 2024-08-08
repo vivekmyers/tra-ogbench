@@ -22,7 +22,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
     @staticmethod
     def expectile_loss(adv, diff, expectile):
         weight = jnp.where(adv >= 0, expectile, (1 - expectile))
-        return weight * (diff ** 2)
+        return weight * (diff**2)
 
     def value_loss(self, batch, grad_params):
         (next_v1_t, next_v2_t) = self.network.select('target_value')(batch['next_observations'], batch['value_goals'])
@@ -59,7 +59,9 @@ class HIQLAgent(flax.struct.PyTreeNode):
         exp_a = jnp.exp(adv * self.config['low_alpha'])
         exp_a = jnp.minimum(exp_a, 100.0)
 
-        goal_reps = self.network.select('goal_rep')(jnp.concatenate([batch['observations'], batch['low_actor_goals']], axis=-1), params=grad_params)
+        goal_reps = self.network.select('goal_rep')(
+            jnp.concatenate([batch['observations'], batch['low_actor_goals']], axis=-1), params=grad_params
+        )
         if not self.config['low_actor_rep_grad']:
             goal_reps = jax.lax.stop_gradient(goal_reps)
         dist = self.network.select('low_actor')(batch['observations'], goal_reps, goal_encoded=True, params=grad_params)
@@ -86,7 +88,9 @@ class HIQLAgent(flax.struct.PyTreeNode):
         exp_a = jnp.minimum(exp_a, 100.0)
 
         dist = self.network.select('high_actor')(batch['observations'], batch['high_actor_goals'], params=grad_params)
-        target = self.network.select('goal_rep')(jnp.concatenate([batch['observations'], batch['high_actor_targets']], axis=-1))
+        target = self.network.select('goal_rep')(
+            jnp.concatenate([batch['observations'], batch['high_actor_targets']], axis=-1)
+        )
         log_prob = dist.log_prob(target)
 
         actor_loss = -(exp_a * log_prob).mean()
@@ -121,7 +125,8 @@ class HIQLAgent(flax.struct.PyTreeNode):
     def target_update(self, network, module_name):
         new_target_params = jax.tree_util.tree_map(
             lambda p, tp: p * self.config['tau'] + tp * (1 - self.config['tau']),
-            self.network.params[f'modules_{module_name}'], self.network.params[f'modules_target_{module_name}']
+            self.network.params[f'modules_{module_name}'],
+            self.network.params[f'modules_target_{module_name}'],
         )
         network.params[f'modules_target_{module_name}'] = new_target_params
 
@@ -139,12 +144,12 @@ class HIQLAgent(flax.struct.PyTreeNode):
 
     @partial(jax.jit, static_argnames=('discrete',))
     def sample_actions(
-            self,
-            observations,
-            goals=None,
-            seed=None,
-            temperature=1.0,
-            discrete=False,
+        self,
+        observations,
+        goals=None,
+        seed=None,
+        temperature=1.0,
+        discrete=False,
     ):
         high_seed, low_seed = jax.random.split(seed)
 
@@ -161,11 +166,11 @@ class HIQLAgent(flax.struct.PyTreeNode):
 
     @classmethod
     def create(
-            cls,
-            seed,
-            ex_observations,
-            ex_actions,
-            config,
+        cls,
+        seed,
+        ex_observations,
+        ex_actions,
+        config,
     ):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
@@ -178,11 +183,13 @@ class HIQLAgent(flax.struct.PyTreeNode):
             goal_rep_seq = [encoder_module()]
         else:
             goal_rep_seq = []
-        goal_rep_seq.append(MLP(
-            hidden_dims=(*config['value_hidden_dims'], config['rep_dim']),
-            activate_final=False,
-            layer_norm=config['layer_norm'],
-        ))
+        goal_rep_seq.append(
+            MLP(
+                hidden_dims=(*config['value_hidden_dims'], config['rep_dim']),
+                activate_final=False,
+                layer_norm=config['layer_norm'],
+            )
+        )
         goal_rep_seq.append(LengthNormalize())
         goal_rep_def = nn.Sequential(goal_rep_seq)
 
@@ -247,35 +254,36 @@ class HIQLAgent(flax.struct.PyTreeNode):
 
 
 def get_config():
-    config = ml_collections.ConfigDict(dict(
-        agent_name='hiql',
-        lr=3e-4,
-        batch_size=1024,
-        actor_hidden_dims=(512, 512, 512),
-        value_hidden_dims=(512, 512, 512),
-        layer_norm=True,
-        discount=0.99,
-        tau=0.005,  # Target network update rate
-        expectile=0.7,
-        low_alpha=1.0,
-        high_alpha=1.0,
-        subgoal_steps=25,
-        rep_dim=10,
-        low_actor_rep_grad=False,  # Whether the gradient flows from the low actor to the goal representation
-        const_std=True,
-        encoder=ml_collections.config_dict.placeholder(str),
-
-        dataset_class='HGCDataset',
-        value_p_curgoal=0.2,
-        value_p_trajgoal=0.5,
-        value_p_randomgoal=0.3,
-        value_geom_sample=True,
-        actor_p_curgoal=0.0,
-        actor_p_trajgoal=1.0,
-        actor_p_randomgoal=0.0,
-        actor_geom_sample=False,
-        gc_negative=True,  # True for (-1, 0) rewards, False for (0, 1) rewards
-        p_aug=0.0,
-        frame_stack=ml_collections.config_dict.placeholder(int),
-    ))
+    config = ml_collections.ConfigDict(
+        dict(
+            agent_name='hiql',
+            lr=3e-4,
+            batch_size=1024,
+            actor_hidden_dims=(512, 512, 512),
+            value_hidden_dims=(512, 512, 512),
+            layer_norm=True,
+            discount=0.99,
+            tau=0.005,  # Target network update rate
+            expectile=0.7,
+            low_alpha=1.0,
+            high_alpha=1.0,
+            subgoal_steps=25,
+            rep_dim=10,
+            low_actor_rep_grad=False,  # Whether the gradient flows from the low actor to the goal representation
+            const_std=True,
+            encoder=ml_collections.config_dict.placeholder(str),
+            dataset_class='HGCDataset',
+            value_p_curgoal=0.2,
+            value_p_trajgoal=0.5,
+            value_p_randomgoal=0.3,
+            value_geom_sample=True,
+            actor_p_curgoal=0.0,
+            actor_p_trajgoal=1.0,
+            actor_p_randomgoal=0.0,
+            actor_geom_sample=False,
+            gc_negative=True,  # True for (-1, 0) rewards, False for (0, 1) rewards
+            p_aug=0.0,
+            frame_stack=ml_collections.config_dict.placeholder(int),
+        )
+    )
     return config

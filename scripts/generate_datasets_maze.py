@@ -69,9 +69,19 @@ def main(_):
                 all_cells.append((i, j))
 
                 # Exclude hallway cells
-                if maze_map[i - 1, j] == 0 and maze_map[i + 1, j] == 0 and maze_map[i, j - 1] == 1 and maze_map[i, j + 1] == 1:
+                if (
+                    maze_map[i - 1, j] == 0
+                    and maze_map[i + 1, j] == 0
+                    and maze_map[i, j - 1] == 1
+                    and maze_map[i, j + 1] == 1
+                ):
                     continue
-                if maze_map[i, j - 1] == 0 and maze_map[i, j + 1] == 0 and maze_map[i - 1, j] == 1 and maze_map[i + 1, j] == 1:
+                if (
+                    maze_map[i, j - 1] == 0
+                    and maze_map[i, j + 1] == 0
+                    and maze_map[i - 1, j] == 1
+                    and maze_map[i + 1, j] == 1
+                ):
                     continue
 
                 vertex_cells.append((i, j))
@@ -107,7 +117,12 @@ def main(_):
                 i, j = queue.pop(0)
                 for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
                     ni, nj = i + di, j + dj
-                    if 0 <= ni < bfs_map.shape[0] and 0 <= nj < bfs_map.shape[1] and maze_map[ni, nj] == 0 and bfs_map[ni, nj] == -1:
+                    if (
+                        0 <= ni < bfs_map.shape[0]
+                        and 0 <= nj < bfs_map.shape[1]
+                        and maze_map[ni, nj] == 0
+                        and bfs_map[ni, nj] == -1
+                    ):
                         bfs_map[ni][nj] = bfs_map[i][j] + 1
                         queue.append((ni, nj))
                         if bfs_map[ni][nj] == adj_steps:

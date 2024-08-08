@@ -4,7 +4,7 @@ from envs.robomanip import viewer_utils
 from envs.robomanip.pick_place import RoboManipEnv
 
 
-SPEED_UP = 2.0
+SPEED_UP = 3.0
 
 
 def main() -> None:
@@ -39,10 +39,10 @@ def main() -> None:
                 time.sleep(time_until_next_step)
 
             if agent.done:
+                obs, info = env.set_new_target()
+                agent.reset(obs, info)
                 print(step)
-                step = 0
-                key_callback.reset = True
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

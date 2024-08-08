@@ -1,4 +1,5 @@
 """Pick and place task."""
+
 import copy
 from pathlib import Path
 import numpy as np
@@ -16,7 +17,7 @@ from envs.robomanip import lie
 
 # XML files.
 _HERE = Path(__file__).resolve().parent
-ARENA_XML = _HERE / "common" / "floor.xml"
+ARENA_XML = _HERE / 'common' / 'floor_wall.xml'
 
 # Default joint configuration for the arm (used by the IK controller).
 _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi / 2, 0])
@@ -38,33 +39,35 @@ _EFFECTOR_DOWN_ROTATION = lie.SO3(np.asarray([0.0, 1.0, 0.0, 0.0]))
 
 _ROBOTIQ_CONSTANT = 255.0
 
-_OBJECT_RGBAS = np.asarray([
-    [0.96, 0.26, 0.33, 1.0],
-    [1.0, 0.69, 0.21, 1.0],
-    [0.06, 0.74, 0.21, 1.0],
-    [0.35, 0.55, 0.91, 1.0],
-    # [0.61, 0.28, 0.82, 1.0],
-])
-_OBJECT_XML = _HERE / "common" / "cube.xml"
+_OBJECT_RGBAS = np.asarray(
+    [
+        [0.96, 0.26, 0.33, 1.0],
+        [1.0, 0.69, 0.21, 1.0],
+        [0.06, 0.74, 0.21, 1.0],
+        [0.35, 0.55, 0.91, 1.0],
+        # [0.61, 0.28, 0.82, 1.0],
+    ]
+)
+_OBJECT_XML = _HERE / 'common' / 'cube.xml'
 _OBJECT_THICKNESS = 0.03
 _OBJECT_SYMMETRY = np.pi / 2
 
 _CAMERAS = {
-    "overhead_left": {
-        "pos": (-0.3, -0.263, 1),
-        "xyaxes": (0, -1, 0, 0.821, 0, 0.571),
+    'overhead_left': {
+        'pos': (-0.3, -0.263, 1),
+        'xyaxes': (0, -1, 0, 0.821, 0, 0.571),
     },
-    "overhead_right": {
-        "pos": (-0.3, 0.263, 1),
-        "xyaxes": (0, -1, 0, 0.821, 0, 0.571),
+    'overhead_right': {
+        'pos': (-0.3, 0.263, 1),
+        'xyaxes': (0, -1, 0, 0.821, 0, 0.571),
     },
-    "front": {
-        "pos": (1.171, 0.002, 0.753),
-        "xyaxes": (-0.002, 1.000, -0.000, -0.569, -0.001, 0.822),
+    'front': {
+        'pos': (1.171, 0.002, 0.753),
+        'xyaxes': (-0.002, 1.000, -0.000, -0.569, -0.001, 0.822),
     },
-    "topdown": {
-        "pos": (0.5, 0.0, 1),
-        "euler": (0.0, 0.0, 1.57),
+    'topdown': {
+        'pos': (0.5, 0.0, 1),
+        'euler': (0.0, 0.0, 1.57),
     },
 }
 
@@ -96,12 +99,12 @@ class RoboManipEnv(env.MujocoEnv):
     """
 
     def __init__(
-            self,
-            pixel_observation: bool = False,
-            absolute_action_space: bool = False,
-            pos_threshold: float = 5e-3,
-            ori_threshold: float = np.deg2rad(5),
-            **kwargs,
+        self,
+        pixel_observation: bool = False,
+        absolute_action_space: bool = False,
+        pos_threshold: float = 5e-3,
+        ori_threshold: float = np.deg2rad(5),
+        **kwargs,
     ):
         """Initializes the pick and place task.
 
@@ -132,73 +135,63 @@ class RoboManipEnv(env.MujocoEnv):
         assets = mjcf_utils.get_assets(ik_mjcf)
         ik_model = mujoco.MjModel.from_xml_string(xml_str, assets)
 
-        self._ik = controllers.DiffIKController(
-            model=ik_model, sites=["attachment_site"]
-        )
+        self._ik = controllers.DiffIKController(model=ik_model, sites=['attachment_site'])
 
     def build_mjcf_model(self) -> mjcf.RootElement:
         # Scene.
         arena_mjcf = mjcf.from_path(ARENA_XML.as_posix())
-        arena_mjcf.model = "ur5e_pick_place_task"
+        arena_mjcf.model = 'ur5e_pick_place_task'
 
         arena_mjcf.statistic.center = (0.3, 0, 0.15)
         arena_mjcf.statistic.extent = 0.7
-        getattr(arena_mjcf.visual, "global").elevation = -20
-        getattr(arena_mjcf.visual, "global").azimuth = 180
+        getattr(arena_mjcf.visual, 'global').elevation = -20
+        getattr(arena_mjcf.visual, 'global').azimuth = 180
         arena_mjcf.statistic.meansize = 0.04
         arena_mjcf.visual.map.znear = 0.1
         arena_mjcf.visual.map.zfar = 10.0
 
         # UR5e.
-        ur5e_mjcf = mjcf.from_path(
-            ur5e_mj_description.MJCF_PATH, escape_separators=True
-        )
-        ur5e_mjcf.model = "ur5e"
+        ur5e_mjcf = mjcf.from_path(ur5e_mj_description.MJCF_PATH, escape_separators=True)
+        ur5e_mjcf.model = 'ur5e'
 
-        for light in ur5e_mjcf.find_all("light"):
+        for light in ur5e_mjcf.find_all('light'):
             light.remove()
 
         # Attach the robotiq gripper to the ur5e flange.
-        gripper_mjcf = mjcf.from_path(
-            robotiq_2f85_mj_description.MJCF_PATH, escape_separators=True
-        )
-        gripper_mjcf.model = "robotiq"
-        mjcf_utils.attach(ur5e_mjcf, gripper_mjcf, "attachment_site")
+        gripper_mjcf = mjcf.from_path(robotiq_2f85_mj_description.MJCF_PATH, escape_separators=True)
+        gripper_mjcf.model = 'robotiq'
+        mjcf_utils.attach(ur5e_mjcf, gripper_mjcf, 'attachment_site')
 
         # Attach ur5e to scene.
         mjcf_utils.attach(arena_mjcf, ur5e_mjcf)
 
         # Add object to scene.
-        object_mjcf = mjcf.from_path((_HERE / "common" / "cubes.xml").as_posix())
+        object_mjcf = mjcf.from_path((_HERE / 'common' / 'cubes.xml').as_posix())
         arena_mjcf.include_copy(object_mjcf)
 
         self._object_geoms_list = []
         for i in range(self._num_objects):
-            self._object_geoms_list.append(object_mjcf.find("body", f"object_{i}").find_all("geom"))
+            self._object_geoms_list.append(object_mjcf.find('body', f'object_{i}').find_all('geom'))
 
-        self._object_target_geoms = object_mjcf.find("body", "object_target").find_all("geom")
+        self._object_target_geoms = object_mjcf.find('body', 'object_target').find_all('geom')
 
         # Add cameras.
         for camera_name, camera_kwargs in _CAMERAS.items():
-            arena_mjcf.worldbody.add("camera", name=camera_name, **camera_kwargs)
+            arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
         # Cache joint and actuator elements.
         self._arm_jnts = mjcf_utils.safe_find_all(
             ur5e_mjcf,
-            "joint",
+            'joint',
             exclude_attachments=True,
         )
         self._arm_acts = mjcf_utils.safe_find_all(
             ur5e_mjcf,
-            "actuator",
+            'actuator',
             exclude_attachments=True,
         )
-        self._gripper_jnts = mjcf_utils.safe_find_all(
-            gripper_mjcf, "joint", exclude_attachments=True
-        )
-        self._gripper_acts = mjcf_utils.safe_find_all(
-            gripper_mjcf, "actuator", exclude_attachments=True
-        )
+        self._gripper_jnts = mjcf_utils.safe_find_all(gripper_mjcf, 'joint', exclude_attachments=True)
+        self._gripper_acts = mjcf_utils.safe_find_all(gripper_mjcf, 'actuator', exclude_attachments=True)
 
         # ================================ #
         # Visualization.
@@ -209,7 +202,7 @@ class RoboManipEnv(env.MujocoEnv):
             upper=self._workspace_bounds[1],
             rgba=(0.2, 0.2, 0.6, 0.1),
             group=4,
-            name="workspace_bounds",
+            name='workspace_bounds',
         )
         mjcf_utils.add_bounding_box_site(
             arena_mjcf.worldbody,
@@ -217,15 +210,7 @@ class RoboManipEnv(env.MujocoEnv):
             upper=np.asarray((*self._target_sampling_bounds[1], 0.03)),
             rgba=(0.6, 0.3, 0.3, 0.2),
             group=4,
-            name="object_bounds",
-        )
-        mjcf_utils.add_bounding_box_site(
-            arena_mjcf.worldbody,
-            lower=np.asarray((*self._object_sampling_bounds[0], 0.03)),
-            upper=np.asarray((*self._object_sampling_bounds[1], 0.03)),
-            rgba=(0.3, 0.6, 0.3, 0.2),
-            group=4,
-            name="target_bounds",
+            name='object_bounds',
         )
         # ================================ #
 
@@ -239,20 +224,12 @@ class RoboManipEnv(env.MujocoEnv):
     def post_compilation(self):
         # Arm joint and actuator IDs.
         arm_joint_names = [j.full_identifier for j in self._arm_jnts]
-        self._arm_joint_ids = np.asarray(
-            [self._model.joint(name).id for name in arm_joint_names]
-        )
+        self._arm_joint_ids = np.asarray([self._model.joint(name).id for name in arm_joint_names])
         actuator_names = [a.full_identifier for a in self._arm_acts]
-        self._arm_actuator_ids = np.asarray(
-            [self._model.actuator(name).id for name in actuator_names]
-        )
+        self._arm_actuator_ids = np.asarray([self._model.actuator(name).id for name in actuator_names])
         gripper_actuator_names = [a.full_identifier for a in self._gripper_acts]
-        self._gripper_actuator_ids = np.asarray(
-            [self._model.actuator(name).id for name in gripper_actuator_names]
-        )
-        self._gripper_opening_joint_id = self._model.joint(
-            "ur5e/robotiq/right_driver_joint"
-        ).id
+        self._gripper_actuator_ids = np.asarray([self._model.actuator(name).id for name in gripper_actuator_names])
+        self._gripper_opening_joint_id = self._model.joint('ur5e/robotiq/right_driver_joint').id
 
         # Modify PD gains.
         self._model.actuator_gainprm[self._arm_actuator_ids, 0] = _ACTUATOR_KP
@@ -266,25 +243,19 @@ class RoboManipEnv(env.MujocoEnv):
         ]
 
         # Mocap IDs.
-        self._object_target_mocap_id = self._model.body("object_target").mocapid[0]
-        self._object_target_geom_ids = [
-            self._model.geom(geom.full_identifier).id for geom in self._object_target_geoms
-        ]
+        self._object_target_mocap_id = self._model.body('object_target').mocapid[0]
+        self._object_target_geom_ids = [self._model.geom(geom.full_identifier).id for geom in self._object_target_geoms]
 
         # Site IDs.
-        self._pinch_site_id = self._model.site("ur5e/robotiq/pinch").id
-        self._attach_site_id = self._model.site("ur5e/attachment_site").id
+        self._pinch_site_id = self._model.site('ur5e/robotiq/pinch').id
+        self._attach_site_id = self._model.site('ur5e/attachment_site').id
 
         pinch_pose = lie.SE3.from_rotation_and_translation(
-            rotation=lie.SO3.from_matrix(
-                self._data.site_xmat[self._pinch_site_id].reshape(3, 3)
-            ),
+            rotation=lie.SO3.from_matrix(self._data.site_xmat[self._pinch_site_id].reshape(3, 3)),
             translation=self._data.site_xpos[self._pinch_site_id],
         )
         attach_pose = lie.SE3.from_rotation_and_translation(
-            rotation=lie.SO3.from_matrix(
-                self._data.site_xmat[self._attach_site_id].reshape(3, 3)
-            ),
+            rotation=lie.SO3.from_matrix(self._data.site_xmat[self._attach_site_id].reshape(3, 3)),
             translation=self._data.site_xpos[self._attach_site_id],
         )
         self._T_pa = pinch_pose.inverse() @ attach_pose
@@ -326,15 +297,7 @@ class RoboManipEnv(env.MujocoEnv):
             self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
 
         # Randomize target position and orientation.
-        xy = self.np_random.uniform(*self._target_sampling_bounds)
-        tar_pos = (*xy, self._object_z)
-        yaw = self.np_random.uniform(0, 2 * np.pi)
-        tar_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
-        self._data.mocap_pos[self._object_target_mocap_id] = tar_pos
-        self._data.mocap_quat[self._object_target_mocap_id] = tar_ori
-        self._target_block = np.random.randint(self._num_objects)
-        for gid in self._object_target_geom_ids:
-            self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[self._target_block][:3]
+        self.set_new_target(return_info=False)
 
         # Forward kinematics to update site positions.
         mujoco.mj_kinematics(self._model, self._data)
@@ -352,6 +315,26 @@ class RoboManipEnv(env.MujocoEnv):
 
         # Reset metrics for the current episode.
         self._success: bool = False
+
+    def set_new_target(self, return_info=True):
+        self._target_block = self.np_random.integers(self._num_objects)
+        put_on_another_block = self.np_random.uniform() < 0.5
+        if put_on_another_block:
+            block_idx = self.np_random.choice(list(set(range(self._num_objects)) - {self._target_block}))
+            block_pos = self._data.joint(f'object_joint_{block_idx}').qpos[:3]
+            tar_pos = np.array([block_pos[0], block_pos[1], block_pos[2] + 2 * self._object_z])
+        else:
+            xy = self.np_random.uniform(*self._target_sampling_bounds)
+            tar_pos = (*xy, self._object_z)
+        yaw = self.np_random.uniform(0, 2 * np.pi)
+        tar_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
+        self._data.mocap_pos[self._object_target_mocap_id] = tar_pos
+        self._data.mocap_quat[self._object_target_mocap_id] = tar_ori
+        for gid in self._object_target_geom_ids:
+            self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[self._target_block][:3]
+
+        if return_info:
+            return self.compute_observation(), self.get_reset_info()
 
     @property
     def action_space(self):
@@ -375,65 +358,59 @@ class RoboManipEnv(env.MujocoEnv):
         spaces = {}
 
         # Proprioceptive observations.
-        spaces["proprio/joint_pos"] = gym.spaces.Box(
+        spaces['proprio/joint_pos'] = gym.spaces.Box(
             low=self._model.jnt_range[self._arm_joint_ids, 0],
             high=self._model.jnt_range[self._arm_joint_ids, 1],
             dtype=np.float64,
         )
-        spaces["proprio/joint_vel"] = gym.spaces.Box(
-            shape=(6,), low=-np.inf, high=np.inf, dtype=np.float64
-        )
-        spaces["proprio/effector_pos"] = gym.spaces.Box(
+        spaces['proprio/joint_vel'] = gym.spaces.Box(shape=(6,), low=-np.inf, high=np.inf, dtype=np.float64)
+        spaces['proprio/effector_pos'] = gym.spaces.Box(
             low=self._workspace_bounds[0],
             high=self._workspace_bounds[1],
             dtype=np.float64,
         )
-        spaces["proprio/effector_yaw"] = gym.spaces.Box(
+        spaces['proprio/effector_yaw'] = gym.spaces.Box(
             low=-np.pi,
             high=np.pi,
             dtype=np.float64,
         )
-        spaces["proprio/effector_target_pos"] = gym.spaces.Box(
+        spaces['proprio/effector_target_pos'] = gym.spaces.Box(
             low=self._workspace_bounds[0],
             high=self._workspace_bounds[1],
             dtype=np.float64,
         )
-        spaces["proprio/effector_target_yaw"] = gym.spaces.Box(
+        spaces['proprio/effector_target_yaw'] = gym.spaces.Box(
             low=-np.pi,
             high=np.pi,
             dtype=np.float64,
         )
-        spaces["proprio/gripper_opening"] = gym.spaces.Box(
+        spaces['proprio/gripper_opening'] = gym.spaces.Box(
             low=0.0,
             high=1.0,
             dtype=np.float64,
         )
 
         # Privileged observations.
-        spaces["privileged/target_pos"] = gym.spaces.Box(
+        spaces['privileged/target_pos'] = gym.spaces.Box(
             low=self._workspace_bounds[0],
             high=self._workspace_bounds[1],
             dtype=np.float64,
         )
-        spaces["privileged/target_yaw"] = gym.spaces.Box(
-            low=0, high=2 * np.pi, shape=(1,), dtype=np.float64
-        )
+        spaces['privileged/target_yaw'] = gym.spaces.Box(low=0, high=2 * np.pi, shape=(1,), dtype=np.float64)
         for i in range(self._num_objects):
-            spaces[f"privileged/block_{i}_pos"] = gym.spaces.Box(
+            spaces[f'privileged/block_{i}_pos'] = gym.spaces.Box(
                 low=self._workspace_bounds[0],
                 high=self._workspace_bounds[1],
                 dtype=np.float64,
             )
-            spaces[f"privileged/block_{i}_yaw"] = gym.spaces.Box(
-                low=0, high=2 * np.pi, shape=(1,), dtype=np.float64
-            )
+            spaces[f'privileged/block_{i}_yaw'] = gym.spaces.Box(low=0, high=2 * np.pi, shape=(1,), dtype=np.float64)
 
         if self._pixel_observation:
             keys = [
-                "front",
-                "overhead_left",
-                "overhead_right",
-                "topdown",
+                'front',
+                'overhead_left',
+                'overhead_right',
+                'topdown',
             ]
 
             rgb_render_kwargs = dict(
@@ -443,7 +420,7 @@ class RoboManipEnv(env.MujocoEnv):
                 dtype=np.uint8,
             )
             for key in keys:
-                spaces[f"rgb/{key}"] = gym.spaces.Box(**rgb_render_kwargs)
+                spaces[f'rgb/{key}'] = gym.spaces.Box(**rgb_render_kwargs)
 
             depth_render_kwargs = dict(
                 shape=(self._render_height, self._render_width),
@@ -452,11 +429,9 @@ class RoboManipEnv(env.MujocoEnv):
                 dtype=np.float32,
             )
             for key in keys:
-                spaces[f"depth/{key}"] = gym.spaces.Box(**depth_render_kwargs)
+                spaces[f'depth/{key}'] = gym.spaces.Box(**depth_render_kwargs)
 
-        spaces["time"] = gym.spaces.Box(
-            low=0, high=np.inf, shape=(1,), dtype=np.float64
-        )
+        spaces['time'] = gym.spaces.Box(low=0, high=np.inf, shape=(1,), dtype=np.float64)
 
         return gym.spaces.Dict(spaces)
 
@@ -465,18 +440,11 @@ class RoboManipEnv(env.MujocoEnv):
 
         if self._absolute_action_space:
             target_effector_translation = a_pos
-            target_effector_orientation = (
-                lie.SO3.from_z_radians(a_ori) @ _EFFECTOR_DOWN_ROTATION
-            )
+            target_effector_orientation = lie.SO3.from_z_radians(a_ori) @ _EFFECTOR_DOWN_ROTATION
             self._target_gripper_opening = a_gripper
         else:
-            target_effector_translation = (
-                self._target_effector_pose.translation() + a_pos
-            )
-            target_effector_orientation = (
-                lie.SO3.from_z_radians(a_ori)
-                @ self._target_effector_pose.rotation()
-            )
+            target_effector_translation = self._target_effector_pose.translation() + a_pos
+            target_effector_orientation = lie.SO3.from_z_radians(a_ori) @ self._target_effector_pose.rotation()
             self._target_gripper_opening += a_gripper
 
         # Make sure the target pose respects the action limits.
@@ -490,9 +458,7 @@ class RoboManipEnv(env.MujocoEnv):
             -np.pi,
             +np.pi,
         )
-        target_effector_orientation = (
-            lie.SO3.from_z_radians(yaw) @ _EFFECTOR_DOWN_ROTATION
-        )
+        target_effector_orientation = lie.SO3.from_z_radians(yaw) @ _EFFECTOR_DOWN_ROTATION
         self._target_gripper_opening = np.clip(self._target_gripper_opening, 0.0, 1.0)
 
         # Pinch pose in the world frame -> attach pose in the world frame.
@@ -511,9 +477,7 @@ class RoboManipEnv(env.MujocoEnv):
 
         # Set the desired joint positions for the underlying PD controller.
         self._data.ctrl[self._arm_actuator_ids] = qpos_target
-        self._data.ctrl[self._gripper_actuator_ids] = (
-            _ROBOTIQ_CONSTANT * self._target_gripper_opening
-        )
+        self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * self._target_gripper_opening
 
     def post_step(self) -> None:
         # obj_pos = self._data.qpos[self._object_joint_ids[0] : self._object_joint_ids[0] + 3]
@@ -548,48 +512,36 @@ class RoboManipEnv(env.MujocoEnv):
         obs = {}
 
         # Proprioceptive observations.
-        obs["proprio/joint_pos"] = self._data.qpos[self._arm_joint_ids].copy()
-        obs["proprio/joint_vel"] = self._data.qvel[self._arm_joint_ids].copy()
-        obs["proprio/effector_pos"] = self._data.site_xpos[self._pinch_site_id].copy()
-        obs["proprio/effector_yaw"] = np.array(
-            [
-                lie.SO3.from_matrix(
-                    self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)
-                ).compute_yaw_radians()
-            ]
+        obs['proprio/joint_pos'] = self._data.qpos[self._arm_joint_ids].copy()
+        obs['proprio/joint_vel'] = self._data.qvel[self._arm_joint_ids].copy()
+        obs['proprio/effector_pos'] = self._data.site_xpos[self._pinch_site_id].copy()
+        obs['proprio/effector_yaw'] = np.array(
+            [lie.SO3.from_matrix(self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)).compute_yaw_radians()]
         )
-        obs["proprio/effector_target_pos"] = (
-            self._target_effector_pose.translation().copy()
-        )
-        obs["proprio/effector_target_yaw"] = np.array(
-            [self._target_effector_pose.rotation().compute_yaw_radians()]
-        )
-        obs["proprio/gripper_opening"] = np.array(
+        obs['proprio/effector_target_pos'] = self._target_effector_pose.translation().copy()
+        obs['proprio/effector_target_yaw'] = np.array([self._target_effector_pose.rotation().compute_yaw_radians()])
+        obs['proprio/gripper_opening'] = np.array(
             np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1)
         )
 
         # Privileged observations.
-        obs["privileged/target_pos"] = self._data.mocap_pos[
-            self._object_target_mocap_id
-        ].copy()
-        obs["privileged/target_yaw"] = np.array(
-            [
-                lie.SO3(
-                    wxyz=self._data.mocap_quat[self._object_target_mocap_id]
-                ).compute_yaw_radians()
-            ]
+        obs['privileged/target_pos'] = self._data.mocap_pos[self._object_target_mocap_id].copy()
+        obs['privileged/target_yaw'] = np.array(
+            [lie.SO3(wxyz=self._data.mocap_quat[self._object_target_mocap_id]).compute_yaw_radians()]
         )
 
         for i in range(self._num_objects):
-            obs[f"privileged/block_{i}_pos"] = self._data.joint(f'object_joint_{i}').qpos[:3].copy()
-            obs[f"privileged/block_{i}_yaw"] = [np.array(lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians())]
+            obs[f'privileged/block_{i}_pos'] = self._data.joint(f'object_joint_{i}').qpos[:3].copy()
+            obs[f'privileged/block_{i}_yaw'] = [
+                np.array(lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians())
+            ]
 
         if self._pixel_observation:
-            for cam_name in ["front", "overhead_left", "overhead_right", "topdown"]:
-                obs[f"rgb/{cam_name}"] = self.render(camera=cam_name)
-                obs[f"depth/{cam_name}"] = self.render(camera=cam_name, depth=True)
+            for cam_name in ['front', 'overhead_left', 'overhead_right', 'topdown']:
+                obs[f'rgb/{cam_name}'] = self.render(camera=cam_name)
+                obs[f'depth/{cam_name}'] = self.render(camera=cam_name, depth=True)
 
-        obs["time"] = np.array([self._data.time])
+        obs['time'] = np.array([self._data.time])
 
         return obs
 

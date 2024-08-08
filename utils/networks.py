@@ -18,7 +18,7 @@ def ensemblize(cls, num_qs, out_axes=0, **kwargs):
         in_axes=None,
         out_axes=out_axes,
         axis_size=num_qs,
-        **kwargs
+        **kwargs,
     )
 
 
@@ -90,14 +90,10 @@ class RunningMeanStd(flax.struct.PyTreeNode):
         new_mean = self.mean + delta * batch_count / total_count
         m_a = self.var * self.count
         m_b = batch_var * batch_count
-        m_2 = m_a + m_b + delta ** 2 * self.count * batch_count / total_count
+        m_2 = m_a + m_b + delta**2 * self.count * batch_count / total_count
         new_var = m_2 / total_count
 
-        return self.replace(
-            mean=new_mean,
-            var=new_var,
-            count=total_count
-        )
+        return self.replace(mean=new_mean, var=new_var, count=total_count)
 
 
 class GCActor(nn.Module):
@@ -114,19 +110,19 @@ class GCActor(nn.Module):
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
 
-        self.mean_net = nn.Dense(
-            self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
-        )
+        self.mean_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
         if self.state_dependent_std:
-            self.log_std_net = nn.Dense(
-                self.action_dim, kernel_init=default_init(self.final_fc_init_scale)
-            )
+            self.log_std_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
         else:
             if not self.const_std:
                 self.log_stds = self.param('log_stds', nn.initializers.zeros, (self.action_dim,))
 
     def __call__(
-            self, observations, goals=None, goal_encoded=False, temperature=1.0,
+        self,
+        observations,
+        goals=None,
+        goal_encoded=False,
+        temperature=1.0,
     ):
         if self.gc_encoder is not None:
             inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)

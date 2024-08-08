@@ -111,7 +111,9 @@ def main(_):
             agent_init_ij = all_cells[agent_init_idx]
             ball_init_ij = all_cells[ball_init_idx]
             goal_ij = all_cells[goal_idx]
-            ob, _ = env.reset(options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij)))
+            ob, _ = env.reset(
+                options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij))
+            )
         elif FLAGS.dataset_type == 'stitch':
             cur_mode = 'navigate' if np.random.randint(2) == 0 else 'dribble'
 
@@ -119,7 +121,9 @@ def main(_):
             agent_init_ij = all_cells[agent_init_idx]
             ball_init_ij = all_cells[ball_init_idx] if cur_mode == 'navigate' else agent_init_ij
             goal_ij = all_cells[goal_idx]
-            ob, _ = env.reset(options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij)))
+            ob, _ = env.reset(
+                options=dict(task_info=dict(agent_init_ij=agent_init_ij, ball_init_ij=ball_init_ij, goal_ij=goal_ij))
+            )
         else:
             raise ValueError(f'Unsupported dataset_type: {FLAGS.dataset_type}')
 
@@ -160,7 +164,11 @@ def main(_):
                     # Resample a new goal
                     goal_ij = all_cells[np.random.randint(len(all_cells))]
                     env.unwrapped.set_goal(goal_ij)
-                if step > 150 and virtual_agent_goal_xy is None and np.linalg.norm(np.array(dataset['observations'][-150:])[:, :2] - next_ob[:2], axis=1).max() <= 2:
+                if (
+                    step > 150
+                    and virtual_agent_goal_xy is None
+                    and np.linalg.norm(np.array(dataset['observations'][-150:])[:, :2] - next_ob[:2], axis=1).max() <= 2
+                ):
                     # If stuck, move the agent to a random position
                     virtual_agent_goal_ij = all_cells[np.random.randint(len(all_cells))]
                     virtual_agent_goal_xy = np.array(env.unwrapped.ij_to_xy(virtual_agent_goal_ij))
@@ -183,8 +191,12 @@ def main(_):
     train_path = FLAGS.save_path
     val_path = FLAGS.save_path.replace('.npz', '-val.npz')
 
-    train_dataset = {k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
-    val_dataset = {k: np.array(v[total_train_steps:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()}
+    train_dataset = {
+        k: np.array(v[:total_train_steps], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()
+    }
+    val_dataset = {
+        k: np.array(v[total_train_steps:], dtype=np.float32 if k != 'terminals' else bool) for k, v in dataset.items()
+    }
 
     for path, dataset in [(train_path, train_dataset), (val_path, val_dataset)]:
         np.savez_compressed(path, **dataset)

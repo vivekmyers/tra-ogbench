@@ -26,7 +26,7 @@ class SE3:
     def __repr__(self) -> str:
         quat = np.round(self.wxyz_xyz[:4], 5)
         xyz = np.round(self.wxyz_xyz[4:], 5)
-        return f"{self.__class__.__name__}(wxyz={quat}, xyz={xyz})"
+        return f'{self.__class__.__name__}(wxyz={quat}, xyz={xyz})'
 
     @staticmethod
     def identity() -> SE3:
@@ -82,9 +82,7 @@ class SE3:
             V = (
                 np.eye(3, dtype=np.float64)
                 + (1.0 - np.cos(theta_safe)) / (theta_squared_safe) * skew_omega
-                + (theta_safe - np.sin(theta_safe))
-                / (theta_squared_safe * theta_safe)
-                * (skew_omega @ skew_omega)
+                + (theta_safe - np.sin(theta_safe)) / (theta_squared_safe * theta_safe) * (skew_omega @ skew_omega)
             )
         return SE3.from_rotation_and_translation(
             rotation=rotation,
@@ -100,21 +98,12 @@ class SE3:
         theta_safe = np.sqrt(theta_squared_safe)
         half_theta_safe = 0.5 * theta_safe
         if use_taylor:
-            V_inv = (
-                np.eye(3, dtype=np.float64)
-                - 0.5 * skew_omega
-                + (skew_omega @ skew_omega) / 12.0
-            )
+            V_inv = np.eye(3, dtype=np.float64) - 0.5 * skew_omega + (skew_omega @ skew_omega) / 12.0
         else:
             V_inv = (
                 np.eye(3, dtype=np.float64)
                 - 0.5 * skew_omega
-                + (
-                    1.0
-                    - theta_safe
-                    * np.cos(half_theta_safe)
-                    / (2.0 * np.sin(half_theta_safe))
-                )
+                + (1.0 - theta_safe * np.cos(half_theta_safe) / (2.0 * np.sin(half_theta_safe)))
                 / theta_squared_safe
                 * (skew_omega @ skew_omega)
             )
@@ -158,4 +147,4 @@ class SE3:
         elif isinstance(other, SE3):
             return self.multiply(other=other)
         else:
-            raise ValueError(f"Unsupported argument type for @ operator: {type(other)}")
+            raise ValueError(f'Unsupported argument type for @ operator: {type(other)}')

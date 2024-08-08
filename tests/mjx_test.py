@@ -19,12 +19,10 @@ _RUN_SPEED = 10
 def _sigmoids(x, value_at_1, sigmoid):
     if sigmoid in ('cosine', 'linear', 'quadratic'):
         if not 0 <= value_at_1 < 1:
-            raise ValueError('`value_at_1` must be nonnegative and smaller than 1, '
-                             'got {}.'.format(value_at_1))
+            raise ValueError('`value_at_1` must be nonnegative and smaller than 1, ' 'got {}.'.format(value_at_1))
     else:
         if not 0 < value_at_1 < 1:
-            raise ValueError('`value_at_1` must be strictly between 0 and 1, '
-                             'got {}.'.format(value_at_1))
+            raise ValueError('`value_at_1` must be strictly between 0 and 1, ' 'got {}.'.format(value_at_1))
 
     if sigmoid == 'gaussian':
         scale = jnp.sqrt(-2 * jnp.log(value_at_1))
@@ -58,7 +56,7 @@ def _sigmoids(x, value_at_1, sigmoid):
     elif sigmoid == 'quadratic':
         scale = jnp.sqrt(1 - value_at_1)
         scaled_x = x * scale
-        return jnp.where(abs(scaled_x) < 1, 1 - scaled_x ** 2, 0.0)
+        return jnp.where(abs(scaled_x) < 1, 1 - scaled_x**2, 0.0)
 
     elif sigmoid == 'tanh_squared':
         scale = jnp.arctanh(jnp.sqrt(1 - value_at_1))
@@ -87,9 +85,9 @@ def tolerance(x, bounds=(0.0, 0.0), margin=0.0, sigmoid='gaussian', value_at_mar
 
 class Humanoid(PipelineEnv):
     def __init__(
-            self,
-            task='walk',
-            **kwargs,
+        self,
+        task='walk',
+        **kwargs,
     ):
         path = os.path.join(os.path.dirname(__file__), '../envs/locomotion/assets/humanoid.xml')
         mj_model = mujoco.MjModel.from_xml_path(path)
@@ -141,7 +139,10 @@ class Humanoid(PipelineEnv):
         state.metrics.update(self._get_info(data0, data))
 
         return state.replace(
-            pipeline_state=data, obs=obs, reward=reward, done=done,
+            pipeline_state=data,
+            obs=obs,
+            reward=reward,
+            done=done,
         )
 
     def _get_obs(self, data0, data):
@@ -158,14 +159,16 @@ class Humanoid(PipelineEnv):
         center_of_mass_velocity = (data.subtree_com[0] - data0.subtree_com[0]) / self.dt
         velocity = data.qvel
 
-        return jnp.concatenate([
-            joint_angles,
-            jnp.array([head_height]),
-            extremities,
-            torso_vertical_orientation,
-            center_of_mass_velocity,
-            velocity,
-        ])
+        return jnp.concatenate(
+            [
+                joint_angles,
+                jnp.array([head_height]),
+                extremities,
+                torso_vertical_orientation,
+                center_of_mass_velocity,
+                velocity,
+            ]
+        )
 
     def _get_reward(self, data0, data):
         head_height = data.xpos[2, 2]
@@ -184,7 +187,13 @@ class Humanoid(PipelineEnv):
             return small_control * stand_reward * dont_move
         else:
             com_velocity = jnp.linalg.norm(center_of_mass_velocity[0:2])
-            move = tolerance(com_velocity, bounds=(self._move_speed, float('inf')), margin=self._move_speed, value_at_margin=0, sigmoid='linear')
+            move = tolerance(
+                com_velocity,
+                bounds=(self._move_speed, float('inf')),
+                margin=self._move_speed,
+                value_at_margin=0,
+                sigmoid='linear',
+            )
             move = (5 * move + 1) / 6
             return small_control * stand_reward * move
 
@@ -219,11 +228,22 @@ def main():
         # unroll_length=10, num_minibatches=32, num_updates_per_batch=8,
         # discounting=0.97, learning_rate=3e-4, entropy_cost=1e-3, num_envs=2048,
         # batch_size=1024, seed=0,
-        ppo.train, num_timesteps=30_000_000, num_evals=5, reward_scaling=0.1,
-        episode_length=1000, normalize_observations=True, action_repeat=1,
-        unroll_length=10, num_minibatches=32, num_updates_per_batch=8,
-        discounting=0.97, learning_rate=3e-4, entropy_cost=1e-3, num_envs=1,
-        batch_size=256, seed=0,
+        ppo.train,
+        num_timesteps=30_000_000,
+        num_evals=5,
+        reward_scaling=0.1,
+        episode_length=1000,
+        normalize_observations=True,
+        action_repeat=1,
+        unroll_length=10,
+        num_minibatches=32,
+        num_updates_per_batch=8,
+        discounting=0.97,
+        learning_rate=3e-4,
+        entropy_cost=1e-3,
+        num_envs=1,
+        batch_size=256,
+        seed=0,
     )
 
     x_data = []

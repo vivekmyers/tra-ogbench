@@ -15,11 +15,11 @@ def get_flag_dict():
 
 
 def setup_wandb(
-        entity=None,
-        project='project',
-        group=None,
-        name=None,
-        mode='online',
+    entity=None,
+    project='project',
+    group=None,
+    name=None,
+    mode='online',
 ):
     wandb_output_dir = tempfile.mkdtemp()
     tags = [group] if group is not None else None
@@ -69,7 +69,9 @@ def get_wandb_video(renders=None, n_cols=None, frame_skip=1):
     # Pad videos to the same length
     max_length = max([len(render) for render in renders])
     for i, render in enumerate(renders):
-        renders[i] = np.concatenate([render, np.zeros((max_length - render.shape[0], *render.shape[1:]), dtype=render.dtype)], axis=0)
+        renders[i] = np.concatenate(
+            [render, np.zeros((max_length - render.shape[0], *render.shape[1:]), dtype=render.dtype)], axis=0
+        )
         renders[i] = renders[i][::frame_skip]
     renders = np.array(renders)  # (n, t, h, w, c)
 

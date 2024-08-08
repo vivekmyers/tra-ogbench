@@ -100,11 +100,13 @@ class TrainState(flax.struct.PyTreeNode):
         final_grad_min = jnp.min(grad_min_flat)
         final_grad_norm = jnp.linalg.norm(grad_norm_flat, ord=1)
 
-        info.update({
-            'grad/max': final_grad_max,
-            'grad/min': final_grad_min,
-            'grad/norm': final_grad_norm,
-        })
+        info.update(
+            {
+                'grad/max': final_grad_max,
+                'grad/min': final_grad_min,
+                'grad/norm': final_grad_norm,
+            }
+        )
 
         return self.apply_gradients(grads=grads), info
 

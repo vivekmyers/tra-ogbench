@@ -21,9 +21,13 @@ class CRLAgent(flax.struct.PyTreeNode):
         batch_size = batch['observations'].shape[0]
 
         if module_name == 'critic':
-            v, phi, psi = self.network.select(module_name)(batch['observations'], batch['value_goals'], batch['actions'], info=True, params=grad_params)
+            v, phi, psi = self.network.select(module_name)(
+                batch['observations'], batch['value_goals'], batch['actions'], info=True, params=grad_params
+            )
         else:
-            v, phi, psi = self.network.select(module_name)(batch['observations'], batch['value_goals'], info=True, params=grad_params)
+            v, phi, psi = self.network.select(module_name)(
+                batch['observations'], batch['value_goals'], info=True, params=grad_params
+            )
         if len(phi.shape) == 2:  # Non-ensemble
             phi = phi[None, ...]
             psi = psi[None, ...]
@@ -63,18 +67,22 @@ class CRLAgent(flax.struct.PyTreeNode):
         if self.config['actor_loss'] == 'awr':
             if self.config['use_q']:
                 v = value_transform(self.network.select('value')(batch['observations'], batch['actor_goals']))
-                q1, q2 = value_transform(self.network.select('critic')(batch['observations'], batch['actor_goals'], batch['actions']))
+                q1, q2 = value_transform(
+                    self.network.select('critic')(batch['observations'], batch['actor_goals'], batch['actions'])
+                )
                 q = jnp.minimum(q1, q2)
                 adv = q - v
             else:
                 v1, v2 = value_transform(self.network.select('value')(batch['observations'], batch['actor_goals']))
-                nv1, nv2 = value_transform(self.network.select('value')(batch['next_observations'], batch['actor_goals']))
+                nv1, nv2 = value_transform(
+                    self.network.select('value')(batch['next_observations'], batch['actor_goals'])
+                )
                 v = (v1 + v2) / 2
                 nv = (nv1 + nv2) / 2
                 adv = nv - v
 
             exp_a = jnp.exp(adv * self.config['alpha'])
-            exp_a = jnp.minimum(exp_a, 100.)
+            exp_a = jnp.minimum(exp_a, 100.0)
 
             dist = self.network.select('actor')(batch['observations'], batch['actor_goals'], params=grad_params)
             log_prob = dist.log_prob(batch['actions'])
@@ -96,7 +104,9 @@ class CRLAgent(flax.struct.PyTreeNode):
                 q_actions = jnp.clip(dist.mode(), -1, 1)
             else:
                 q_actions = jnp.clip(dist.sample(seed=rng), -1, 1)
-            q1, q2 = value_transform(self.network.select('critic')(batch['observations'], batch['actor_goals'], q_actions))
+            q1, q2 = value_transform(
+                self.network.select('critic')(batch['observations'], batch['actor_goals'], q_actions)
+            )
             q = jnp.minimum(q1, q2)
 
             q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-6)
@@ -129,14 +139,14 @@ class CRLAgent(flax.struct.PyTreeNode):
             for k, v in critic_info.items():
                 info[f'critic/{k}'] = v
         else:
-            critic_loss = 0.
+            critic_loss = 0.0
 
         if not self.config['use_q'] or (self.config['use_q'] and self.config['actor_loss'] == 'awr'):
             value_loss, value_info = self.contrastive_loss(batch, grad_params, 'value')
             for k, v in value_info.items():
                 info[f'value/{k}'] = v
         else:
-            value_loss = 0.
+            value_loss = 0.0
 
         rng, actor_rng = jax.random.split(rng)
         actor_loss, actor_info = self.actor_loss(batch, grad_params, actor_rng)
@@ -159,12 +169,12 @@ class CRLAgent(flax.struct.PyTreeNode):
 
     @partial(jax.jit, static_argnames=('discrete',))
     def sample_actions(
-            self,
-            observations,
-            goals=None,
-            seed=None,
-            temperature=1.0,
-            discrete=False,
+        self,
+        observations,
+        goals=None,
+        seed=None,
+        temperature=1.0,
+        discrete=False,
     ):
         dist = self.network.select('actor')(observations, goals, temperature=temperature)
         actions = dist.sample(seed=seed)
@@ -174,11 +184,11 @@ class CRLAgent(flax.struct.PyTreeNode):
 
     @classmethod
     def create(
-            cls,
-            seed,
-            ex_observations,
-            ex_actions,
-            config,
+        cls,
+        seed,
+        ex_observations,
+        ex_actions,
+        config,
     ):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
@@ -255,33 +265,34 @@ class CRLAgent(flax.struct.PyTreeNode):
 
 
 def get_config():
-    config = ml_collections.ConfigDict(dict(
-        agent_name='crl',
-        lr=3e-4,
-        batch_size=1024,
-        actor_hidden_dims=(512, 512, 512),
-        value_hidden_dims=(512, 512, 512),
-        latent_dim=512,
-        layer_norm=True,
-        discount=0.99,
-        actor_loss='ddpgbc',  # ['awr', 'ddpgbc']
-        alpha=1.0,  # AWR temperature or DDPG+BC coefficient
-        use_q=True,  # Whether to fit Q or V with contrastive RL
-        actor_log_q=True,  # Whether to use log Q in actor loss
-        const_std=True,
-        encoder=ml_collections.config_dict.placeholder(str),
-
-        dataset_class='GCDataset',
-        value_p_curgoal=0.0,
-        value_p_trajgoal=1.0,
-        value_p_randomgoal=0.0,
-        value_geom_sample=True,
-        actor_p_curgoal=0.0,
-        actor_p_trajgoal=1.0,
-        actor_p_randomgoal=0.0,
-        actor_geom_sample=False,
-        gc_negative=False,
-        p_aug=0.0,
-        frame_stack=ml_collections.config_dict.placeholder(int),
-    ))
+    config = ml_collections.ConfigDict(
+        dict(
+            agent_name='crl',
+            lr=3e-4,
+            batch_size=1024,
+            actor_hidden_dims=(512, 512, 512),
+            value_hidden_dims=(512, 512, 512),
+            latent_dim=512,
+            layer_norm=True,
+            discount=0.99,
+            actor_loss='ddpgbc',  # ['awr', 'ddpgbc']
+            alpha=1.0,  # AWR temperature or DDPG+BC coefficient
+            use_q=True,  # Whether to fit Q or V with contrastive RL
+            actor_log_q=True,  # Whether to use log Q in actor loss
+            const_std=True,
+            encoder=ml_collections.config_dict.placeholder(str),
+            dataset_class='GCDataset',
+            value_p_curgoal=0.0,
+            value_p_trajgoal=1.0,
+            value_p_randomgoal=0.0,
+            value_geom_sample=True,
+            actor_p_curgoal=0.0,
+            actor_p_trajgoal=1.0,
+            actor_p_randomgoal=0.0,
+            actor_geom_sample=False,
+            gc_negative=False,
+            p_aug=0.0,
+            frame_stack=ml_collections.config_dict.placeholder(int),
+        )
+    )
     return config

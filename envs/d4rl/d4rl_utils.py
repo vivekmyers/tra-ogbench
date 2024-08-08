@@ -13,11 +13,11 @@ def make_env(env_name):
 
 
 def get_dataset(
-        env,
-        env_name,
-        dataset=None,
-        filter_terminals=False,
-        ob_dtype=np.float32,
+    env,
+    env_name,
+    dataset=None,
+    filter_terminals=False,
+    ob_dtype=np.float32,
 ):
     if dataset is None:
         dataset = d4rl.qlearning_dataset(env)
@@ -37,10 +37,15 @@ def get_dataset(
     terminals = np.zeros_like(dataset['rewards'])
     if 'antmaze' in env_name:
         for i in range(len(terminals) - 1):
-            terminals[i] = float(np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6)
+            terminals[i] = float(
+                np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6
+            )
     else:
         for i in range(len(terminals) - 1):
-            if np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6 or dataset['terminals'][i] == 1.0:
+            if (
+                np.linalg.norm(dataset['observations'][i + 1] - dataset['next_observations'][i]) > 1e-6
+                or dataset['terminals'][i] == 1.0
+            ):
                 terminals[i] = 1
             else:
                 terminals[i] = 0

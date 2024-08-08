@@ -7,5 +7,5 @@ def interpolate(
     alpha: float = 0.5,
 ) -> SE3 | SO3:
     assert 0.0 <= alpha <= 1.0
-    exp_func = getattr(type(p0), "exp")
+    exp_func = getattr(type(p0), 'exp')
     return p0 @ exp_func(alpha * (p0.inverse() @ p1).log())
