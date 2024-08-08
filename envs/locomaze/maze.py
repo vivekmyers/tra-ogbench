@@ -4,8 +4,8 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from gymnasium.spaces import Box
 
-from envs.locomaze.quad import QuadEnv
 from envs.locomaze.humanoid import HumanoidEnv
+from envs.locomaze.quad import QuadEnv
 
 
 def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):

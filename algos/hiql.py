@@ -9,9 +9,9 @@ import jax.numpy as jnp
 import ml_collections
 import optax
 
-from utils.encoders import encoder_modules, GCEncoder
-from utils.networks import GCValue, GCActor, MLP, Identity, LengthNormalize
-from utils.train_state import TrainState, nonpytree_field, ModuleDict
+from utils.encoders import GCEncoder, encoder_modules
+from utils.networks import MLP, GCActor, GCValue, Identity, LengthNormalize
+from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
 class HIQLAgent(flax.struct.PyTreeNode):

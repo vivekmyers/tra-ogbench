@@ -1,6 +1,5 @@
 from gymnasium.envs.registration import register
 
-
 visual_dict = dict(
     render_mode='rgb_array',
     width=64,

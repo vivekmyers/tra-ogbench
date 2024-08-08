@@ -1,11 +1,11 @@
 import functools
-from typing import Sequence, Any
+from typing import Any, Sequence
 
 import flax.linen as nn
 import jax
 import jax.numpy as jnp
 
-from utils.networks import default_init, MLP
+from utils.networks import MLP, default_init
 
 
 class ResnetStack(nn.Module):

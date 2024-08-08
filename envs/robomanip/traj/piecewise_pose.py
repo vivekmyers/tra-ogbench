@@ -1,12 +1,12 @@
 from __future__ import annotations
+
+from dataclasses import dataclass
 from typing import Sequence
 
 import numpy as np
-from dataclasses import dataclass
 
 from envs.robomanip.lie import SE3
-from envs.robomanip.traj import piecewise_polynomial
-from envs.robomanip.traj import piecewise_quaternion
+from envs.robomanip.traj import piecewise_polynomial, piecewise_quaternion
 
 
 @dataclass

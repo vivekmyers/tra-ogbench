@@ -7,8 +7,8 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
-import jax
 import flax
+import jax
 import numpy as np
 import tqdm
 import wandb
@@ -16,10 +16,10 @@ from absl import app, flags
 from ml_collections import config_flags
 
 from algos import algos
-from envs.env_loader import make_env_and_dataset, FrameStackWrapper
+from envs.env_loader import FrameStackWrapper, make_env_and_dataset
 from utils.dataset import Dataset, GCDataset, HGCDataset
 from utils.evaluation import evaluate
-from utils.logger import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
+from utils.logger import CsvLogger, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 

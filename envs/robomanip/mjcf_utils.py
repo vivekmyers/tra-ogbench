@@ -1,7 +1,8 @@
 from pathlib import Path
+
+import numpy as np
 from dm_control import mjcf
 from lxml import etree
-import numpy as np
 
 
 def attach(

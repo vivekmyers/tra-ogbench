@@ -1,4 +1,4 @@
-from typing import Sequence, Optional, Any
+from typing import Any, Optional, Sequence
 
 import distrax
 import flax

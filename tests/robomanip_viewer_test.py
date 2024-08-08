@@ -1,8 +1,7 @@
 import time
-from envs.robomanip import oracles
-from envs.robomanip import viewer_utils
-from envs.robomanip.pick_place import RoboManipEnv
 
+from envs.robomanip import oracles, viewer_utils
+from envs.robomanip.pick_place import RoboManipEnv
 
 SPEED_UP = 3.0
 

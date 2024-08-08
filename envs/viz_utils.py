@@ -1,6 +1,6 @@
 import matplotlib
-from matplotlib import figure
 import numpy as np
+from matplotlib import figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 matplotlib.use('Agg')

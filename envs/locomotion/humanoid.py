@@ -8,7 +8,6 @@ from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
 
-
 _DEFAULT_VALUE_AT_MARGIN = 0.1
 _STAND_HEIGHT = 1.4
 _WALK_SPEED = 1

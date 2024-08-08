@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from envs.robomanip.traj.piecewise_trajectory import PiecewiseTrajectory
-from envs.robomanip.lie import interpolate
 import numpy as np
+
+from envs.robomanip.lie import interpolate
+from envs.robomanip.traj.piecewise_trajectory import PiecewiseTrajectory
 
 
 class PiecewiseQuaternionSlerp(PiecewiseTrajectory):

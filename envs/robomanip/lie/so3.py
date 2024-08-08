@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import numpy as np
 from dataclasses import dataclass
+
 import mujoco
+import numpy as np
 
 from envs.robomanip.lie.utils import get_epsilon
 

@@ -4,8 +4,8 @@ import platform
 import time
 
 import gymnasium
-from gymnasium.spaces import Box
 import numpy as np
+from gymnasium.spaces import Box
 
 from utils.dataset import Dataset
 
@@ -138,8 +138,8 @@ def make_env_and_dataset(env_name, dataset_path=None):
     setup_egl()
 
     if 'antmaze' in env_name:
-        from envs.d4rl import d4rl_utils
         from envs.antmaze.wrappers import AntMazeGoalWrapper
+        from envs.d4rl import d4rl_utils
 
         env = d4rl_utils.make_env(env_name)
         env = AntMazeGoalWrapper(env)
@@ -163,6 +163,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'quadmaze' in env_name or 'quadball' in env_name or 'humanoidmaze' in env_name:
         import gymnasium
+
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name)
@@ -201,7 +202,7 @@ def make_online_env(env_name):
             env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200)
 
         if apply_xy_wrapper:
-            from envs.locomotion.wrappers import GymXYWrapper, DMCHumanoidXYWrapper
+            from envs.locomotion.wrappers import DMCHumanoidXYWrapper, GymXYWrapper
 
             if 'HumanoidCustom' in env_name:
                 env = DMCHumanoidXYWrapper(env, resample_interval=200)

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 from envs.robomanip.lie.so3 import SO3
 from envs.robomanip.lie.utils import get_epsilon, skew

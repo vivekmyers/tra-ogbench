@@ -8,8 +8,8 @@ import jax.numpy as jnp
 import ml_collections
 import optax
 
-from utils.networks import GCValue, GCActor, LogParam
-from utils.train_state import TrainState, nonpytree_field, ModuleDict
+from utils.networks import GCActor, GCValue, LogParam
+from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
 class SACAgent(flax.struct.PyTreeNode):

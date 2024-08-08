@@ -1,5 +1,5 @@
 import functools
-from typing import Any, Mapping, Sequence, Dict
+from typing import Any, Dict, Mapping, Sequence
 
 import flax
 import flax.linen as nn

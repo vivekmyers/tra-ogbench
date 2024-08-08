@@ -1,4 +1,5 @@
 import abc
+
 import numpy as np
 
 from envs.robomanip.traj import trajectory

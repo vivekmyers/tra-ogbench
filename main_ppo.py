@@ -6,8 +6,8 @@ import random
 import time
 from datetime import datetime
 
-import jax
 import flax
+import jax
 import numpy as np
 import tqdm
 import wandb
@@ -19,7 +19,7 @@ from envs.env_loader import make_online_env, make_vec_env
 from envs.viz_utils import visualize_trajs
 from utils.dataset import ReplayBuffer
 from utils.evaluation import evaluate, flatten
-from utils.logger import setup_wandb, get_flag_dict, get_wandb_video, CsvLogger
+from utils.logger import CsvLogger, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 

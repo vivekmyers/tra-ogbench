@@ -1,8 +1,8 @@
-from envs.robomanip import lie
 import numpy as np
 
-from envs.robomanip.traj import piecewise_polynomial, piecewise_pose
+from envs.robomanip import lie
 from envs.robomanip.oracles import oracle
+from envs.robomanip.traj import piecewise_polynomial, piecewise_pose
 
 
 class PickPlaceOracle(oracle.Oracle):

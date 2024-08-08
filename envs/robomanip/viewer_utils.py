@@ -1,5 +1,6 @@
-from dm_control.viewer import user_input
 from dataclasses import dataclass
+
+from dm_control.viewer import user_input
 
 
 @dataclass
