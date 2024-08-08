@@ -1,12 +1,13 @@
 """Pick and place task."""
 
-import copy
 from pathlib import Path
+from typing import Any
 
 import gymnasium as gym
 import mujoco
 import numpy as np
 from dm_control import mjcf
+from gymnasium.spaces import Box
 from robot_descriptions import robotiq_2f85_mj_description, ur5e_mj_description
 
 from envs.robomanip import controllers, env, lie, mjcf_utils
@@ -44,7 +45,7 @@ _OBJECT_RGBAS = np.asarray(
         # [0.61, 0.28, 0.82, 1.0],
     ]
 )
-_OBJECT_XML = _HERE / 'common' / 'cube.xml'
+_OBJECT_XML = _HERE / 'common' / 'cubes.xml'
 _OBJECT_THICKNESS = 0.03
 _OBJECT_SYMMETRY = np.pi / 2
 
@@ -133,6 +134,13 @@ class RoboManipEnv(env.MujocoEnv):
 
         self._ik = controllers.DiffIKController(model=ik_model, sites=['attachment_site'])
 
+        if self._absolute_action_space:
+            self.action_low = np.array([*self._workspace_bounds[0], -np.pi, 0.0])
+            self.action_high = np.array([*self._workspace_bounds[1], np.pi, 1.0])
+        else:
+            self.action_low = np.array([-0.1, -0.1, -0.1, -0.1, 0.0])
+            self.action_high = np.array([0.1, 0.1, 0.1, 0.1, 0.1])
+
     def build_mjcf_model(self) -> mjcf.RootElement:
         # Scene.
         arena_mjcf = mjcf.from_path(ARENA_XML.as_posix())
@@ -162,7 +170,7 @@ class RoboManipEnv(env.MujocoEnv):
         mjcf_utils.attach(arena_mjcf, ur5e_mjcf)
 
         # Add object to scene.
-        object_mjcf = mjcf.from_path((_HERE / 'common' / 'cubes.xml').as_posix())
+        object_mjcf = mjcf.from_path(_OBJECT_XML.as_posix())
         arena_mjcf.include_copy(object_mjcf)
 
         self._object_geoms_list = []
@@ -334,104 +342,32 @@ class RoboManipEnv(env.MujocoEnv):
 
     @property
     def action_space(self):
-        if self._absolute_action_space:
-            return gym.spaces.Box(
-                low=np.asarray([*self._workspace_bounds[0], -np.pi, 0.0]),
-                high=np.asarray([*self._workspace_bounds[1], np.pi, 1.0]),
-                dtype=np.float64,
-            )
         return gym.spaces.Box(
-            low=np.asarray([-0.1, -0.1, -0.1, -0.1, 0.0]),
-            high=np.asarray([0.1, 0.1, 0.1, 0.1, 0.1]),
+            low=-np.ones(5),
+            high=np.ones(5),
             shape=(5,),
-            dtype=np.float64,
+            dtype=np.float32,
         )
+
+    def normalize_action(self, action: np.ndarray) -> np.ndarray:
+        # Normalize the action to the range [-1, 1].
+        return 2 * (action - self.action_low) / (self.action_high - self.action_low) - 1
+
+    def unnormalize_action(self, action: np.ndarray) -> np.ndarray:
+        # Unnormalize the action to the range [action_low, action_high].
+        return 0.5 * (action + 1) * (self.action_high - self.action_low) + self.action_low
 
     @property
     def observation_space(self):
         if self._model is None:
             self.reset()
-        spaces = {}
 
-        # Proprioceptive observations.
-        spaces['proprio/joint_pos'] = gym.spaces.Box(
-            low=self._model.jnt_range[self._arm_joint_ids, 0],
-            high=self._model.jnt_range[self._arm_joint_ids, 1],
-            dtype=np.float64,
-        )
-        spaces['proprio/joint_vel'] = gym.spaces.Box(shape=(6,), low=-np.inf, high=np.inf, dtype=np.float64)
-        spaces['proprio/effector_pos'] = gym.spaces.Box(
-            low=self._workspace_bounds[0],
-            high=self._workspace_bounds[1],
-            dtype=np.float64,
-        )
-        spaces['proprio/effector_yaw'] = gym.spaces.Box(
-            low=-np.pi,
-            high=np.pi,
-            dtype=np.float64,
-        )
-        spaces['proprio/effector_target_pos'] = gym.spaces.Box(
-            low=self._workspace_bounds[0],
-            high=self._workspace_bounds[1],
-            dtype=np.float64,
-        )
-        spaces['proprio/effector_target_yaw'] = gym.spaces.Box(
-            low=-np.pi,
-            high=np.pi,
-            dtype=np.float64,
-        )
-        spaces['proprio/gripper_opening'] = gym.spaces.Box(
-            low=0.0,
-            high=1.0,
-            dtype=np.float64,
-        )
+        ex_ob = self.compute_observation()
 
-        # Privileged observations.
-        spaces['privileged/target_pos'] = gym.spaces.Box(
-            low=self._workspace_bounds[0],
-            high=self._workspace_bounds[1],
-            dtype=np.float64,
-        )
-        spaces['privileged/target_yaw'] = gym.spaces.Box(low=0, high=2 * np.pi, shape=(1,), dtype=np.float64)
-        for i in range(self._num_objects):
-            spaces[f'privileged/block_{i}_pos'] = gym.spaces.Box(
-                low=self._workspace_bounds[0],
-                high=self._workspace_bounds[1],
-                dtype=np.float64,
-            )
-            spaces[f'privileged/block_{i}_yaw'] = gym.spaces.Box(low=0, high=2 * np.pi, shape=(1,), dtype=np.float64)
-
-        if self._pixel_observation:
-            keys = [
-                'front',
-                'overhead_left',
-                'overhead_right',
-                'topdown',
-            ]
-
-            rgb_render_kwargs = dict(
-                shape=(self._render_height, self._render_width, 3),
-                low=0,
-                high=255,
-                dtype=np.uint8,
-            )
-            for key in keys:
-                spaces[f'rgb/{key}'] = gym.spaces.Box(**rgb_render_kwargs)
-
-            depth_render_kwargs = dict(
-                shape=(self._render_height, self._render_width),
-                low=0.0,
-                high=np.inf,
-                dtype=np.float32,
-            )
-            for key in keys:
-                spaces[f'depth/{key}'] = gym.spaces.Box(**depth_render_kwargs)
-
-        spaces['time'] = gym.spaces.Box(low=0, high=np.inf, shape=(1,), dtype=np.float64)
-
-        return gym.spaces.Dict(spaces)
+        return Box(low=-np.inf, high=np.inf, shape=ex_ob.shape, dtype=ex_ob.dtype)
 
     def set_control(self, action):
+        action = self.unnormalize_action(action)
         a_pos, a_ori, a_gripper = action[:3], action[3], action[4]
 
         if self._absolute_action_space:
@@ -504,52 +440,82 @@ class RoboManipEnv(env.MujocoEnv):
         #     for gid in self._object_geom_ids:
         #         self._model.geom(gid).rgba = _OBJECT_RGBA
 
-    def compute_observation(self) -> dict[str, np.ndarray]:
-        obs = {}
+    def compute_ob_info(self) -> dict[str, np.ndarray]:
+        ob_info = {}
+
+        ob_info['qpos'] = self._data.qpos.copy()
+        ob_info['qvel'] = self._data.qvel.copy()
 
         # Proprioceptive observations.
-        obs['proprio/joint_pos'] = self._data.qpos[self._arm_joint_ids].copy()
-        obs['proprio/joint_vel'] = self._data.qvel[self._arm_joint_ids].copy()
-        obs['proprio/effector_pos'] = self._data.site_xpos[self._pinch_site_id].copy()
-        obs['proprio/effector_yaw'] = np.array(
+        ob_info['proprio/joint_pos'] = self._data.qpos[self._arm_joint_ids].copy()
+        ob_info['proprio/joint_vel'] = self._data.qvel[self._arm_joint_ids].copy()
+        ob_info['proprio/effector_pos'] = self._data.site_xpos[self._pinch_site_id].copy()
+        ob_info['proprio/effector_yaw'] = np.array(
             [lie.SO3.from_matrix(self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)).compute_yaw_radians()]
         )
-        obs['proprio/effector_target_pos'] = self._target_effector_pose.translation().copy()
-        obs['proprio/effector_target_yaw'] = np.array([self._target_effector_pose.rotation().compute_yaw_radians()])
-        obs['proprio/gripper_opening'] = np.array(
+        ob_info['proprio/effector_target_pos'] = self._target_effector_pose.translation().copy()
+        ob_info['proprio/effector_target_yaw'] = np.array([self._target_effector_pose.rotation().compute_yaw_radians()])
+        ob_info['proprio/gripper_opening'] = np.array(
             np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1)
         )
+        ob_info['proprio/gripper_vel'] = self._data.qvel[[self._gripper_opening_joint_id]]
 
         # Privileged observations.
-        obs['privileged/target_pos'] = self._data.mocap_pos[self._object_target_mocap_id].copy()
-        obs['privileged/target_yaw'] = np.array(
+        ob_info['privileged/target_pos'] = self._data.mocap_pos[self._object_target_mocap_id].copy()
+        ob_info['privileged/target_yaw'] = np.array(
             [lie.SO3(wxyz=self._data.mocap_quat[self._object_target_mocap_id]).compute_yaw_radians()]
         )
 
         for i in range(self._num_objects):
-            obs[f'privileged/block_{i}_pos'] = self._data.joint(f'object_joint_{i}').qpos[:3].copy()
-            obs[f'privileged/block_{i}_yaw'] = [
-                np.array(lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians())
-            ]
+            ob_info[f'privileged/block_{i}_pos'] = self._data.joint(f'object_joint_{i}').qpos[:3].copy()
+            ob_info[f'privileged/block_{i}_quat'] = self._data.joint(f'object_joint_{i}').qpos[3:].copy()
+            ob_info[f'privileged/block_{i}_yaw'] = np.array(
+                [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
+            )
 
         if self._pixel_observation:
             for cam_name in ['front', 'overhead_left', 'overhead_right', 'topdown']:
-                obs[f'rgb/{cam_name}'] = self.render(camera=cam_name)
-                obs[f'depth/{cam_name}'] = self.render(camera=cam_name, depth=True)
+                ob_info[f'rgb/{cam_name}'] = self.render(camera=cam_name)
+                ob_info[f'depth/{cam_name}'] = self.render(camera=cam_name, depth=True)
 
-        obs['time'] = np.array([self._data.time])
+        ob_info['time'] = np.array([self._data.time])
 
-        return obs
+        return ob_info
+
+    def compute_observation(self) -> Any:
+        xyz_scaler = 10
+        gripper_scaler = 10
+
+        ob_info = self.compute_ob_info()
+        obs = [
+            ob_info['proprio/joint_pos'],
+            ob_info['proprio/joint_vel'],
+            ob_info['proprio/effector_pos'] * xyz_scaler,
+            ob_info['proprio/effector_yaw'],
+            ob_info['proprio/gripper_opening'] * gripper_scaler,
+            ob_info['proprio/gripper_vel'],
+        ]
+        for i in range(self._num_objects):
+            obs.extend(
+                [
+                    ob_info[f'privileged/block_{i}_pos'] * xyz_scaler,
+                    ob_info[f'privileged/block_{i}_yaw'],
+                    ob_info[f'privileged/block_{i}_quat'],
+                ]
+            )
+
+        return np.concatenate(obs)
 
     def compute_reward(self, obs: dict[str, np.ndarray], action: np.ndarray) -> float:
-        del obs, action  # Unused.
         return 0.0
 
     def get_reset_info(self) -> dict:
-        return dict(target_block=self._target_block)
+        reset_info = dict(target_block=self._target_block)
+        reset_info.update(self.compute_ob_info())
+        return reset_info
 
     def get_step_info(self) -> dict:
-        return dict(success=self._success)
+        return self.compute_ob_info()
 
     def terminate_episode(self) -> bool:
         return self._success

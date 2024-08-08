@@ -1,32 +1,36 @@
-import envs.locomotion  # noqa
-import gymnasium
 import numpy as np
 
 from envs.robomanip import oracles
-from envs.robomanip.pick_place import RoboManipEnv
+from envs.robomanip.robomanip import RoboManipEnv
 
 
 def main():
     env = RoboManipEnv(
         absolute_action_space=True,
-        physics_timestep=0.004,
+        physics_timestep=0.002,
         control_timestep=0.04,
     )
-    obs, info = env.reset(seed=12345)
+    ob, info = env.reset(seed=12345)
     agent = oracles.PickPlaceOracle(segment_dt=0.32)
-    agent.reset(obs, info)
-    obs, info = env.reset()
-    agent.reset(obs, info)
+    agent.reset(ob, info)
+    ob, info = env.reset()
+    agent.reset(ob, info)
     step = 0
+    obs = []
     for _ in range(1000):
-        action = agent.select_action(obs)
-        obs, *_ = env.step(action)
+        action = agent.select_action(ob, info)
+        action = env.normalize_action(action)
+        ob, _, _, _, info = env.step(action)
+        obs.append(ob)
         step += 1
 
         if agent.done:
-            obs, info = env.set_new_target()
-            agent.reset(obs, info)
+            ob, info = env.set_new_target()
+            agent.reset(ob, info)
             print('done', step)
+
+    obs = np.array(obs)
+    print('done')
 
 
 if __name__ == '__main__':

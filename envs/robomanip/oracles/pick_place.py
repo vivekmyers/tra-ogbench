@@ -101,18 +101,18 @@ class PickPlaceOracle(oracle.Oracle):
         target_block = info['target_block']
         X_O = {
             'initial': self.to_pose(
-                pos=obs[f'privileged/block_{target_block}_pos'],
-                yaw=obs[f'privileged/block_{target_block}_yaw'][0],
+                pos=info[f'privileged/block_{target_block}_pos'],
+                yaw=info[f'privileged/block_{target_block}_yaw'][0],
             ),
             'goal': self.to_pose(
-                pos=obs['privileged/target_pos'],
-                yaw=obs['privileged/target_yaw'][0],
+                pos=info['privileged/target_pos'],
+                yaw=info['privileged/target_yaw'][0],
             ),
         }
         X_G = {
             'initial': self.to_pose(
-                pos=obs['proprio/effector_pos'],
-                yaw=obs['proprio/effector_yaw'][0],
+                pos=info['proprio/effector_pos'],
+                yaw=info['proprio/effector_yaw'][0],
             )
         }
         times, X_G, Gs = self.construct_trajectory(X_G, X_O)
@@ -125,15 +125,15 @@ class PickPlaceOracle(oracle.Oracle):
             poses.append(X_G[name])
             grasps.append(Gs[name])
 
-        self._t_init = obs['time'][0]
+        self._t_init = info['time'][0]
         self._t_max = sample_times[-1]
         self._done = False
         self._traj = piecewise_pose.PiecewisePose.make_linear(sample_times, poses)
         self._gripper_traj = piecewise_polynomial.FirstOrderHold(sample_times, grasps)
 
-    def select_action(self, obs):
-        t = np.clip(obs['time'][0] - self._t_init, 0.0, self._t_max)
-        self._done = obs['time'][0] - self._t_init >= self._t_max
+    def select_action(self, obs, info):
+        t = np.clip(info['time'][0] - self._t_init, 0.0, self._t_max)
+        self._done = info['time'][0] - self._t_init >= self._t_max
         pose = self._traj.value(t)
         action = np.zeros(5)
         action[:3] = pose.translation()

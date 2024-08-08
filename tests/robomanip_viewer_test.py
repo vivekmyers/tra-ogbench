@@ -1,7 +1,7 @@
 import time
 
 from envs.robomanip import oracles, viewer_utils
-from envs.robomanip.pick_place import RoboManipEnv
+from envs.robomanip.robomanip import RoboManipEnv
 
 SPEED_UP = 3.0
 
@@ -9,7 +9,7 @@ SPEED_UP = 3.0
 def main() -> None:
     env = RoboManipEnv(
         absolute_action_space=True,
-        physics_timestep=0.004,
+        physics_timestep=0.002,
         control_timestep=0.04,
     )
     obs, info = env.reset(seed=12345)
@@ -28,9 +28,9 @@ def main() -> None:
                 # key_callback.pause = True
             else:
                 if not key_callback.pause:
-                    action = agent.select_action(obs)
-                    # action = env.action_space.sample()
-                    obs, *_ = env.step(action)
+                    action = agent.select_action(obs, info)
+                    action = env.normalize_action(action)
+                    obs, _, _, _, info = env.step(action)
                     step += 1
             viewer.sync()
             time_until_next_step = env.control_timestep() / SPEED_UP - (time.time() - step_start)
