@@ -5,6 +5,7 @@ from envs.robomanip.robomanip import RoboManipEnv
 def main():
     env = RoboManipEnv(
         absolute_action_space=True,
+        data_collection=True,
         show_target=True,
     )
     ob, info = env.reset(seed=12345)

@@ -42,7 +42,6 @@ _OBJECT_RGBAS = np.asarray(
         [1.0, 0.69, 0.21, 1.0],
         [0.06, 0.74, 0.21, 1.0],
         [0.35, 0.55, 0.91, 1.0],
-        # [0.61, 0.28, 0.82, 1.0],
     ]
 )
 _OBJECT_XML = _HERE / 'common' / 'cubes.xml'
@@ -78,6 +77,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         ori_threshold: float = np.deg2rad(5),
         physics_timestep: float = 0.002,
         control_timestep: float = 0.05,
+        data_collection: bool = False,
         show_target: bool = False,
         **kwargs,
     ):
@@ -94,6 +94,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._absolute_action_space = absolute_action_space
         self._pos_threshold = pos_threshold
         self._ori_treshold = ori_threshold
+        self._data_collection = data_collection
         self._show_target = show_target
 
         self._num_objects = 4
@@ -151,7 +152,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         for i in range(self._num_objects):
             self._object_geoms_list.append(object_mjcf.find('body', f'object_{i}').find_all('geom'))
 
-        self._object_target_geoms = object_mjcf.find('body', 'object_target').find_all('geom')
+        self._object_target_geoms_list = []
+        for i in range(self._num_objects):
+            self._object_target_geoms_list.append(object_mjcf.find('body', f'object_target_{i}').find_all('geom'))
 
         # Add cameras.
         for camera_name, camera_kwargs in _CAMERAS.items():
@@ -221,8 +224,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         ]
 
         # Mocap IDs.
-        self._object_target_mocap_id = self._model.body('object_target').mocapid[0]
-        self._object_target_geom_ids = [self._model.geom(geom.full_identifier).id for geom in self._object_target_geoms]
+        self._object_target_mocap_ids = [
+            self._model.body(f'object_target_{i}').mocapid[0] for i in range(self._num_objects)
+        ]
+        self._object_target_geom_ids_list = [
+            [self._model.geom(geom.full_identifier).id for geom in object_target_geoms]
+            for object_target_geoms in self._object_target_geoms_list
+        ]
 
         # Site IDs.
         self._pinch_site_id = self._model.site('ur5e/robotiq/pinch').id
@@ -241,6 +249,8 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
     def initialize_episode(self):
         for i in range(self._num_objects):
             for gid in self._object_geom_ids_list[i]:
+                self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
+            for gid in self._object_target_geom_ids_list[i]:
                 self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
 
         self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
@@ -274,13 +284,14 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
             self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
 
-        # Randomize target position and orientation.
-        self.set_new_target(return_info=False)
+        if self._data_collection:
+            # Set a new target.
+            self.set_new_target(return_info=False)
 
         # Forward kinematics to update site positions.
         mujoco.mj_kinematics(self._model, self._data)
 
-        # Initialize the target effector mocap body at the pinch site.
+        # Initialize the target effector at the pinch site.
         pinch_xpos = self._data.site_xpos[self._pinch_site_id]
         pinch_xmat = self._data.site_xmat[self._pinch_site_id]
         pinch_quat = lie.mat2quat(pinch_xmat)
@@ -295,6 +306,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._success: bool = False
 
     def set_new_target(self, return_info=True, p_stack=0.5):
+        """Set a new target for data collection."""
         self._target_block = self.np_random.integers(self._num_objects)
         stack = self.np_random.uniform() <= p_stack
         if stack:
@@ -308,12 +320,15 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             tar_pos = (*xy, self._object_z)
         yaw = self.np_random.uniform(0, 2 * np.pi)
         tar_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
-        self._data.mocap_pos[self._object_target_mocap_id] = tar_pos
-        self._data.mocap_quat[self._object_target_mocap_id] = tar_ori
-        for gid in self._object_target_geom_ids:
-            self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[self._target_block][:3]
-            if not self._show_target:
-                self._model.geom(gid).rgba[3] = 0.0
+        self._data.mocap_pos[self._object_target_mocap_ids[self._target_block]] = tar_pos
+        self._data.mocap_quat[self._object_target_mocap_ids[self._target_block]] = tar_ori
+        for i in range(self._num_objects):
+            if self._show_target and i == self._target_block:
+                for gid in self._object_target_geom_ids_list[i]:
+                    self._model.geom(gid).rgba[3] = 0.2
+            else:
+                for gid in self._object_target_geom_ids_list[i]:
+                    self._model.geom(gid).rgba[3] = 0.0
 
         if return_info:
             return self.compute_observation(), self.get_reset_info()
@@ -437,16 +452,18 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         ob_info['proprio/gripper_vel'] = self._data.qvel[[self._gripper_opening_joint_id]]
 
         # Privileged observations.
-        ob_info['privileged/target_pos'] = self._data.mocap_pos[self._object_target_mocap_id].copy()
-        ob_info['privileged/target_yaw'] = np.array(
-            [lie.SO3(wxyz=self._data.mocap_quat[self._object_target_mocap_id]).compute_yaw_radians()]
-        )
-
         for i in range(self._num_objects):
             ob_info[f'privileged/block_{i}_pos'] = self._data.joint(f'object_joint_{i}').qpos[:3].copy()
             ob_info[f'privileged/block_{i}_quat'] = self._data.joint(f'object_joint_{i}').qpos[3:].copy()
             ob_info[f'privileged/block_{i}_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
+            )
+
+        if self._data_collection:
+            target_mocap_id = self._object_target_mocap_ids[self._target_block]
+            ob_info['privileged/target_pos'] = self._data.mocap_pos[target_mocap_id].copy()
+            ob_info['privileged/target_yaw'] = np.array(
+                [lie.SO3(wxyz=self._data.mocap_quat[target_mocap_id]).compute_yaw_radians()]
             )
 
         if self._pixel_observation:
