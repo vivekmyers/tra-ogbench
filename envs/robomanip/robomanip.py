@@ -69,50 +69,23 @@ _CAMERAS = {
 }
 
 
-class RoboManipEnv(env.MujocoEnv):
-    """Pick and place task.
-
-    The agent controls the end-effector of a UR5e robot to pick up the object and place
-    it at the target location. The episode is considered successful if the object is
-    successfully placed in the target area.
-
-    Observations:
-        - proprioceptive: joint positions, joint velocities, end-effector position, and
-            target end-effector position.
-        - privileged: target object position and orientation, object position and
-            orientation.
-        - pixel: RGB images from the front, overhead left, overhead right, and wrist
-            cameras if `pixel_observation` is set to `True`.
-
-    Actions (5D):
-        - The agent controls the desired end-effector velocity in the x-y-z plane, the
-            wrist yaw angle and the gripper open/close.
-
-    Info:
-        - success: whether the episode was successful.
-
-    Notes:
-        - At the moment, no reward is implemented for this task.
-    """
-
+class RoboManipEnv(env.CustomMuJoCoEnv):
     def __init__(
         self,
         pixel_observation: bool = False,
         absolute_action_space: bool = False,
         pos_threshold: float = 5e-3,
         ori_threshold: float = np.deg2rad(5),
+        physics_timestep: float = 0.002,
+        control_timestep: float = 0.05,
+        show_target: bool = False,
         **kwargs,
     ):
-        """Initializes the pick and place task.
-
-        Args:
-            pixel_observation: Whether to include RGB images from the front, overhead
-                left, overhead right, and wrist cameras in the observations.
-            absolute_action_space: Whether the action space is absolute (i.e., the
-                desired end-effector position) or relative (i.e., the desired
-                end-effector velocity).
-        """
-        super().__init__(**kwargs)
+        super().__init__(
+            physics_timestep=physics_timestep,
+            control_timestep=control_timestep,
+            **kwargs,
+        )
 
         self._workspace_bounds = _WORKSPACE_BOUNDS
         self._object_sampling_bounds = _OBJECT_SAMPLING_BOUNDS
@@ -121,6 +94,7 @@ class RoboManipEnv(env.MujocoEnv):
         self._absolute_action_space = absolute_action_space
         self._pos_threshold = pos_threshold
         self._ori_treshold = ori_threshold
+        self._show_target = show_target
 
         self._num_objects = 4
 
@@ -320,14 +294,16 @@ class RoboManipEnv(env.MujocoEnv):
         # Reset metrics for the current episode.
         self._success: bool = False
 
-    def set_new_target(self, return_info=True):
+    def set_new_target(self, return_info=True, p_stack=0.5):
         self._target_block = self.np_random.integers(self._num_objects)
-        put_on_another_block = self.np_random.uniform() < 0.5
-        if put_on_another_block:
+        stack = self.np_random.uniform() <= p_stack
+        if stack:
+            # Stack the target block on top of another block.
             block_idx = self.np_random.choice(list(set(range(self._num_objects)) - {self._target_block}))
             block_pos = self._data.joint(f'object_joint_{block_idx}').qpos[:3]
             tar_pos = np.array([block_pos[0], block_pos[1], block_pos[2] + 2 * self._object_z])
         else:
+            # Randomize target position and orientation.
             xy = self.np_random.uniform(*self._target_sampling_bounds)
             tar_pos = (*xy, self._object_z)
         yaw = self.np_random.uniform(0, 2 * np.pi)
@@ -336,6 +312,8 @@ class RoboManipEnv(env.MujocoEnv):
         self._data.mocap_quat[self._object_target_mocap_id] = tar_ori
         for gid in self._object_target_geom_ids:
             self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[self._target_block][:3]
+            if not self._show_target:
+                self._model.geom(gid).rgba[3] = 0.0
 
         if return_info:
             return self.compute_observation(), self.get_reset_info()
@@ -351,7 +329,8 @@ class RoboManipEnv(env.MujocoEnv):
 
     def normalize_action(self, action: np.ndarray) -> np.ndarray:
         # Normalize the action to the range [-1, 1].
-        return 2 * (action - self.action_low) / (self.action_high - self.action_low) - 1
+        action = 2 * (action - self.action_low) / (self.action_high - self.action_low) - 1
+        return np.clip(action, -1, 1)
 
     def unnormalize_action(self, action: np.ndarray) -> np.ndarray:
         # Unnormalize the action to the range [action_low, action_high].
@@ -443,9 +422,6 @@ class RoboManipEnv(env.MujocoEnv):
     def compute_ob_info(self) -> dict[str, np.ndarray]:
         ob_info = {}
 
-        ob_info['qpos'] = self._data.qpos.copy()
-        ob_info['qvel'] = self._data.qvel.copy()
-
         # Proprioceptive observations.
         ob_info['proprio/joint_pos'] = self._data.qpos[self._arm_joint_ids].copy()
         ob_info['proprio/joint_vel'] = self._data.qvel[self._arm_joint_ids].copy()
@@ -483,6 +459,7 @@ class RoboManipEnv(env.MujocoEnv):
         return ob_info
 
     def compute_observation(self) -> Any:
+        xyz_center = np.array([0.25, 0.0, 0.0])
         xyz_scaler = 10
         gripper_scaler = 10
 
@@ -490,7 +467,7 @@ class RoboManipEnv(env.MujocoEnv):
         obs = [
             ob_info['proprio/joint_pos'],
             ob_info['proprio/joint_vel'],
-            ob_info['proprio/effector_pos'] * xyz_scaler,
+            (ob_info['proprio/effector_pos'] - xyz_center) * xyz_scaler,
             ob_info['proprio/effector_yaw'],
             ob_info['proprio/gripper_opening'] * gripper_scaler,
             ob_info['proprio/gripper_vel'],
@@ -498,9 +475,9 @@ class RoboManipEnv(env.MujocoEnv):
         for i in range(self._num_objects):
             obs.extend(
                 [
-                    ob_info[f'privileged/block_{i}_pos'] * xyz_scaler,
-                    ob_info[f'privileged/block_{i}_yaw'],
+                    (ob_info[f'privileged/block_{i}_pos'] - xyz_center) * xyz_scaler,
                     ob_info[f'privileged/block_{i}_quat'],
+                    ob_info[f'privileged/block_{i}_yaw'],
                 ]
             )
 

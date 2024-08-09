@@ -1,5 +1,3 @@
-import numpy as np
-
 from envs.robomanip import oracles
 from envs.robomanip.robomanip import RoboManipEnv
 
@@ -7,8 +5,7 @@ from envs.robomanip.robomanip import RoboManipEnv
 def main():
     env = RoboManipEnv(
         absolute_action_space=True,
-        physics_timestep=0.002,
-        control_timestep=0.04,
+        show_target=True,
     )
     ob, info = env.reset(seed=12345)
     agent = oracles.PickPlaceOracle(segment_dt=0.32)
@@ -28,9 +25,6 @@ def main():
             ob, info = env.set_new_target()
             agent.reset(ob, info)
             print('done', step)
-
-    obs = np.array(obs)
-    print('done')
 
 
 if __name__ == '__main__':

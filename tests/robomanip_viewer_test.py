@@ -9,8 +9,7 @@ SPEED_UP = 3.0
 def main() -> None:
     env = RoboManipEnv(
         absolute_action_space=True,
-        physics_timestep=0.002,
-        control_timestep=0.04,
+        show_target=True,
     )
     obs, info = env.reset(seed=12345)
     key_callback = viewer_utils.KeyCallback(pause=True)

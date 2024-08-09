@@ -11,15 +11,16 @@ from dm_control import mjcf
 from envs.robomanip import mjcf_utils
 
 
-class MujocoEnv(gym.Env, abc.ABC):
+class CustomMuJoCoEnv(gym.Env, abc.ABC):
     """Base class for Mujoco environments."""
 
     def __init__(
         self,
         physics_timestep: float = 0.002,
         control_timestep: float = 0.002,
-        render_height: int = 240,
-        render_width: int = 320,
+        render_mode: Optional[str] = None,
+        width: int = 480,
+        height: int = 480,
     ):
         """Initializes the Mujoco environment.
 
@@ -28,8 +29,8 @@ class MujocoEnv(gym.Env, abc.ABC):
                 value is Mujoco's default of 2ms.
             control_timestep: The timestep used for the control signal. By default,
                 this is the same as the physics timestep.
-            render_height: The height of the rendered image in pixels.
-            render_width: The width of the rendered image in pixels.
+            width: The width of the rendered image in pixels.
+            height: The height of the rendered image in pixels.
         """
         self._dirty = True
         self._passive_viewer_handle = None
@@ -41,8 +42,8 @@ class MujocoEnv(gym.Env, abc.ABC):
         self._renderer: Optional[mujoco.Renderer] = None
         self._scene_option = mujoco.MjvOption()
         self._camera = mujoco.MjvCamera()
-        self._render_height = render_height
-        self._render_width = render_width
+        self._render_height = height
+        self._render_width = width
 
         self.set_timesteps(
             physics_timestep=float(physics_timestep),
@@ -207,19 +208,28 @@ class MujocoEnv(gym.Env, abc.ABC):
         info = self.get_reset_info()
         return obs, info
 
-    def reset_to(self, state: np.ndarray, spec: mujoco.mjtState):
+    # def reset_to(self, state: np.ndarray, spec: mujoco.mjtState):
+    #     """Resets the environment to a specific state."""
+    #     if self._model is None:
+    #         self.reset()
+    #     size = mujoco.mj_stateSize(self.model, spec)
+    #     if state.size != size:
+    #         raise ValueError(f'State size mismatch. Expected {size}, got {state.size}.')
+    #     mujoco.mj_setState(self.model, self.data, state, spec)
+    #     # TODO(kevin): Do we need to call mj_forward here?
+    #     # mujoco.mj_forward(self.model, self.data)
+    #     obs = self.compute_observation()
+    #     info = self.get_reset_info()
+    #     return obs, info
+    #
+    def set_state(self, qpos, qvel):
         """Resets the environment to a specific state."""
-        if self._model is None:
-            self.reset()
-        size = mujoco.mj_stateSize(self.model, spec)
-        if state.size != size:
-            raise ValueError(f'State size mismatch. Expected {size}, got {state.size}.')
-        mujoco.mj_setState(self.model, self.data, state, spec)
-        # TODO(kevin): Do we need to call mj_forward here?
-        # mujoco.mj_forward(self.model, self.data)
-        obs = self.compute_observation()
-        info = self.get_reset_info()
-        return obs, info
+        assert qpos.shape == (self.model.nq,) and qvel.shape == (self.model.nv,)
+        self._data.qpos[:] = np.copy(qpos)
+        self._data.qvel[:] = np.copy(qvel)
+        if self._model.na == 0:
+            self._data.act[:] = None
+        mujoco.mj_forward(self._model, self._data)
 
     def step(self, action):
         """Steps the environment forward by one timestep.
@@ -232,6 +242,8 @@ class MujocoEnv(gym.Env, abc.ABC):
         """
         if self._reset_next_step:
             return self.reset()
+        prev_qpos = self._data.qpos.copy()
+        prev_qvel = self._data.qvel.copy()
         self.set_control(action)
         mujoco.mj_step(self._model, self._data, nstep=self._n_steps)
         self.post_step()
@@ -245,6 +257,16 @@ class MujocoEnv(gym.Env, abc.ABC):
         obs = self.compute_observation()
         reward = self.compute_reward(obs, action)
         info = self.get_step_info()
+        qpos = self._data.qpos.copy()
+        qvel = self._data.qvel.copy()
+        info.update(
+            {
+                'prev_qpos': prev_qpos,
+                'prev_qvel': prev_qvel,
+                'qpos': qpos,
+                'qvel': qvel,
+            }
+        )
         return obs, reward, terminated, truncated, info
 
     @property
