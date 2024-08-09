@@ -193,8 +193,8 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         # ================================ #
 
         ################### FOR DEBUGGING ###################
-        with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
-            file.write(mjcf_utils.to_string(arena_mjcf))
+        # with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
+        #     file.write(mjcf_utils.to_string(arena_mjcf))
         ################### FOR DEBUGGING ###################
 
         return arena_mjcf

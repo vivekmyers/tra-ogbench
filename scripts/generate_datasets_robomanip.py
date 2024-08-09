@@ -46,12 +46,12 @@ def main(_):
 
         while not done:
             action = agent.select_action(ob, info)
-            action = env.normalize_action(action)
+            action = env.unwrapped.normalize_action(action)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
             if agent.done and FLAGS.dataset_type == 'play':
-                agent_ob, agent_info = env.set_new_target(p_stack=p_stack)
+                agent_ob, agent_info = env.unwrapped.set_new_target(p_stack=p_stack)
                 agent.reset(agent_ob, agent_info)
 
             dataset['observations'].append(ob)
