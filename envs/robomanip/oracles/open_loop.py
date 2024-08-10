@@ -5,7 +5,7 @@ from envs.robomanip.oracles import oracle
 from envs.robomanip.traj import piecewise_polynomial, piecewise_pose
 
 
-class PickPlaceOracle(oracle.Oracle):
+class OpenLoopCubeOracle(oracle.Oracle):
     def __init__(self, segment_dt: float = 1.0) -> None:
         self._dt = segment_dt
 

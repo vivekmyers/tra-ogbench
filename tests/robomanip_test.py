@@ -11,7 +11,7 @@ def main():
         visualize_info=True,
     )
     ob, info = env.reset(seed=12345)
-    agent = oracles.PickPlaceOracle(segment_dt=0.32)
+    agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
     agent.reset(ob, info)
     ob, info = env.reset()
     agent.reset(ob, info)

@@ -20,7 +20,7 @@ def main() -> None:
     obs, info = env.reset(seed=12345)
     key_callback = viewer_utils.KeyCallback(pause=True)
     if use_oracle:
-        agent = oracles.PickPlaceOracle(segment_dt=0.32)
+        agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
         agent.reset(obs, info)
     step = 0
     with env.passive_viewer(key_callback=key_callback) as viewer:
