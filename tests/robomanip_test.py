@@ -4,6 +4,7 @@ from envs.robomanip.robomanip import RoboManipEnv
 
 def main():
     env = RoboManipEnv(
+        env_type='cubes',
         absolute_action_space=True,
         terminate_at_goal=False,
         mode='data_collection',

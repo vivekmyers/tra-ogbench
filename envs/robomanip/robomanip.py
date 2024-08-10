@@ -135,13 +135,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self.task_infos = [
                 dict(
                     task_name='task1',
-                    init_xyzs=np.array([[0.32, -0.38, 0.03]]),
-                    goal_xyzs=np.array([[0.53, 0.38, 0.03]]),
+                    init_xyzs=np.array([[0.425, 0.1, 0.03]]),
+                    goal_xyzs=np.array([[0.425, -0.1, 0.03]]),
                 ),
                 dict(
                     task_name='task2',
-                    init_xyzs=np.array([[0.425, 0.1, 0.03]]),
-                    goal_xyzs=np.array([[0.425, -0.1, 0.03]]),
+                    init_xyzs=np.array([[0.32, -0.38, 0.03]]),
+                    goal_xyzs=np.array([[0.53, 0.38, 0.03]]),
                 ),
             ]
         else:
@@ -649,7 +649,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         ob_info['proprio/gripper_opening'] = np.array(
             np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1)
         )
-        ob_info['proprio/gripper_vel'] = self._data.qvel[[self._gripper_opening_joint_id]]
+        ob_info['proprio/gripper_vel'] = self._data.qvel[[self._gripper_opening_joint_id]].copy()
 
         # Privileged observations.
         for i in range(self._num_objects):
