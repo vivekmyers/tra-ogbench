@@ -8,13 +8,14 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 from gymnasium.spaces import Box
-from robot_descriptions import robotiq_2f85_mj_description, ur5e_mj_description
 
 from envs.robomanip import controllers, env, lie, mjcf_utils
 
 # XML files.
 _HERE = Path(__file__).resolve().parent
 ARENA_XML = _HERE / 'common' / 'floor_wall.xml'
+UR5E_XML = _HERE / 'common' / 'universal_robots_ur5e' / 'ur5e.xml'
+ROBOTIQ_XML = _HERE / 'common' / 'robotiq_2f85' / '2f85.xml'
 
 # Default joint configuration for the arm (used by the IK controller).
 _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi / 2, 0])
@@ -44,7 +45,6 @@ _OBJECT_RGBAS = np.asarray(
         [0.35, 0.55, 0.91, 1.0],
     ]
 )
-_OBJECT_XML = _HERE / 'common' / 'cubes.xml'
 _OBJECT_THICKNESS = 0.03
 _OBJECT_SYMMETRY = np.pi / 2
 
@@ -71,6 +71,7 @@ _CAMERAS = {
 class RoboManipEnv(env.CustomMuJoCoEnv):
     def __init__(
         self,
+        env_type: str = 'cubes',
         pixel_observation: bool = False,
         absolute_action_space: bool = False,
         physics_timestep: float = 0.002,
@@ -89,18 +90,24 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._workspace_bounds = _WORKSPACE_BOUNDS
         self._object_sampling_bounds = _OBJECT_SAMPLING_BOUNDS
         self._target_sampling_bounds = _TARGET_SAMPLING_BOUNDS
+        self._env_type = env_type
         self._pixel_observation = pixel_observation
         self._absolute_action_space = absolute_action_space
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
         self._visualize_info = visualize_info
 
-        self._num_objects = 4
+        if self._env_type == 'cube':
+            self._object_xml = _HERE / 'common' / 'cube.xml'
+            self._num_objects = 1
+        else:
+            self._object_xml = _HERE / 'common' / 'cubes.xml'
+            self._num_objects = 4
 
         self._symmetry = _OBJECT_SYMMETRY
         self._object_z = _OBJECT_THICKNESS
 
-        ik_mjcf = mjcf.from_path(ur5e_mj_description.MJCF_PATH, escape_separators=True)
+        ik_mjcf = mjcf.from_path(UR5E_XML, escape_separators=True)
         xml_str = mjcf_utils.to_string(ik_mjcf)
         assets = mjcf_utils.get_assets(ik_mjcf)
         ik_model = mujoco.MjModel.from_xml_string(xml_str, assets)
@@ -124,122 +131,136 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self._cur_goal_ob = None
 
     def set_tasks(self):
-        self.task_infos = [
-            dict(
-                task_name='task1',
-                init_xyzs=np.array(
-                    [
-                        [0.32, -0.38, 0.03],
-                        [0.53, -0.38, 0.03],
-                        [0.53, 0.38, 0.03],
-                        [0.32, 0.38, 0.03],
-                    ]
+        if self._env_type == 'cube':
+            self.task_infos = [
+                dict(
+                    task_name='task1',
+                    init_xyzs=np.array([[0.32, -0.38, 0.03]]),
+                    goal_xyzs=np.array([[0.53, 0.38, 0.03]]),
                 ),
-                goal_xyzs=np.array(
-                    [
-                        [0.3, 0, 0.03],
-                        [0.425, -0.125, 0.03],
-                        [0.55, 0, 0.03],
-                        [0.425, 0.125, 0.03],
-                    ]
+                dict(
+                    task_name='task2',
+                    init_xyzs=np.array([[0.425, 0.1, 0.03]]),
+                    goal_xyzs=np.array([[0.425, -0.1, 0.03]]),
                 ),
-            ),
-            dict(
-                task_name='task2',
-                init_xyzs=np.array(
-                    [
-                        [0.35, -0.2, 0.03],
-                        [0.35, 0.2, 0.03],
-                        [0.5, 0.2, 0.03],
-                        [0.5, -0.2, 0.03],
-                    ]
+            ]
+        else:
+            self.task_infos = [
+                dict(
+                    task_name='task1',
+                    init_xyzs=np.array(
+                        [
+                            [0.32, -0.38, 0.03],
+                            [0.53, -0.38, 0.03],
+                            [0.53, 0.38, 0.03],
+                            [0.32, 0.38, 0.03],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.3, 0, 0.03],
+                            [0.425, -0.125, 0.03],
+                            [0.55, 0, 0.03],
+                            [0.425, 0.125, 0.03],
+                        ]
+                    ),
                 ),
-                goal_xyzs=np.array(
-                    [
-                        [0.5, -0.2, 0.03],
-                        [0.35, -0.2, 0.03],
-                        [0.35, 0.2, 0.03],
-                        [0.5, 0.2, 0.03],
-                    ]
+                dict(
+                    task_name='task2',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, -0.2, 0.03],
+                            [0.35, 0.2, 0.03],
+                            [0.5, 0.2, 0.03],
+                            [0.5, -0.2, 0.03],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.5, -0.2, 0.03],
+                            [0.35, -0.2, 0.03],
+                            [0.35, 0.2, 0.03],
+                            [0.5, 0.2, 0.03],
+                        ]
+                    ),
                 ),
-            ),
-            dict(
-                task_name='task3',
-                init_xyzs=np.array(
-                    [
-                        [0.55, 0, 0.03],
-                        [0.425, -0.3, 0.03],
-                        [0.3, 0, 0.03],
-                        [0.425, 0.3, 0.03],
-                    ]
+                dict(
+                    task_name='task3',
+                    init_xyzs=np.array(
+                        [
+                            [0.55, 0, 0.03],
+                            [0.425, -0.3, 0.03],
+                            [0.3, 0, 0.03],
+                            [0.425, 0.3, 0.03],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, 0, 0.03],
+                            [0.425, 0, 0.09],
+                            [0.425, 0, 0.15],
+                            [0.425, 0, 0.21],
+                        ]
+                    ),
                 ),
-                goal_xyzs=np.array(
-                    [
-                        [0.425, 0, 0.03],
-                        [0.425, 0, 0.09],
-                        [0.425, 0, 0.15],
-                        [0.425, 0, 0.21],
-                    ]
+                dict(
+                    task_name='task4',
+                    init_xyzs=np.array(
+                        [
+                            [0.425, -0.2, 0.03],
+                            [0.425, -0.2, 0.09],
+                            [0.425, 0.2, 0.03],
+                            [0.425, 0.2, 0.09],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, 0.2, 0.03],
+                            [0.425, 0.2, 0.09],
+                            [0.425, -0.2, 0.03],
+                            [0.425, -0.2, 0.09],
+                        ]
+                    ),
                 ),
-            ),
-            dict(
-                task_name='task4',
-                init_xyzs=np.array(
-                    [
-                        [0.425, -0.2, 0.03],
-                        [0.425, -0.2, 0.09],
-                        [0.425, 0.2, 0.03],
-                        [0.425, 0.2, 0.09],
-                    ]
+                dict(
+                    task_name='task5',
+                    init_xyzs=np.array(
+                        [
+                            [0.425, 0.2, 0.03],
+                            [0.425, 0.2, 0.09],
+                            [0.425, 0.2, 0.15],
+                            [0.425, 0.2, 0.21],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, -0.23, 0.03],
+                            [0.425, -0.23, 0.09],
+                            [0.425, -0.17, 0.03],
+                            [0.425, -0.17, 0.09],
+                        ]
+                    ),
                 ),
-                goal_xyzs=np.array(
-                    [
-                        [0.425, 0.2, 0.03],
-                        [0.425, 0.2, 0.09],
-                        [0.425, -0.2, 0.03],
-                        [0.425, -0.2, 0.09],
-                    ]
+                dict(
+                    task_name='task6',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, -0.2, 0.03],
+                            [0.5, -0.2, 0.03],
+                            [0.5, 0.2, 0.03],
+                            [0.35, 0.2, 0.03],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, 0.0, 0.03],
+                            [0.5, -0.2, 0.03],
+                            [0.5, 0.2, 0.03],
+                            [0.35, 0.2, 0.03],
+                        ]
+                    ),
                 ),
-            ),
-            dict(
-                task_name='task5',
-                init_xyzs=np.array(
-                    [
-                        [0.425, 0.2, 0.03],
-                        [0.425, 0.2, 0.09],
-                        [0.425, 0.2, 0.15],
-                        [0.425, 0.2, 0.21],
-                    ]
-                ),
-                goal_xyzs=np.array(
-                    [
-                        [0.425, -0.23, 0.03],
-                        [0.425, -0.23, 0.09],
-                        [0.425, -0.17, 0.03],
-                        [0.425, -0.17, 0.09],
-                    ]
-                ),
-            ),
-            dict(
-                task_name='task6',
-                init_xyzs=np.array(
-                    [
-                        [0.35, -0.2, 0.03],
-                        [0.5, -0.2, 0.03],
-                        [0.5, 0.2, 0.03],
-                        [0.35, 0.2, 0.03],
-                    ]
-                ),
-                goal_xyzs=np.array(
-                    [
-                        [0.425, 0.0, 0.03],
-                        [0.5, -0.2, 0.03],
-                        [0.5, 0.2, 0.03],
-                        [0.35, 0.2, 0.03],
-                    ]
-                ),
-            ),
-        ]
+            ]
         self.num_tasks = len(self.task_infos)
 
     def build_mjcf_model(self) -> mjcf.RootElement:
@@ -256,14 +277,14 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         arena_mjcf.visual.map.zfar = 10.0
 
         # UR5e.
-        ur5e_mjcf = mjcf.from_path(ur5e_mj_description.MJCF_PATH, escape_separators=True)
+        ur5e_mjcf = mjcf.from_path(UR5E_XML, escape_separators=True)
         ur5e_mjcf.model = 'ur5e'
 
         for light in ur5e_mjcf.find_all('light'):
             light.remove()
 
         # Attach the robotiq gripper to the ur5e flange.
-        gripper_mjcf = mjcf.from_path(robotiq_2f85_mj_description.MJCF_PATH, escape_separators=True)
+        gripper_mjcf = mjcf.from_path(ROBOTIQ_XML, escape_separators=True)
         gripper_mjcf.model = 'robotiq'
         mjcf_utils.attach(ur5e_mjcf, gripper_mjcf, 'attachment_site')
 
@@ -271,7 +292,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         mjcf_utils.attach(arena_mjcf, ur5e_mjcf)
 
         # Add object to scene.
-        object_mjcf = mjcf.from_path(_OBJECT_XML.as_posix())
+        object_mjcf = mjcf.from_path(self._object_xml.as_posix())
         arena_mjcf.include_copy(object_mjcf)
 
         self._object_geoms_list = []
@@ -436,7 +457,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             # Set object positions and orientations based on the current task.
             init_xyzs = self.cur_task_info['init_xyzs'].copy()
             goal_xyzs = self.cur_task_info['goal_xyzs'].copy()
-            permutation = self.np_random.permutation(4)
+            permutation = self.np_random.permutation(self._num_objects)
             init_xyzs = init_xyzs[permutation]
             goal_xyzs = goal_xyzs[permutation]
 
@@ -479,8 +500,11 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
     def set_new_target(self, return_info=True, p_stack=0.5):
         assert self._mode == 'data_collection'
 
+        if self._num_objects == 1:
+            p_stack = 0
+
         self._target_block = self.np_random.integers(self._num_objects)
-        stack = self.np_random.uniform() <= p_stack
+        stack = self.np_random.uniform() < p_stack
         if stack:
             # Stack the target block on top of another block.
             block_idx = self.np_random.choice(list(set(range(self._num_objects)) - {self._target_block}))

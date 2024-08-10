@@ -17,4 +17,3 @@ wandb
 numba
 moviepy==1.0.3
 shapely
-robot_descriptions
