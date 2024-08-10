@@ -671,6 +671,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 ob_info[f'rgb/{cam_name}'] = self.render(camera=cam_name)
                 ob_info[f'depth/{cam_name}'] = self.render(camera=cam_name, depth=True)
 
+        ob_info['control'] = self._data.ctrl.copy()
         ob_info['time'] = np.array([self._data.time])
 
         return ob_info
