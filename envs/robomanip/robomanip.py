@@ -77,7 +77,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         control_timestep: float = 0.05,
         terminate_at_goal: bool = True,
         mode: str = 'evaluation',  # 'evaluation' or 'data_collection'
-        visualize_info: bool = False,  # Whether to visualize the targets and successes.
+        visualize_info: bool = True,  # Whether to visualize the targets and successes.
         **kwargs,
     ):
         super().__init__(
@@ -129,10 +129,10 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 task_name='task1',
                 init_xyzs=np.array(
                     [
-                        [0.28, -0.38, 0.03],
+                        [0.32, -0.38, 0.03],
                         [0.53, -0.38, 0.03],
                         [0.53, 0.38, 0.03],
-                        [0.28, 0.38, 0.03],
+                        [0.32, 0.38, 0.03],
                     ]
                 ),
                 goal_xyzs=np.array(
@@ -217,6 +217,25 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                         [0.425, -0.23, 0.09],
                         [0.425, -0.17, 0.03],
                         [0.425, -0.17, 0.09],
+                    ]
+                ),
+            ),
+            dict(
+                task_name='task6',
+                init_xyzs=np.array(
+                    [
+                        [0.35, -0.2, 0.03],
+                        [0.5, -0.2, 0.03],
+                        [0.5, 0.2, 0.03],
+                        [0.35, 0.2, 0.03],
+                    ]
+                ),
+                goal_xyzs=np.array(
+                    [
+                        [0.425, 0.0, 0.03],
+                        [0.5, -0.2, 0.03],
+                        [0.5, 0.2, 0.03],
+                        [0.35, 0.2, 0.03],
                     ]
                 ),
             ),
@@ -579,6 +598,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self._success = all(object_successes)
 
         for i in range(self._num_objects):
+            if self._visualize_info and (self._mode == 'evaluation' or i == self._target_block):
+                for gid in self._object_target_geom_ids_list[i]:
+                    self._model.geom(gid).rgba[3] = 0.2
+            else:
+                for gid in self._object_target_geom_ids_list[i]:
+                    self._model.geom(gid).rgba[3] = 0.0
+
             if self._visualize_info and object_successes[i]:
                 for gid in self._object_geom_ids_list[i]:
                     self._model.geom(gid).rgba[:3] = (0, 1, 1)
@@ -662,7 +688,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         return reset_info
 
     def get_step_info(self) -> dict:
-        return self.compute_ob_info()
+        ob_info = self.compute_ob_info()
+        ob_info['success'] = self._success
+        return ob_info
 
     def terminate_episode(self) -> bool:
         if self._terminate_at_goal:
