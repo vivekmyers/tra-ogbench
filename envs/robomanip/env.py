@@ -19,8 +19,8 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         physics_timestep: float = 0.002,
         control_timestep: float = 0.002,
         render_mode: Optional[str] = None,
-        width: int = 480,
-        height: int = 480,
+        width: int = 200,
+        height: int = 200,
     ):
         """Initializes the Mujoco environment.
 

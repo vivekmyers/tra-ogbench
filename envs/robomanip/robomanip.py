@@ -73,12 +73,11 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self,
         pixel_observation: bool = False,
         absolute_action_space: bool = False,
-        pos_threshold: float = 5e-3,
-        ori_threshold: float = np.deg2rad(5),
         physics_timestep: float = 0.002,
         control_timestep: float = 0.05,
-        data_collection: bool = False,
-        show_target: bool = False,
+        terminate_at_goal: bool = True,
+        mode: str = 'evaluation',  # 'evaluation' or 'data_collection'
+        visualize_info: bool = False,  # Whether to visualize the targets and successes.
         **kwargs,
     ):
         super().__init__(
@@ -92,10 +91,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._target_sampling_bounds = _TARGET_SAMPLING_BOUNDS
         self._pixel_observation = pixel_observation
         self._absolute_action_space = absolute_action_space
-        self._pos_threshold = pos_threshold
-        self._ori_treshold = ori_threshold
-        self._data_collection = data_collection
-        self._show_target = show_target
+        self._terminate_at_goal = terminate_at_goal
+        self._mode = mode
+        self._visualize_info = visualize_info
 
         self._num_objects = 4
 
@@ -116,10 +114,119 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self.action_low = np.array([-0.1, -0.1, -0.1, -0.1, 0.0])
             self.action_high = np.array([0.1, 0.1, 0.1, 0.1, 0.1])
 
+        if self._mode == 'evaluation':
+            self.task_infos = []
+            self.num_tasks = None
+            self.cur_task_idx = None
+            self.cur_task_info = None
+            self.set_tasks()
+
+            self._cur_goal_ob = None
+
+    def set_tasks(self):
+        self.task_infos = [
+            dict(
+                task_name='task1',
+                init_xyzs=np.array(
+                    [
+                        [0.28, -0.38, 0.03],
+                        [0.53, -0.38, 0.03],
+                        [0.53, 0.38, 0.03],
+                        [0.28, 0.38, 0.03],
+                    ]
+                ),
+                goal_xyzs=np.array(
+                    [
+                        [0.3, 0, 0.03],
+                        [0.425, -0.125, 0.03],
+                        [0.55, 0, 0.03],
+                        [0.425, 0.125, 0.03],
+                    ]
+                ),
+            ),
+            dict(
+                task_name='task2',
+                init_xyzs=np.array(
+                    [
+                        [0.35, -0.2, 0.03],
+                        [0.35, 0.2, 0.03],
+                        [0.5, 0.2, 0.03],
+                        [0.5, -0.2, 0.03],
+                    ]
+                ),
+                goal_xyzs=np.array(
+                    [
+                        [0.5, -0.2, 0.03],
+                        [0.35, -0.2, 0.03],
+                        [0.35, 0.2, 0.03],
+                        [0.5, 0.2, 0.03],
+                    ]
+                ),
+            ),
+            dict(
+                task_name='task3',
+                init_xyzs=np.array(
+                    [
+                        [0.55, 0, 0.03],
+                        [0.425, -0.3, 0.03],
+                        [0.3, 0, 0.03],
+                        [0.425, 0.3, 0.03],
+                    ]
+                ),
+                goal_xyzs=np.array(
+                    [
+                        [0.425, 0, 0.03],
+                        [0.425, 0, 0.09],
+                        [0.425, 0, 0.15],
+                        [0.425, 0, 0.21],
+                    ]
+                ),
+            ),
+            dict(
+                task_name='task4',
+                init_xyzs=np.array(
+                    [
+                        [0.425, -0.2, 0.03],
+                        [0.425, -0.2, 0.09],
+                        [0.425, 0.2, 0.03],
+                        [0.425, 0.2, 0.09],
+                    ]
+                ),
+                goal_xyzs=np.array(
+                    [
+                        [0.425, 0.2, 0.03],
+                        [0.425, 0.2, 0.09],
+                        [0.425, -0.2, 0.03],
+                        [0.425, -0.2, 0.09],
+                    ]
+                ),
+            ),
+            dict(
+                task_name='task5',
+                init_xyzs=np.array(
+                    [
+                        [0.425, 0.2, 0.03],
+                        [0.425, 0.2, 0.09],
+                        [0.425, 0.2, 0.15],
+                        [0.425, 0.2, 0.21],
+                    ]
+                ),
+                goal_xyzs=np.array(
+                    [
+                        [0.425, -0.23, 0.03],
+                        [0.425, -0.23, 0.09],
+                        [0.425, -0.17, 0.03],
+                        [0.425, -0.17, 0.09],
+                    ]
+                ),
+            ),
+        ]
+        self.num_tasks = len(self.task_infos)
+
     def build_mjcf_model(self) -> mjcf.RootElement:
         # Scene.
         arena_mjcf = mjcf.from_path(ARENA_XML.as_posix())
-        arena_mjcf.model = 'ur5e_pick_place_task'
+        arena_mjcf.model = 'ur5e_arena'
 
         arena_mjcf.statistic.center = (0.3, 0, 0.15)
         arena_mjcf.statistic.extent = 0.7
@@ -195,6 +302,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         )
         # ================================ #
 
+        # TODO: Remove this
         ################### FOR DEBUGGING ###################
         # with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
         #     file.write(mjcf_utils.to_string(arena_mjcf))
@@ -246,12 +354,30 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         )
         self._T_pa = pinch_pose.inverse() @ attach_pose
 
+    def reset(self, options=None, *args, **kwargs):
+        if self._mode == 'evaluation':
+            if options is not None:
+                if 'task_idx' in options:
+                    self.cur_task_idx = options['task_idx']
+                    self.cur_task_info = self.task_infos[self.cur_task_idx]
+                elif 'task_info' in options:
+                    self.cur_task_idx = None
+                    self.cur_task_info = options['task_info']
+                else:
+                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
+            else:
+                # Randomly sample task
+                self.cur_task_idx = np.random.randint(self.num_tasks)
+                self.cur_task_info = self.task_infos[self.cur_task_idx]
+
+        return super().reset(*args, **kwargs)
+
     def initialize_episode(self):
         for i in range(self._num_objects):
             for gid in self._object_geom_ids_list[i]:
                 self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
             for gid in self._object_target_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
+                self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
 
         self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
         mujoco.mj_kinematics(self._model, self._data)
@@ -275,21 +401,48 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._data.qpos[self._arm_joint_ids] = qpos_init
         mujoco.mj_forward(self._model, self._data)
 
-        # Randomize object position and orientation.
-        for i in range(self._num_objects):
-            xy = self.np_random.uniform(*self._object_sampling_bounds)
-            obj_pos = (*xy, self._object_z)
-            yaw = self.np_random.uniform(0, 2 * np.pi)
-            obj_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
-            self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
-            self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
+        if self._mode == 'data_collection':
+            # Randomize object positions and orientations.
+            for i in range(self._num_objects):
+                xy = self.np_random.uniform(*self._object_sampling_bounds)
+                obj_pos = (*xy, self._object_z)
+                yaw = self.np_random.uniform(0, 2 * np.pi)
+                obj_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
+                self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
+                self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
 
-        if self._data_collection:
             # Set a new target.
             self.set_new_target(return_info=False)
+        else:
+            # Set object positions and orientations based on the current task.
+            init_xyzs = self.cur_task_info['init_xyzs'].copy()
+            goal_xyzs = self.cur_task_info['goal_xyzs'].copy()
+            permutation = self.np_random.permutation(4)
+            init_xyzs = init_xyzs[permutation]
+            goal_xyzs = goal_xyzs[permutation]
+
+            # First set the current scene to the goal state to get the goal observation.
+            for i in range(self._num_objects):
+                self._data.joint(f'object_joint_{i}').qpos[:3] = goal_xyzs[i]
+                self._data.joint(f'object_joint_{i}').qpos[3:] = lie.SO3.identity().wxyz.tolist()
+                self._data.mocap_pos[self._object_target_mocap_ids[i]] = goal_xyzs[i]
+                self._data.mocap_quat[self._object_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
+            mujoco.mj_forward(self._model, self._data)
+            self._cur_goal_ob = self.compute_observation()
+
+            # Now do the actual reset.
+            for i in range(self._num_objects):
+                obj_pos = init_xyzs[i].copy()
+                obj_pos[:2] += self.np_random.uniform(-0.015, 0.015, size=2)
+                self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
+                yaw = self.np_random.uniform(0, 2 * np.pi)
+                obj_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
+                self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
+                self._data.mocap_pos[self._object_target_mocap_ids[i]] = goal_xyzs[i]
+                self._data.mocap_quat[self._object_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
 
         # Forward kinematics to update site positions.
-        mujoco.mj_kinematics(self._model, self._data)
+        mujoco.mj_forward(self._model, self._data)
 
         # Initialize the target effector at the pinch site.
         pinch_xpos = self._data.site_xpos[self._pinch_site_id]
@@ -300,13 +453,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             rotation=lie.SO3(wxyz=pinch_quat),
             translation=pinch_xpos,
         )
-        self._target_gripper_opening: float = 0.0
+        self._target_gripper_opening = 0.0
 
-        # Reset metrics for the current episode.
-        self._success: bool = False
+        self._success = False
 
     def set_new_target(self, return_info=True, p_stack=0.5):
-        """Set a new target for data collection."""
+        assert self._mode == 'data_collection'
+
         self._target_block = self.np_random.integers(self._num_objects)
         stack = self.np_random.uniform() <= p_stack
         if stack:
@@ -320,10 +473,15 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             tar_pos = (*xy, self._object_z)
         yaw = self.np_random.uniform(0, 2 * np.pi)
         tar_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
-        self._data.mocap_pos[self._object_target_mocap_ids[self._target_block]] = tar_pos
-        self._data.mocap_quat[self._object_target_mocap_ids[self._target_block]] = tar_ori
         for i in range(self._num_objects):
-            if self._show_target and i == self._target_block:
+            if i == self._target_block:
+                self._data.mocap_pos[self._object_target_mocap_ids[i]] = tar_pos
+                self._data.mocap_quat[self._object_target_mocap_ids[i]] = tar_ori
+            else:
+                self._data.mocap_pos[self._object_target_mocap_ids[i]] = (0, 0, -0.3)
+                self._data.mocap_quat[self._object_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
+        for i in range(self._num_objects):
+            if self._visualize_info and i == self._target_block:
                 for gid in self._object_target_geom_ids_list[i]:
                     self._model.geom(gid).rgba[3] = 0.2
             else:
@@ -406,33 +564,27 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * self._target_gripper_opening
 
     def post_step(self) -> None:
-        # obj_pos = self._data.qpos[self._object_joint_ids[0] : self._object_joint_ids[0] + 3]
-        # tar_pos = self._data.mocap_pos[self._object_target_mocap_id]
-        # err_pos = tar_pos - obj_pos
-        # dist_pos = np.linalg.norm(err_pos)
-        # pos_success = dist_pos <= self._pos_threshold
-        #
-        # obj_yaw = lie.SO3(
-        #     self._data.qpos[self._object_joint_ids[0] + 3 : self._object_joint_ids[0] + 7]
-        # ).compute_yaw_radians()
-        # tar_yaw = lie.SO3(
-        #     self._data.mocap_quat[self._object_target_mocap_id]
-        # ).compute_yaw_radians()
-        # err_rot = 0.0
-        # if self._symmetry > 0.0:
-        #     err_rot = abs(obj_yaw - tar_yaw) % self._symmetry
-        #     if err_rot > (self._symmetry / 2):
-        #         err_rot = self._symmetry - err_rot
-        # ori_success = err_rot <= self._ori_treshold
+        object_successes = []
+        for i in range(self._num_objects):
+            obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
+            tar_pos = self._data.mocap_pos[self._object_target_mocap_ids[i]]
+            if np.linalg.norm(obj_pos - tar_pos) <= 0.03:
+                object_successes.append(True)
+            else:
+                object_successes.append(False)
 
-        # self._success = pos_success and ori_success
-        self._success = False
-        # if self._success:
-        #     for gid in self._object_geom_ids:
-        #         self._model.geom(gid).rgba[:3] = (0, 1, 0)
-        # else:
-        #     for gid in self._object_geom_ids:
-        #         self._model.geom(gid).rgba = _OBJECT_RGBA
+        if self._mode == 'data_collection':
+            self._success = object_successes[self._target_block]
+        else:
+            self._success = all(object_successes)
+
+        for i in range(self._num_objects):
+            if self._visualize_info and object_successes[i]:
+                for gid in self._object_geom_ids_list[i]:
+                    self._model.geom(gid).rgba[:3] = (0, 1, 1)
+            else:
+                for gid in self._object_geom_ids_list[i]:
+                    self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
 
     def compute_ob_info(self) -> dict[str, np.ndarray]:
         ob_info = {}
@@ -444,8 +596,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         ob_info['proprio/effector_yaw'] = np.array(
             [lie.SO3.from_matrix(self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)).compute_yaw_radians()]
         )
-        ob_info['proprio/effector_target_pos'] = self._target_effector_pose.translation().copy()
-        ob_info['proprio/effector_target_yaw'] = np.array([self._target_effector_pose.rotation().compute_yaw_radians()])
         ob_info['proprio/gripper_opening'] = np.array(
             np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1)
         )
@@ -459,7 +609,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
             )
 
-        if self._data_collection:
+        if self._mode == 'data_collection':
             target_mocap_id = self._object_target_mocap_ids[self._target_block]
             ob_info['privileged/target_pos'] = self._data.mocap_pos[target_mocap_id].copy()
             ob_info['privileged/target_yaw'] = np.array(
@@ -504,12 +654,18 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         return 0.0
 
     def get_reset_info(self) -> dict:
-        reset_info = dict(target_block=self._target_block)
-        reset_info.update(self.compute_ob_info())
+        reset_info = self.compute_ob_info()
+        if self._mode == 'data_collection':
+            reset_info['target_block'] = self._target_block
+        elif self._mode == 'evaluation':
+            reset_info['goal'] = self._cur_goal_ob
         return reset_info
 
     def get_step_info(self) -> dict:
         return self.compute_ob_info()
 
     def terminate_episode(self) -> bool:
-        return self._success
+        if self._terminate_at_goal:
+            return self._success
+        else:
+            return False

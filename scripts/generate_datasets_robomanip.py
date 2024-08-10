@@ -21,7 +21,8 @@ flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 def main(_):
     env = gymnasium.make(
         FLAGS.env_name,
-        # terminate_at_goal=False,
+        terminate_at_goal=False,
+        mode='data_collection',
         max_episode_steps=FLAGS.max_episode_steps,
     )
 

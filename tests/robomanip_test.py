@@ -5,8 +5,9 @@ from envs.robomanip.robomanip import RoboManipEnv
 def main():
     env = RoboManipEnv(
         absolute_action_space=True,
-        data_collection=True,
-        show_target=True,
+        terminate_at_goal=False,
+        mode='data_collection',
+        visualize_info=True,
     )
     ob, info = env.reset(seed=12345)
     agent = oracles.PickPlaceOracle(segment_dt=0.32)

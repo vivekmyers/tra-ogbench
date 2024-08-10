@@ -162,18 +162,24 @@ def make_env_and_dataset(env_name, dataset_path=None):
         )
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'quadmaze' in env_name or 'quadball' in env_name or 'humanoidmaze' in env_name:
-        import gymnasium
-
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(
             dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
         )
-        if val_dataset.size == 0:
-            val_dataset = None
+    elif 'cubes' in env_name:
+        import envs.robomanip  # noqa
+
+        env = gymnasium.make(env_name)
+        train_dataset, val_dataset = get_dataset(
+            dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
+        )
     else:
         raise ValueError(f'Unknown environment: {env_name}')
+
+    if val_dataset is not None and val_dataset.size == 0:
+        val_dataset = None
 
     env.reset()
 
