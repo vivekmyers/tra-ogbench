@@ -13,6 +13,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('seed', 0, 'Random seed')
 flags.DEFINE_string('env_name', 'cubes-v0', 'Environment name')
 flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
+flags.DEFINE_string('oracle_type', 'closed', 'Oracle type')
 flags.DEFINE_string('save_path', None, 'Save path')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
 flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
@@ -26,7 +27,10 @@ def main(_):
         max_episode_steps=FLAGS.max_episode_steps,
     )
 
-    agent = oracles.PickPlaceOracle(segment_dt=0.32)
+    if FLAGS.oracle_type == 'open':
+        agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
+    else:
+        agent = oracles.ClosedLoopCubeOracle()
 
     dataset = defaultdict(list)
 
@@ -47,7 +51,8 @@ def main(_):
 
         while not done:
             action = agent.select_action(ob, info)
-            action = env.unwrapped.normalize_action(action)
+            if FLAGS.oracle_type == 'open':
+                action = env.unwrapped.normalize_action(action)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 

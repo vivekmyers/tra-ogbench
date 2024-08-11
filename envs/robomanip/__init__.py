@@ -6,7 +6,7 @@ register(
     max_episode_steps=200,
     kwargs=dict(
         env_type='cube',
-        absolute_action_space=True,
+        absolute_action_space=False,
     ),
 )
 register(
@@ -15,6 +15,6 @@ register(
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cubes',
-        absolute_action_space=True,
+        absolute_action_space=False,
     ),
 )

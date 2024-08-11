@@ -1,7 +1,9 @@
-from envs.robomanip.oracles.oracle import Oracle
+from envs.robomanip.oracles.closed_loop import ClosedLoopCubeOracle
 from envs.robomanip.oracles.open_loop import OpenLoopCubeOracle
+from envs.robomanip.oracles.oracle import Oracle
 
 __all__ = (
-    'Oracle',
+    'ClosedLoopCubeOracle',
     'OpenLoopCubeOracle',
+    'Oracle',
 )

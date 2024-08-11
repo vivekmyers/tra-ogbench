@@ -118,8 +118,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self.action_low = np.array([*self._workspace_bounds[0], -np.pi, 0.0])
             self.action_high = np.array([*self._workspace_bounds[1], np.pi, 1.0])
         else:
-            self.action_low = np.array([-0.1, -0.1, -0.1, -0.1, 0.0])
-            self.action_high = np.array([0.1, 0.1, 0.1, 0.1, 0.1])
+            action_range = np.array([0.1] * 3 + [0.3, 0.1])
+            self.action_low = -action_range
+            self.action_high = action_range
 
         if self._mode == 'evaluation':
             self.task_infos = []
@@ -493,7 +494,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             rotation=lie.SO3(wxyz=pinch_quat),
             translation=pinch_xpos,
         )
-        self._target_gripper_opening = 0.0
 
         self._success = False
 
@@ -568,11 +568,18 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         if self._absolute_action_space:
             target_effector_translation = a_pos
             target_effector_orientation = lie.SO3.from_z_radians(a_ori) @ _EFFECTOR_DOWN_ROTATION
-            self._target_gripper_opening = a_gripper
+            target_gripper_opening = a_gripper
         else:
-            target_effector_translation = self._target_effector_pose.translation() + a_pos
-            target_effector_orientation = lie.SO3.from_z_radians(a_ori) @ self._target_effector_pose.rotation()
-            self._target_gripper_opening += a_gripper
+            effector_pos = self._data.site_xpos[self._pinch_site_id].copy()
+            effector_yaw = lie.SO3.from_matrix(
+                self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)
+            ).compute_yaw_radians()
+            gripper_opening = np.array(np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1))
+            target_effector_translation = effector_pos + a_pos
+            target_effector_orientation = (
+                lie.SO3.from_z_radians(a_ori) @ lie.SO3.from_z_radians(effector_yaw) @ _EFFECTOR_DOWN_ROTATION.inverse()
+            )
+            target_gripper_opening = gripper_opening + a_gripper
 
         # Make sure the target pose respects the action limits.
         np.clip(
@@ -586,7 +593,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             +np.pi,
         )
         target_effector_orientation = lie.SO3.from_z_radians(yaw) @ _EFFECTOR_DOWN_ROTATION
-        self._target_gripper_opening = np.clip(self._target_gripper_opening, 0.0, 1.0)
+        target_gripper_opening = np.clip(target_gripper_opening, 0.0, 1.0)
 
         # Pinch pose in the world frame -> attach pose in the world frame.
         self._target_effector_pose = lie.SE3.from_rotation_and_translation(
@@ -604,7 +611,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         # Set the desired joint positions for the underlying PD controller.
         self._data.ctrl[self._arm_actuator_ids] = qpos_target
-        self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * self._target_gripper_opening
+        self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * target_gripper_opening
 
     def post_step(self) -> None:
         object_successes = []
@@ -661,6 +668,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         if self._mode == 'data_collection':
             target_mocap_id = self._object_target_mocap_ids[self._target_block]
+            ob_info['target_block'] = self._target_block
             ob_info['privileged/target_pos'] = self._data.mocap_pos[target_mocap_id].copy()
             ob_info['privileged/target_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.mocap_quat[target_mocap_id]).compute_yaw_radians()]
@@ -706,9 +714,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
     def get_reset_info(self) -> dict:
         reset_info = self.compute_ob_info()
-        if self._mode == 'data_collection':
-            reset_info['target_block'] = self._target_block
-        elif self._mode == 'evaluation':
+        if self._mode == 'evaluation':
             reset_info['goal'] = self._cur_goal_ob
         return reset_info
 
