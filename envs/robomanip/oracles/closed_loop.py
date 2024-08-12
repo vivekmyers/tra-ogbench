@@ -19,6 +19,8 @@ class ClosedLoopCubeOracle(oracle.Oracle):
         self._max_step = 250
         self._final_pos = info['privileged/target_pos'] + np.array([0, 0, 0.18])
 
+        self._block_above_offset = np.array([0, 0, 0.23]) + np.random.uniform([-0.01, -0.01, -0.02], [0.01, 0.01, 0.02])
+
     def select_action(self, obs, info):
         debug = False
 
@@ -55,7 +57,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
             if not xy_aligned or not yaw_aligned:
                 print_phase(1)
                 action = np.zeros(5)
-                diff = block_pos + np.array([0, 0, 0.21]) - effector_pos
+                diff = block_pos + self._block_above_offset - effector_pos
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (block_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
@@ -73,13 +75,13 @@ class ClosedLoopCubeOracle(oracle.Oracle):
                 action[4] = 1
             elif pos_aligned and gripper_closed and not above and (not target_xy_aligned or not target_yaw_aligned):
                 print_phase(4)
-                diff = np.array([block_pos[0], block_pos[1], 0.21]) - effector_pos
+                diff = np.array([block_pos[0], block_pos[1], self._block_above_offset[2]]) - effector_pos
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (target_yaw - block_yaw) * gain_yaw
                 action[4] = 1
             elif pos_aligned and gripper_closed and above and (not target_xy_aligned or not target_yaw_aligned):
                 print_phase(5)
-                diff = target_pos + np.array([0, 0, 0.21]) - effector_pos
+                diff = target_pos + self._block_above_offset - effector_pos
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (target_yaw - block_yaw) * gain_yaw
                 action[4] = 1
@@ -99,7 +101,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
                 action[4] = -1
             elif gripper_open and not above:
                 print_phase(9)
-                diff = np.array([block_pos[0], block_pos[1], 0.21]) - effector_pos
+                diff = np.array([block_pos[0], block_pos[1], self._block_above_offset[2]]) - effector_pos
                 action[:3] = diff[:3] * gain_pos
                 action[4] = -1
             elif gripper_open and above:

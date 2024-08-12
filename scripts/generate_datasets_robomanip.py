@@ -15,6 +15,7 @@ flags.DEFINE_string('env_name', 'cubes-v0', 'Environment name')
 flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
 flags.DEFINE_string('oracle_type', 'closed', 'Oracle type')
 flags.DEFINE_string('save_path', None, 'Save path')
+flags.DEFINE_float('noise', 0.3, 'Action noise')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
 flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 
@@ -44,6 +45,7 @@ def main(_):
             p_stack = np.random.uniform(0.1, 0.5)
         else:
             ob, info = env.reset()
+        action_noise_level = np.random.uniform(0, FLAGS.noise)
         agent.reset(ob, info)
 
         done = False
@@ -53,6 +55,8 @@ def main(_):
             action = agent.select_action(ob, info)
             if FLAGS.oracle_type == 'open':
                 action = env.unwrapped.normalize_action(action)
+            action = action + np.random.uniform(-action_noise_level, action_noise_level, size=action.shape)
+            action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 

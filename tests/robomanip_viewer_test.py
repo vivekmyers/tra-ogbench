@@ -1,5 +1,7 @@
 import time
 
+import numpy as np
+
 from envs.robomanip import oracles, viewer_utils
 from envs.robomanip.robomanip import RoboManipEnv
 
@@ -10,7 +12,7 @@ def main() -> None:
     use_oracle = True
     oracle_type = 'closed'
     env = RoboManipEnv(
-        env_type='cubes',
+        env_type='cube',
         absolute_action_space=(oracle_type == 'open'),
         terminate_at_goal=False,
         mode='data_collection',
@@ -43,6 +45,8 @@ def main() -> None:
                         action = agent.select_action(obs, info)
                         if oracle_type == 'open':
                             action = env.normalize_action(action)
+                        # action = action + np.random.uniform(-0.25, 0.25, size=action.shape)
+                        action = np.clip(action, -1, 1)
                     else:
                         action = env.action_space.sample()
                         action[:] = 0
