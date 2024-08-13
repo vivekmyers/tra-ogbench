@@ -657,6 +657,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1)
         )
         ob_info['proprio/gripper_vel'] = self._data.qvel[[self._gripper_opening_joint_id]].copy()
+        ob_info['proprio/gripper_contact'] = np.clip(np.linalg.norm(self._data.body('ur5e/robotiq/right_pad').cfrc_ext) / 10, 0, 1)
 
         # Privileged observations.
         for i in range(self._num_objects):
@@ -680,6 +681,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 ob_info[f'depth/{cam_name}'] = self.render(camera=cam_name, depth=True)
 
         ob_info['control'] = self._data.ctrl.copy()
+        ob_info['contact'] = self._data.cfrc_ext.copy()
         ob_info['time'] = np.array([self._data.time])
 
         return ob_info

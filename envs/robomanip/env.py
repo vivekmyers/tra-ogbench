@@ -246,6 +246,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         prev_qvel = self._data.qvel.copy()
         self.set_control(action)
         mujoco.mj_step(self._model, self._data, nstep=self._n_steps)
+        mujoco.mj_rnePostConstraint(self._model, self._data)  # Compute contact forces.
         self.post_step()
         terminated = self.terminate_episode()
         truncated = self.truncate_episode()
