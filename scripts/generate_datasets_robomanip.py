@@ -45,7 +45,7 @@ def main(_):
             p_stack = np.random.uniform(0.1, 0.5)
         else:
             ob, info = env.reset()
-        action_noise_level = np.random.uniform(0, FLAGS.noise)
+        xi = np.random.uniform(0, FLAGS.noise)
         agent.reset(ob, info)
 
         done = False
@@ -55,7 +55,7 @@ def main(_):
             action = agent.select_action(ob, info)
             if FLAGS.oracle_type == 'open':
                 action = env.unwrapped.normalize_action(action)
-            action = action + np.random.uniform(-action_noise_level, action_noise_level, size=action.shape)
+            action = action + np.random.normal(0, [xi, xi, xi, xi * 3, xi * 10], action.shape)
             action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
