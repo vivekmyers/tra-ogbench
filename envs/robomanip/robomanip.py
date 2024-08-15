@@ -657,7 +657,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1)
         )
         ob_info['proprio/gripper_vel'] = self._data.qvel[[self._gripper_opening_joint_id]].copy()
-        ob_info['proprio/gripper_contact'] = np.clip(np.linalg.norm(self._data.body('ur5e/robotiq/right_pad').cfrc_ext) / 10, 0, 1)
+        ob_info['proprio/gripper_contact'] = np.array(
+            [np.clip(np.linalg.norm(self._data.body('ur5e/robotiq/right_pad').cfrc_ext) / 10, 0, 1)]
+        )
+
+        ob_info['proprio_aux/gripper_closed'] = (ob_info['proprio/gripper_opening'] > 0.3).astype(np.float64)
+        ob_info['proprio_aux/gripper_open'] = (ob_info['proprio/gripper_opening'] <= 0.02).astype(np.float64)
+        ob_info['proprio_aux/above'] = (ob_info['proprio/effector_pos'][[2]] > 0.18).astype(np.float64)
 
         # Privileged observations.
         for i in range(self._num_objects):
@@ -666,6 +672,14 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             ob_info[f'privileged/block_{i}_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
             )
+
+            effector_pos = ob_info['proprio/effector_pos']
+            effector_yaw = ob_info['proprio/effector_yaw']
+            block_pos = ob_info[f'privileged/block_{i}_pos']
+            block_yaw = ob_info[f'privileged/block_{i}_yaw']
+            ob_info[f'privileged_aux/block_{i}_xy_aligned'] = np.array([np.linalg.norm(block_pos[:2] - effector_pos[:2]) <= 0.03]).astype(np.float64)
+            ob_info[f'privileged_aux/block_{i}_yaw_aligned'] = np.array([np.linalg.norm(block_yaw - effector_yaw) <= 0.04]).astype(np.float64)
+            ob_info[f'privileged_aux/block_{i}_pos_aligned'] = np.array([np.linalg.norm(block_pos - effector_pos) <= 0.015]).astype(np.float64)
 
         if self._mode == 'data_collection':
             target_mocap_id = self._object_target_mocap_ids[self._target_block]
@@ -699,6 +713,10 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             ob_info['proprio/effector_yaw'],
             ob_info['proprio/gripper_opening'] * gripper_scaler,
             ob_info['proprio/gripper_vel'],
+            ob_info['proprio/gripper_contact'],
+            ob_info['proprio_aux/gripper_closed'],
+            ob_info['proprio_aux/gripper_open'],
+            ob_info['proprio_aux/above'],
         ]
         for i in range(self._num_objects):
             obs.extend(
@@ -706,6 +724,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     (ob_info[f'privileged/block_{i}_pos'] - xyz_center) * xyz_scaler,
                     ob_info[f'privileged/block_{i}_quat'],
                     ob_info[f'privileged/block_{i}_yaw'],
+                    ob_info[f'privileged_aux/block_{i}_xy_aligned'],
+                    ob_info[f'privileged_aux/block_{i}_yaw_aligned'],
+                    ob_info[f'privileged_aux/block_{i}_pos_aligned'],
                 ]
             )
 
