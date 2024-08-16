@@ -208,20 +208,6 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         info = self.get_reset_info()
         return obs, info
 
-    # def reset_to(self, state: np.ndarray, spec: mujoco.mjtState):
-    #     """Resets the environment to a specific state."""
-    #     if self._model is None:
-    #         self.reset()
-    #     size = mujoco.mj_stateSize(self.model, spec)
-    #     if state.size != size:
-    #         raise ValueError(f'State size mismatch. Expected {size}, got {state.size}.')
-    #     mujoco.mj_setState(self.model, self.data, state, spec)
-    #     # TODO(kevin): Do we need to call mj_forward here?
-    #     # mujoco.mj_forward(self.model, self.data)
-    #     obs = self.compute_observation()
-    #     info = self.get_reset_info()
-    #     return obs, info
-    #
     def set_state(self, qpos, qvel):
         """Resets the environment to a specific state."""
         assert qpos.shape == (self.model.nq,) and qvel.shape == (self.model.nv,)
