@@ -235,10 +235,10 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     ),
                     goal_xyzs=np.array(
                         [
-                            [0.425, -0.23, 0.02],
-                            [0.425, -0.23, 0.06],
-                            [0.425, -0.17, 0.02],
-                            [0.425, -0.17, 0.06],
+                            [0.425, -0.22, 0.02],
+                            [0.425, -0.22, 0.06],
+                            [0.425, -0.18, 0.02],
+                            [0.425, -0.18, 0.06],
                         ]
                     ),
                 ),
@@ -499,7 +499,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self._data.qvel[:] = saved_qvel
             for i in range(self._num_objects):
                 obj_pos = init_xyzs[i].copy()
-                obj_pos[:2] += self.np_random.uniform(-0.015, 0.015, size=2)
+                obj_pos[:2] += self.np_random.uniform(-0.01, 0.01, size=2)
                 self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
                 yaw = self.np_random.uniform(0, 2 * np.pi)
                 obj_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
