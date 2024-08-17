@@ -4,8 +4,8 @@ from envs.robomanip.oracles import oracle
 
 
 class ClosedLoopCubeOracle(oracle.Oracle):
-    def __init__(self):
-        pass
+    def __init__(self, min_norm=0.3):
+        self._min_norm = min_norm
 
     def shortest_yaw(self, eff_yaw, obj_yaw):
         symmetries = np.array([i * np.pi / 2 + obj_yaw for i in range(-4, 5)])
@@ -48,12 +48,11 @@ class ClosedLoopCubeOracle(oracle.Oracle):
                 print(f'Phase {step}', end=' ')
 
         def shape_diff(diff):
-            min_norm = 0.15
             diff_norm = np.linalg.norm(diff)
-            if diff_norm >= min_norm:
+            if diff_norm >= self._min_norm:
                 return diff
             else:
-                return diff / (diff_norm + 1e-6) * min_norm
+                return diff / (diff_norm + 1e-6) * self._min_norm
 
         gain_pos = 5
         gain_yaw = 3
