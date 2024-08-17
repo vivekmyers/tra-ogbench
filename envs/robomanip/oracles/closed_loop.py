@@ -15,11 +15,11 @@ class ClosedLoopCubeOracle(oracle.Oracle):
     def reset(self, obs, info):
         self._done = False
         self._step = 0
-        self._max_step = 250
-        self._final_pos = np.random.uniform([0.25, -0.45, 0.18], [0.6, 0.45, 0.35])
+        self._max_step = 200
+        self._final_pos = np.random.uniform([0.25, -0.45, 0.20], [0.6, 0.45, 0.35])
         self._final_yaw = np.random.uniform(-np.pi, np.pi)
 
-        self._block_above_offset = np.array([0, 0, 0.16])
+        self._block_above_offset = np.array([0, 0, 0.18])
 
     def select_action(self, obs, info):
         debug = False
@@ -36,7 +36,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
 
         gripper_closed = info['proprio/gripper_contact'] > 0.5
         gripper_open = info['proprio/gripper_contact'] < 0.1
-        above = effector_pos[2] > 0.14
+        above = effector_pos[2] > 0.16
         xy_aligned = np.linalg.norm(block_pos[:2] - effector_pos[:2]) <= 0.04
         pos_aligned = np.linalg.norm(block_pos - effector_pos) <= 0.02
         target_xy_aligned = np.linalg.norm(target_pos[:2] - block_pos[:2]) <= 0.04
@@ -48,11 +48,12 @@ class ClosedLoopCubeOracle(oracle.Oracle):
                 print(f'Phase {step}', end=' ')
 
         def shape_diff(diff):
+            min_norm = 0.15
             diff_norm = np.linalg.norm(diff)
-            if diff_norm >= 0.3:
+            if diff_norm >= min_norm:
                 return diff
             else:
-                return diff / (diff_norm + 1e-6) * 0.3
+                return diff / (diff_norm + 1e-6) * min_norm
 
         gain_pos = 5
         gain_yaw = 3

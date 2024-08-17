@@ -467,7 +467,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             # First set the current scene to the goal state to get the goal observation.
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
-            eff_pos = np.random.uniform([0.25, -0.45, 0.18], [0.6, 0.45, 0.35])
+            eff_pos = np.random.uniform([0.25, -0.45, 0.20], [0.6, 0.45, 0.35])
             cur_ori = _EFFECTOR_DOWN_ROTATION
             yaw = self.np_random.uniform(-np.pi, np.pi)
             rotz = lie.SO3.from_z_radians(yaw)
@@ -515,14 +515,27 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
     def set_new_target(self, return_info=True, p_stack=0.5):
         assert self._mode == 'data_collection'
 
-        if self._num_objects == 1:
-            p_stack = 0
+        block_xyzs = np.array([self._data.joint(f'object_joint_{i}').qpos[:3] for i in range(self._num_objects)])
+        top_blocks = []
+        for i in range(self._num_objects):
+            for j in range(self._num_objects):
+                if i == j:
+                    continue
+                if (
+                        block_xyzs[j][2] > block_xyzs[i][2]
+                        and np.linalg.norm(block_xyzs[i][:2] - block_xyzs[j][:2]) < 0.02
+                ):
+                    break
+            else:
+                top_blocks.append(i)
 
-        self._target_block = self.np_random.integers(self._num_objects)
-        stack = self.np_random.uniform() < p_stack
+        # Pick one of the top objects as the target.
+        self._target_block = self.np_random.choice(top_blocks)
+
+        stack = len(top_blocks) >= 2 and self.np_random.uniform() < p_stack
         if stack:
             # Stack the target block on top of another block.
-            block_idx = self.np_random.choice(list(set(range(self._num_objects)) - {self._target_block}))
+            block_idx = self.np_random.choice(list(set(top_blocks) - {self._target_block}))
             block_pos = self._data.joint(f'object_joint_{block_idx}').qpos[:3]
             tar_pos = np.array([block_pos[0], block_pos[1], block_pos[2] + 2 * self._object_z])
         else:
@@ -678,7 +691,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         ob_info['proprio_aux/gripper_closed'] = (ob_info['proprio/gripper_contact'] > 0.5).astype(np.float64)
         ob_info['proprio_aux/gripper_open'] = (ob_info['proprio/gripper_contact'] < 0.1).astype(np.float64)
-        ob_info['proprio_aux/above'] = (ob_info['proprio/effector_pos'][[2]] > 0.14).astype(np.float64)
+        ob_info['proprio_aux/above'] = (ob_info['proprio/effector_pos'][[2]] > 0.16).astype(np.float64)
 
         # Privileged observations.
         for i in range(self._num_objects):
@@ -690,8 +703,12 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
             effector_pos = ob_info['proprio/effector_pos']
             block_pos = ob_info[f'privileged/block_{i}_pos']
-            ob_info[f'privileged_aux/block_{i}_xy_aligned'] = np.array([np.linalg.norm(block_pos[:2] - effector_pos[:2]) <= 0.04]).astype(np.float64)
-            ob_info[f'privileged_aux/block_{i}_pos_aligned'] = np.array([np.linalg.norm(block_pos - effector_pos) <= 0.02]).astype(np.float64)
+            ob_info[f'privileged_aux/block_{i}_xy_aligned'] = np.array(
+                [np.linalg.norm(block_pos[:2] - effector_pos[:2]) <= 0.04]
+            ).astype(np.float64)
+            ob_info[f'privileged_aux/block_{i}_pos_aligned'] = np.array(
+                [np.linalg.norm(block_pos - effector_pos) <= 0.02]
+            ).astype(np.float64)
 
         if self._mode == 'data_collection':
             target_mocap_id = self._object_target_mocap_ids[self._target_block]
@@ -713,7 +730,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         return ob_info
 
     def compute_observation(self) -> Any:
-        xyz_center = np.array([0.25, 0.0, 0.0])
+        xyz_center = np.array([0.425, 0.0, 0.0])
         xyz_scaler = 10
         gripper_scaler = 3
 
