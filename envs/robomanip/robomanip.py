@@ -21,13 +21,13 @@ ROBOTIQ_XML = _HERE / 'common' / 'robotiq_2f85' / '2f85.xml'
 _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi / 2, 0])
 
 # Box bounds (xy) for the end-effector, in meters.
-_WORKSPACE_BOUNDS = np.asarray([[0.25, -0.45, 0.02], [0.6, 0.45, 0.35]])
+_WORKSPACE_BOUNDS = np.asarray([[0.25, -0.35, 0.02], [0.6, 0.35, 0.35]])
 
 # Box bounds for sampling the initial object position, in meters.
-_OBJECT_SAMPLING_BOUNDS = np.asarray([[0.3, -0.4], [0.55, 0.4]])
+_OBJECT_SAMPLING_BOUNDS = np.asarray([[0.3, -0.3], [0.55, 0.3]])
 
 # Box bounds for sampling the target position, in meters.
-_TARGET_SAMPLING_BOUNDS = np.asarray([[0.3, -0.4], [0.55, 0.4]])
+_TARGET_SAMPLING_BOUNDS = np.asarray([[0.3, -0.3], [0.55, 0.3]])
 
 # Actuator PD gains.
 _ACTUATOR_KP = np.asarray([4500, 4500, 4500, 2000, 2000, 500])
@@ -40,9 +40,9 @@ _ROBOTIQ_CONSTANT = 255.0
 _OBJECT_RGBAS = np.asarray(
     [
         [0.96, 0.26, 0.33, 1.0],
+        [0.35, 0.55, 0.91, 1.0],
         [1.0, 0.69, 0.21, 1.0],
         [0.06, 0.74, 0.21, 1.0],
-        [0.35, 0.55, 0.91, 1.0],
     ]
 )
 _OBJECT_THICKNESS = 0.02
@@ -71,7 +71,7 @@ _CAMERAS = {
 class RoboManipEnv(env.CustomMuJoCoEnv):
     def __init__(
         self,
-        env_type: str = 'cubes',
+        env_type: str = 'cube_single',
         pixel_observation: bool = False,
         absolute_action_space: bool = False,
         physics_timestep: float = 0.002,
@@ -97,11 +97,17 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._mode = mode
         self._visualize_info = visualize_info
 
-        if self._env_type == 'cube':
-            self._object_xml = _HERE / 'common' / 'cube.xml'
+        if self._env_type == 'cube_single':
+            self._object_xml = _HERE / 'common' / 'cube_1.xml'
             self._num_objects = 1
-        else:
-            self._object_xml = _HERE / 'common' / 'cubes.xml'
+        elif self._env_type == 'cube_double':
+            self._object_xml = _HERE / 'common' / 'cube_2.xml'
+            self._num_objects = 2
+        elif self._env_type == 'cube_triple':
+            self._object_xml = _HERE / 'common' / 'cube_3.xml'
+            self._num_objects = 3
+        elif self._env_type == 'cube_quadruple':
+            self._object_xml = _HERE / 'common' / 'cube_4.xml'
             self._num_objects = 4
 
         self._symmetry = _OBJECT_SYMMETRY
@@ -132,7 +138,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             self._cur_goal_ob = None
 
     def set_tasks(self):
-        if self._env_type == 'cube':
+        if self._env_type == 'cube_single':
             self.task_infos = [
                 dict(
                     task_name='task1',
@@ -141,28 +147,119 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 ),
                 dict(
                     task_name='task2',
-                    init_xyzs=np.array([[0.32, -0.38, 0.02]]),
-                    goal_xyzs=np.array([[0.53, 0.38, 0.02]]),
+                    init_xyzs=np.array([[0.35, 0.0, 0.02]]),
+                    goal_xyzs=np.array([[0.50, 0.0, 0.02]]),
+                ),
+                dict(
+                    task_name='task3',
+                    init_xyzs=np.array([[0.50, 0.0, 0.02]]),
+                    goal_xyzs=np.array([[0.35, 0.0, 0.02]]),
+                ),
+                dict(
+                    task_name='task4',
+                    init_xyzs=np.array([[0.35, -0.2, 0.02]]),
+                    goal_xyzs=np.array([[0.50, 0.2, 0.02]]),
+                ),
+                dict(
+                    task_name='task5',
+                    init_xyzs=np.array([[0.35, 0.2, 0.02]]),
+                    goal_xyzs=np.array([[0.50, -0.2, 0.02]]),
                 ),
             ]
-        else:
+        elif self._env_type == 'cube_double':
             self.task_infos = [
                 dict(
                     task_name='task1',
                     init_xyzs=np.array(
                         [
-                            [0.32, -0.38, 0.02],
-                            [0.53, -0.38, 0.02],
-                            [0.53, 0.38, 0.02],
-                            [0.32, 0.38, 0.02],
+                            [0.425, 0.0, 0.02],
+                            [0.425, -0.1, 0.02],
                         ]
                     ),
                     goal_xyzs=np.array(
                         [
-                            [0.3, 0, 0.02],
-                            [0.425, -0.125, 0.02],
-                            [0.55, 0, 0.02],
-                            [0.425, 0.125, 0.02],
+                            [0.425, 0.0, 0.02],
+                            [0.425, 0.1, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task2',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, -0.1, 0.02],
+                            [0.50, -0.1, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.35, 0.1, 0.02],
+                            [0.50, 0.1, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task3',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, 0.0, 0.02],
+                            [0.50, 0.0, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, -0.2, 0.02],
+                            [0.425, 0.2, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task4',
+                    init_xyzs=np.array(
+                        [
+                            [0.425, -0.1, 0.02],
+                            [0.425, 0.1, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, 0.1, 0.02],
+                            [0.425, -0.1, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task5',
+                    init_xyzs=np.array(
+                        [
+                            [0.425, -0.2, 0.02],
+                            [0.425, 0.2, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, 0.0, 0.02],
+                            [0.425, 0.0, 0.06],
+                        ]
+                    ),
+                ),
+            ]
+        elif self._env_type == 'cube_triple':
+            self.task_infos = [
+                dict(
+                    task_name='task1',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, -0.1, 0.02],
+                            [0.35, 0.1, 0.02],
+                            [0.50, -0.1, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.35, -0.1, 0.02],
+                            [0.35, 0.1, 0.02],
+                            [0.50, 0.1, 0.02],
                         ]
                     ),
                 ),
@@ -171,17 +268,15 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     init_xyzs=np.array(
                         [
                             [0.35, -0.2, 0.02],
+                            [0.35, 0.0, 0.02],
                             [0.35, 0.2, 0.02],
-                            [0.5, 0.2, 0.02],
-                            [0.5, -0.2, 0.02],
                         ]
                     ),
                     goal_xyzs=np.array(
                         [
-                            [0.5, -0.2, 0.02],
-                            [0.35, -0.2, 0.02],
-                            [0.35, 0.2, 0.02],
-                            [0.5, 0.2, 0.02],
+                            [0.50, 0.0, 0.02],
+                            [0.50, 0.2, 0.02],
+                            [0.50, -0.2, 0.02],
                         ]
                     ),
                 ),
@@ -189,18 +284,16 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     task_name='task3',
                     init_xyzs=np.array(
                         [
-                            [0.55, 0, 0.02],
-                            [0.425, -0.3, 0.02],
-                            [0.3, 0, 0.02],
-                            [0.425, 0.3, 0.02],
+                            [0.35, 0.0, 0.02],
+                            [0.50, -0.1, 0.02],
+                            [0.50, 0.1, 0.02],
                         ]
                     ),
                     goal_xyzs=np.array(
                         [
-                            [0.425, 0, 0.02],
-                            [0.425, 0, 0.06],
-                            [0.425, 0, 0.10],
-                            [0.425, 0, 0.14],
+                            [0.50, -0.1, 0.02],
+                            [0.50, 0.1, 0.02],
+                            [0.35, 0.0, 0.02],
                         ]
                     ),
                 ),
@@ -208,18 +301,16 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     task_name='task4',
                     init_xyzs=np.array(
                         [
-                            [0.425, -0.2, 0.02],
-                            [0.425, -0.2, 0.06],
                             [0.425, 0.2, 0.02],
                             [0.425, 0.2, 0.06],
+                            [0.425, 0.2, 0.10],
                         ]
                     ),
                     goal_xyzs=np.array(
                         [
-                            [0.425, 0.2, 0.02],
-                            [0.425, 0.2, 0.06],
-                            [0.425, -0.2, 0.02],
-                            [0.425, -0.2, 0.06],
+                            [0.35, -0.1, 0.02],
+                            [0.50, -0.2, 0.02],
+                            [0.50, 0.0, 0.02],
                         ]
                     ),
                 ),
@@ -227,41 +318,22 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     task_name='task5',
                     init_xyzs=np.array(
                         [
+                            [0.35, -0.1, 0.02],
+                            [0.50, -0.2, 0.02],
+                            [0.50, 0.0, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
                             [0.425, 0.2, 0.02],
                             [0.425, 0.2, 0.06],
                             [0.425, 0.2, 0.10],
-                            [0.425, 0.2, 0.14],
-                        ]
-                    ),
-                    goal_xyzs=np.array(
-                        [
-                            [0.425, -0.22, 0.02],
-                            [0.425, -0.22, 0.06],
-                            [0.425, -0.18, 0.02],
-                            [0.425, -0.18, 0.06],
-                        ]
-                    ),
-                ),
-                dict(
-                    task_name='task6',
-                    init_xyzs=np.array(
-                        [
-                            [0.35, -0.2, 0.02],
-                            [0.5, -0.2, 0.02],
-                            [0.5, 0.2, 0.02],
-                            [0.35, 0.2, 0.02],
-                        ]
-                    ),
-                    goal_xyzs=np.array(
-                        [
-                            [0.425, 0.0, 0.02],
-                            [0.5, -0.2, 0.02],
-                            [0.5, 0.2, 0.02],
-                            [0.35, 0.2, 0.02],
                         ]
                     ),
                 ),
             ]
+        else:
+            raise NotImplementedError
         self.num_tasks = len(self.task_infos)
 
     def build_mjcf_model(self) -> mjcf.RootElement:
@@ -413,18 +485,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         return super().reset(*args, **kwargs)
 
-    def initialize_episode(self):
-        # TODO: Refactor
-
-        for i in range(self._num_objects):
-            for gid in self._object_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
-            for gid in self._object_target_geom_ids_list[i]:
-                self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
-
-        self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
-        mujoco.mj_kinematics(self._model, self._data)
-
+    def initialize_arm(self):
         # Sample initial effector position and orientation.
         eff_pos = self.np_random.uniform(*self._workspace_bounds)
         cur_ori = _EFFECTOR_DOWN_ROTATION
@@ -444,7 +505,19 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._data.qpos[self._arm_joint_ids] = qpos_init
         mujoco.mj_forward(self._model, self._data)
 
+    def initialize_episode(self):
+        for i in range(self._num_objects):
+            for gid in self._object_geom_ids_list[i]:
+                self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
+            for gid in self._object_target_geom_ids_list[i]:
+                self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
+
+        self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
+        mujoco.mj_kinematics(self._model, self._data)
+
         if self._mode == 'data_collection':
+            self.initialize_arm()
+
             # Randomize object positions and orientations.
             for i in range(self._num_objects):
                 xy = self.np_random.uniform(*self._object_sampling_bounds)
@@ -467,36 +540,21 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             # First set the current scene to the goal state to get the goal observation.
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
-            eff_pos = np.random.uniform([0.25, -0.45, 0.20], [0.6, 0.45, 0.35])
-            cur_ori = _EFFECTOR_DOWN_ROTATION
-            yaw = self.np_random.uniform(-np.pi, np.pi)
-            rotz = lie.SO3.from_z_radians(yaw)
-            eff_ori = rotz @ cur_ori
-
-            T_wp = lie.SE3.from_rotation_and_translation(eff_ori, eff_pos)
-            T_wa = T_wp @ self._T_pa
-            qpos_init = self._ik.solve(
-                pos=T_wa.translation(),
-                quat=T_wa.rotation().wxyz,
-                curr_qpos=_HOME_QPOS,
-            )
-
-            self._data.qpos[self._arm_joint_ids] = qpos_init
+            self.initialize_arm()
             for i in range(self._num_objects):
                 self._data.joint(f'object_joint_{i}').qpos[:3] = goal_xyzs[i]
                 self._data.joint(f'object_joint_{i}').qpos[3:] = lie.SO3.identity().wxyz.tolist()
                 self._data.mocap_pos[self._object_target_mocap_ids[i]] = goal_xyzs[i]
                 self._data.mocap_quat[self._object_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
             mujoco.mj_forward(self._model, self._data)
-
             for _ in range(2):
                 self.step(self.action_space.sample())
-
             self._cur_goal_ob = self.compute_observation()
 
             # Now do the actual reset.
             self._data.qpos[:] = saved_qpos
             self._data.qvel[:] = saved_qvel
+            self.initialize_arm()
             for i in range(self._num_objects):
                 obj_pos = init_xyzs[i].copy()
                 obj_pos[:2] += self.np_random.uniform(-0.01, 0.01, size=2)
@@ -509,6 +567,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         # Forward kinematics to update site positions.
         mujoco.mj_forward(self._model, self._data)
+        self.post_step()
 
         self._success = False
 
@@ -521,10 +580,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             for j in range(self._num_objects):
                 if i == j:
                     continue
-                if (
-                        block_xyzs[j][2] > block_xyzs[i][2]
-                        and np.linalg.norm(block_xyzs[i][:2] - block_xyzs[j][:2]) < 0.02
-                ):
+                if block_xyzs[j][2] > block_xyzs[i][2] and np.linalg.norm(block_xyzs[i][:2] - block_xyzs[j][:2]) < 0.02:
                     break
             else:
                 top_blocks.append(i)
@@ -646,7 +702,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         for i in range(self._num_objects):
             obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
             tar_pos = self._data.mocap_pos[self._object_target_mocap_ids[i]]
-            if np.linalg.norm(obj_pos - tar_pos) <= 0.03:
+            if np.linalg.norm(obj_pos - tar_pos) <= 0.04:
                 object_successes.append(True)
             else:
                 object_successes.append(False)
@@ -689,10 +745,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             [np.clip(np.linalg.norm(self._data.body('ur5e/robotiq/right_pad').cfrc_ext) / 50, 0, 1)]
         )
 
-        ob_info['proprio_aux/gripper_closed'] = (ob_info['proprio/gripper_contact'] > 0.5).astype(np.float64)
-        ob_info['proprio_aux/gripper_open'] = (ob_info['proprio/gripper_contact'] < 0.1).astype(np.float64)
-        ob_info['proprio_aux/above'] = (ob_info['proprio/effector_pos'][[2]] > 0.16).astype(np.float64)
-
         # Privileged observations.
         for i in range(self._num_objects):
             ob_info[f'privileged/block_{i}_pos'] = self._data.joint(f'object_joint_{i}').qpos[:3].copy()
@@ -700,15 +752,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             ob_info[f'privileged/block_{i}_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
             )
-
-            effector_pos = ob_info['proprio/effector_pos']
-            block_pos = ob_info[f'privileged/block_{i}_pos']
-            ob_info[f'privileged_aux/block_{i}_xy_aligned'] = np.array(
-                [np.linalg.norm(block_pos[:2] - effector_pos[:2]) <= 0.04]
-            ).astype(np.float64)
-            ob_info[f'privileged_aux/block_{i}_pos_aligned'] = np.array(
-                [np.linalg.norm(block_pos - effector_pos) <= 0.02]
-            ).astype(np.float64)
 
         if self._mode == 'data_collection':
             target_mocap_id = self._object_target_mocap_ids[self._target_block]
@@ -743,9 +786,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             np.sin(ob_info['proprio/effector_yaw']),
             ob_info['proprio/gripper_opening'] * gripper_scaler,
             ob_info['proprio/gripper_contact'],
-            ob_info['proprio_aux/gripper_closed'],
-            ob_info['proprio_aux/gripper_open'],
-            ob_info['proprio_aux/above'],
         ]
         for i in range(self._num_objects):
             obs.extend(
@@ -754,8 +794,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                     ob_info[f'privileged/block_{i}_quat'],
                     np.cos(ob_info[f'privileged/block_{i}_yaw']),
                     np.sin(ob_info[f'privileged/block_{i}_yaw']),
-                    ob_info[f'privileged_aux/block_{i}_xy_aligned'],
-                    ob_info[f'privileged_aux/block_{i}_pos_aligned'],
                 ]
             )
 

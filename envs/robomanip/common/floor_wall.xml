@@ -14,9 +14,9 @@
   <worldbody>
     <light pos="0 0 2" directional="true"/>
     <geom name="floor" size="1 1 0.01" type="plane" material="grid"/>
-    <geom name="wall_0" size="0.003 0.48 0.2" pos="0.22 0 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
-    <geom name="wall_1" size="0.205 0.003 0.2" pos="0.425 -0.48 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
-    <geom name="wall_2" size="0.003 0.48 0.2" pos="0.63 0 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
-    <geom name="wall_3" size="0.205 0.003 0.2" pos="0.425 0.48 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_0" size="0.003 0.38 0.2" pos="0.22 0 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_1" size="0.205 0.003 0.2" pos="0.425 -0.38 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_2" size="0.003 0.38 0.2" pos="0.63 0 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
+    <geom name="wall_3" size="0.205 0.003 0.2" pos="0.425 0.38 0.1" type="box" rgba="0.5 0.5 0.5 0.1" contype="0" conaffinity="2" group="4"/>
   </worldbody>
 </mujoco>

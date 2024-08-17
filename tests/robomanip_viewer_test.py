@@ -12,7 +12,7 @@ def main() -> None:
     use_oracle = True
     oracle_type = 'closed'
     env = RoboManipEnv(
-        env_type='cubes',
+        env_type='cube_triple',
         absolute_action_space=(oracle_type == 'open'),
         terminate_at_goal=False,
         mode='data_collection',

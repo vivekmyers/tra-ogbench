@@ -44,7 +44,14 @@ def main(_):
     for ep_idx in trange(num_train_episodes + num_val_episodes):
         if FLAGS.dataset_type in ['play']:
             ob, info = env.reset()
-            p_stack = np.random.uniform(0.1, 0.5)
+            if 'single' in FLAGS.env_name:
+                p_stack = 0.0
+            elif 'double' in FLAGS.env_name:
+                p_stack = np.random.uniform(0.0, 0.25)
+            elif 'triple' in FLAGS.env_name:
+                p_stack = np.random.uniform(0.05, 0.35)
+            else:
+                p_stack = np.random.uniform(0.1, 0.5)
         else:
             ob, info = env.reset()
         xi = np.random.uniform(0, FLAGS.noise)

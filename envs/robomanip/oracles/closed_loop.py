@@ -16,7 +16,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
         self._done = False
         self._step = 0
         self._max_step = 200
-        self._final_pos = np.random.uniform([0.25, -0.45, 0.20], [0.6, 0.45, 0.35])
+        self._final_pos = np.random.uniform([0.25, -0.35, 0.20], [0.6, 0.35, 0.35])
         self._final_yaw = np.random.uniform(-np.pi, np.pi)
 
         self._block_above_offset = np.array([0, 0, 0.18])

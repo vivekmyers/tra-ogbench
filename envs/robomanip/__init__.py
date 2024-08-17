@@ -1,18 +1,34 @@
 from gymnasium.envs.registration import register
 
 register(
-    id='cube-v0',
+    id='cube-single-v0',
     entry_point='envs.robomanip.robomanip:RoboManipEnv',
     max_episode_steps=200,
     kwargs=dict(
-        env_type='cube',
+        env_type='cube_single',
     ),
 )
 register(
-    id='cubes-v0',
+    id='cube-double-v0',
+    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    max_episode_steps=500,
+    kwargs=dict(
+        env_type='cube_double',
+    ),
+)
+register(
+    id='cube-triple-v0',
     entry_point='envs.robomanip.robomanip:RoboManipEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='cubes',
+        env_type='cube_triple',
+    ),
+)
+register(
+    id='cube-quadruple-v0',
+    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='cube_quadruple',
     ),
 )
