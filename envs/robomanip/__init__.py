@@ -1,6 +1,17 @@
 from gymnasium.envs.registration import register
 
 register(
+    id='cube-online-v0',
+    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    max_episode_steps=75,
+    kwargs=dict(
+        env_type='cube_single',
+        mode='online',
+        terminate_at_goal=False,
+    ),
+)
+
+register(
     id='cube-single-v0',
     entry_point='envs.robomanip.robomanip:RoboManipEnv',
     max_episode_steps=200,

@@ -134,6 +134,13 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         """Returns a dictionary of information to be included in the step return."""
         return {}
 
+    def pre_step(self) -> None:
+        """Performs any pre-step operations.
+
+        This can be useful for saving information. By default, this method does nothing.
+        """
+        pass
+
     def post_step(self) -> None:
         """Performs any post-step operations.
 
@@ -231,6 +238,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         prev_qpos = self._data.qpos.copy()
         prev_qvel = self._data.qvel.copy()
         self.set_control(action)
+        self.pre_step()
         mujoco.mj_step(self._model, self._data, nstep=self._n_steps)
         mujoco.mj_rnePostConstraint(self._model, self._data)  # Compute contact forces.
         self.post_step()

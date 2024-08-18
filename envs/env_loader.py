@@ -191,7 +191,6 @@ def make_online_env(env_name):
 
     if 'Ant' in env_name or 'Humanoid' in env_name:
         import envs.locomotion  # noqa
-        import gymnasium
 
         if '-xy' in env_name:
             env_name = env_name.replace('-xy', '')
@@ -215,6 +214,11 @@ def make_online_env(env_name):
             else:
                 env = GymXYWrapper(env, resample_interval=100 if 'Ant' in env_name else 200)
 
+        env = EpisodeMonitor(env)
+    elif 'cube' in env_name:
+        import envs.robomanip  # noqa
+
+        env = gymnasium.make(env_name)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')

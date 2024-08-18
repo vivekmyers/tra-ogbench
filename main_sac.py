@@ -132,6 +132,7 @@ def main(_):
             expl_rng, key = jax.random.split(expl_rng)
             action = agent.sample_actions(observations=ob, seed=key)
 
+        action = np.array(action)
         next_ob, reward, terminated, truncated, info = env.step(action)
         if FLAGS.terminate_at_end and truncated:
             terminated = True

@@ -77,7 +77,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         physics_timestep: float = 0.002,
         control_timestep: float = 0.05,
         terminate_at_goal: bool = True,
-        mode: str = 'evaluation',  # 'evaluation' or 'data_collection'
+        mode: str = 'evaluation',  # 'evaluation' or 'data_collection' or 'online'
         visualize_info: bool = True,  # Whether to visualize the targets and successes.
         **kwargs,
     ):
@@ -515,7 +515,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
         mujoco.mj_kinematics(self._model, self._data)
 
-        if self._mode == 'data_collection':
+        if self._mode in ['data_collection', 'online']:
             self.initialize_arm()
 
             # Randomize object positions and orientations.
@@ -572,7 +572,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._success = False
 
     def set_new_target(self, return_info=True, p_stack=0.5):
-        assert self._mode == 'data_collection'
+        assert self._mode in ['data_collection', 'online']
 
         block_xyzs = np.array([self._data.joint(f'object_joint_{i}').qpos[:3] for i in range(self._num_objects)])
         top_blocks = []
@@ -596,8 +596,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             tar_pos = np.array([block_pos[0], block_pos[1], block_pos[2] + 2 * self._object_z])
         else:
             # Randomize target position and orientation.
-            xy = self.np_random.uniform(*self._target_sampling_bounds)
-            tar_pos = (*xy, self._object_z)
+            if self._mode == 'online':
+                xy = self.np_random.uniform(*self._target_sampling_bounds)
+                z = self.np_random.uniform(0.02, 0.22)
+                tar_pos = (*xy, z)
+            else:
+                xy = self.np_random.uniform(*self._target_sampling_bounds)
+                tar_pos = (*xy, self._object_z)
         yaw = self.np_random.uniform(0, 2 * np.pi)
         tar_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
         for i in range(self._num_objects):
@@ -697,6 +702,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._data.ctrl[self._arm_actuator_ids] = qpos_target
         self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * target_gripper_opening
 
+    def pre_step(self) -> None:
+        self._prev_ob_info = self.compute_ob_info()
+
     def post_step(self) -> None:
         object_successes = []
         for i in range(self._num_objects):
@@ -707,7 +715,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             else:
                 object_successes.append(False)
 
-        if self._mode == 'data_collection':
+        if self._mode in ['data_collection', 'online']:
             self._success = object_successes[self._target_block]
         else:
             self._success = all(object_successes)
@@ -753,7 +761,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
             )
 
-        if self._mode == 'data_collection':
+        if self._mode in ['data_collection', 'online']:
             target_mocap_id = self._object_target_mocap_ids[self._target_block]
             ob_info['target_block'] = self._target_block
             ob_info['privileged/target_pos'] = self._data.mocap_pos[target_mocap_id].copy()
@@ -797,10 +805,37 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 ]
             )
 
+        if self._mode == 'online':
+            obs.extend(
+                [
+                    (ob_info['privileged/target_pos'] - xyz_center) * xyz_scaler,
+                    np.cos(ob_info['privileged/target_yaw']),
+                    np.sin(ob_info['privileged/target_yaw']),
+                ]
+            )
+
         return np.concatenate(obs)
 
     def compute_reward(self, obs: dict[str, np.ndarray], action: np.ndarray) -> float:
-        return 0.0
+        if self._mode == 'online':
+            prev_eff_pos = self._prev_ob_info['proprio/effector_pos']
+            prev_block_pos = self._prev_ob_info[f'privileged/block_{self._target_block}_pos']
+
+            ob_info = self.compute_ob_info()
+            eff_pos = ob_info['proprio/effector_pos']
+            block_pos = ob_info[f'privileged/block_{self._target_block}_pos']
+            target_pos = ob_info['privileged/target_pos']
+
+            prev_agent_block_dist = np.linalg.norm(prev_eff_pos - prev_block_pos)
+            agent_block_dist = np.linalg.norm(eff_pos - block_pos)
+            prev_block_goal_dist = np.linalg.norm(prev_block_pos - target_pos)
+            block_goal_dist = np.linalg.norm(block_pos - target_pos)
+
+            reward = ((prev_block_goal_dist - block_goal_dist) * 125 + (prev_agent_block_dist - agent_block_dist)) * 500
+
+            return reward
+        else:
+            return 0.0
 
     def get_reset_info(self) -> dict:
         reset_info = self.compute_ob_info()
