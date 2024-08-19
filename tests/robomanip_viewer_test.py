@@ -10,7 +10,7 @@ SPEED_UP = 3.0
 
 def main() -> None:
     use_oracle = True
-    oracle_type = 'closed'
+    oracle_type = 'learned'
     env = RoboManipEnv(
         env_type='cube_double',
         absolute_action_space=(oracle_type == 'open'),
@@ -25,8 +25,15 @@ def main() -> None:
     if use_oracle:
         if oracle_type == 'open':
             agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
-        else:
+        elif oracle_type == 'closed':
             agent = oracles.ClosedLoopCubeOracle()
+        else:
+            agent = oracles.LearnedCubeOracle(
+                'exp/restore/sd320002',
+                4000000,
+                env.observation_space.shape[0] + 5,
+                env.action_space.shape[0],
+            )
         agent.reset(obs, info)
     step = 0
     with env.passive_viewer(key_callback=key_callback) as viewer:
@@ -45,7 +52,7 @@ def main() -> None:
                         action = agent.select_action(obs, info)
                         if oracle_type == 'open':
                             action = env.normalize_action(action)
-                        # action = action + np.random.uniform(-0.25, 0.25, size=action.shape)
+                        action = np.array(action)
                         action = np.clip(action, -1, 1)
                     else:
                         action = env.action_space.sample()

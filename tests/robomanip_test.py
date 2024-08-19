@@ -1,12 +1,14 @@
+import numpy as np
+
 from envs.robomanip import oracles
 from envs.robomanip.robomanip import RoboManipEnv
 
 
 def main():
     use_oracle = True
-    oracle_type = 'closed'
+    oracle_type = 'learned'
     env = RoboManipEnv(
-        env_type='cubes',
+        env_type='cube_single',
         absolute_action_space=(oracle_type == 'open'),
         terminate_at_goal=False,
         mode='data_collection',
@@ -15,8 +17,15 @@ def main():
     ob, info = env.reset(seed=12345)
     if oracle_type == 'open':
         agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
-    else:
+    elif oracle_type == 'closed':
         agent = oracles.ClosedLoopCubeOracle()
+    else:
+        agent = oracles.LearnedCubeOracle(
+            'exp/restore/sd320002',
+            4000000,
+            env.observation_space.shape[0] + 5,
+            env.action_space.shape[0],
+        )
     agent.reset(ob, info)
     ob, info = env.reset()
     agent.reset(ob, info)
@@ -26,6 +35,7 @@ def main():
         action = agent.select_action(ob, info)
         if oracle_type == 'open':
             action = env.normalize_action(action)
+        action = np.array(action)
         ob, _, _, _, info = env.step(action)
         obs.append(ob)
         step += 1
