@@ -49,21 +49,9 @@ _OBJECT_THICKNESS = 0.02
 _OBJECT_SYMMETRY = np.pi / 2
 
 _CAMERAS = {
-    'overhead_left': {
-        'pos': (-0.3, -0.263, 1),
-        'xyaxes': (0, -1, 0, 0.821, 0, 0.571),
-    },
-    'overhead_right': {
-        'pos': (-0.3, 0.263, 1),
-        'xyaxes': (0, -1, 0, 0.821, 0, 0.571),
-    },
     'front': {
-        'pos': (1.171, 0.002, 0.753),
-        'xyaxes': (-0.002, 1.000, -0.000, -0.569, -0.001, 0.822),
-    },
-    'topdown': {
-        'pos': (0.5, 0.0, 1),
-        'euler': (0.0, 0.0, 1.57),
+        'pos': (0.905, 0.000, 0.762),
+        'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
     },
 }
 
@@ -72,7 +60,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
     def __init__(
         self,
         env_type: str = 'cube_single',
-        pixel_observation: bool = False,
+        ob_type: str = 'states',
         absolute_action_space: bool = False,
         physics_timestep: float = 0.002,
         control_timestep: float = 0.05,
@@ -91,11 +79,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._object_sampling_bounds = _OBJECT_SAMPLING_BOUNDS
         self._target_sampling_bounds = _TARGET_SAMPLING_BOUNDS
         self._env_type = env_type
-        self._pixel_observation = pixel_observation
+        self._ob_type = ob_type
         self._absolute_action_space = absolute_action_space
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
         self._visualize_info = visualize_info
+
+        assert ob_type in ['states', 'pixels']
 
         if self._env_type == 'cube_single':
             self._object_xml = _HERE / 'common' / 'cube_1.xml'
@@ -394,6 +384,14 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._gripper_jnts = mjcf_utils.safe_find_all(gripper_mjcf, 'joint', exclude_attachments=True)
         self._gripper_acts = mjcf_utils.safe_find_all(gripper_mjcf, 'actuator', exclude_attachments=True)
 
+        if self._ob_type == 'pixels':
+            # Change the colors.
+            arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = np.array([1.0, 1.0, 1.0, 1.0])
+            arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba = np.array([1.0, 1.0, 1.0, 1.0])
+            grid = arena_mjcf.find('texture', 'grid')
+            grid.builtin = 'gradient'
+            grid.mark = 'edge'
+
         # ================================ #
         # Visualization.
         # ================================ #
@@ -569,6 +567,8 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         mujoco.mj_forward(self._model, self._data)
         self.post_step()
 
+        self._prev_qpos = self._data.qpos.copy()
+        self._prev_qvel = self._data.qvel.copy()
         self._success = False
 
     def set_new_target(self, return_info=True, p_stack=0.5):
@@ -704,6 +704,8 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
     def pre_step(self) -> None:
         self._prev_ob_info = self.compute_ob_info()
+        self._prev_qpos = self._data.qpos.copy()
+        self._prev_qvel = self._data.qvel.copy()
 
     def post_step(self) -> None:
         object_successes = []
@@ -769,11 +771,10 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 [lie.SO3(wxyz=self._data.mocap_quat[target_mocap_id]).compute_yaw_radians()]
             )
 
-        if self._pixel_observation:
-            for cam_name in ['front', 'overhead_left', 'overhead_right', 'topdown']:
-                ob_info[f'rgb/{cam_name}'] = self.render(camera=cam_name)
-                ob_info[f'depth/{cam_name}'] = self.render(camera=cam_name, depth=True)
-
+        ob_info['prev_qpos'] = self._prev_qpos
+        ob_info['prev_qvel'] = self._prev_qvel
+        ob_info['qpos'] = self._data.qpos.copy()
+        ob_info['qvel'] = self._data.qvel.copy()
         ob_info['control'] = self._data.ctrl.copy()
         ob_info['contact'] = self._data.cfrc_ext.copy()
         ob_info['time'] = np.array([self._data.time])
@@ -781,42 +782,46 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         return ob_info
 
     def compute_observation(self) -> Any:
-        xyz_center = np.array([0.425, 0.0, 0.0])
-        xyz_scaler = 10
-        gripper_scaler = 3
+        if self._ob_type == 'pixels':
+            frame = self.render(camera='front')
+            return frame
+        else:
+            xyz_center = np.array([0.425, 0.0, 0.0])
+            xyz_scaler = 10
+            gripper_scaler = 3
 
-        ob_info = self.compute_ob_info()
-        obs = [
-            ob_info['proprio/joint_pos'],
-            ob_info['proprio/joint_vel'],
-            (ob_info['proprio/effector_pos'] - xyz_center) * xyz_scaler,
-            np.cos(ob_info['proprio/effector_yaw']),
-            np.sin(ob_info['proprio/effector_yaw']),
-            ob_info['proprio/gripper_opening'] * gripper_scaler,
-            ob_info['proprio/gripper_contact'],
-        ]
-        for i in range(self._num_objects):
-            obs.extend(
-                [
-                    (ob_info[f'privileged/block_{i}_pos'] - xyz_center) * xyz_scaler,
-                    ob_info[f'privileged/block_{i}_quat'],
-                    np.cos(ob_info[f'privileged/block_{i}_yaw']),
-                    np.sin(ob_info[f'privileged/block_{i}_yaw']),
-                ]
-            )
+            ob_info = self.compute_ob_info()
+            ob = [
+                ob_info['proprio/joint_pos'],
+                ob_info['proprio/joint_vel'],
+                (ob_info['proprio/effector_pos'] - xyz_center) * xyz_scaler,
+                np.cos(ob_info['proprio/effector_yaw']),
+                np.sin(ob_info['proprio/effector_yaw']),
+                ob_info['proprio/gripper_opening'] * gripper_scaler,
+                ob_info['proprio/gripper_contact'],
+            ]
+            for i in range(self._num_objects):
+                ob.extend(
+                    [
+                        (ob_info[f'privileged/block_{i}_pos'] - xyz_center) * xyz_scaler,
+                        ob_info[f'privileged/block_{i}_quat'],
+                        np.cos(ob_info[f'privileged/block_{i}_yaw']),
+                        np.sin(ob_info[f'privileged/block_{i}_yaw']),
+                    ]
+                )
 
-        if self._mode == 'online':
-            obs.extend(
-                [
-                    (ob_info['privileged/target_pos'] - xyz_center) * xyz_scaler,
-                    np.cos(ob_info['privileged/target_yaw']),
-                    np.sin(ob_info['privileged/target_yaw']),
-                ]
-            )
+            if self._mode == 'online':
+                ob.extend(
+                    [
+                        (ob_info['privileged/target_pos'] - xyz_center) * xyz_scaler,
+                        np.cos(ob_info['privileged/target_yaw']),
+                        np.sin(ob_info['privileged/target_yaw']),
+                    ]
+                )
 
-        return np.concatenate(obs)
+            return np.concatenate(ob)
 
-    def compute_reward(self, obs: dict[str, np.ndarray], action: np.ndarray) -> float:
+    def compute_reward(self, ob: dict[str, np.ndarray], action: np.ndarray) -> float:
         if self._mode == 'online':
             prev_eff_pos = self._prev_ob_info['proprio/effector_pos']
             prev_block_pos = self._prev_ob_info[f'privileged/block_{self._target_block}_pos']

@@ -45,7 +45,7 @@ class LearnedCubeOracle(oracle.Oracle):
         d = np.argmin(np.abs(eff_yaw - symmetries))
         return symmetries[d]
 
-    def reset(self, obs, info):
+    def reset(self, ob, info):
         self._done = False
         self._step = 0
         self._max_step = 75
@@ -63,7 +63,7 @@ class LearnedCubeOracle(oracle.Oracle):
         self._target_pos[2] = 0.18
         self._target_yaw = info['privileged/target_yaw']
 
-    def select_action(self, obs, info):
+    def select_action(self, ob, info):
         if self._phase == 'reach_midpoint':
             block_pos = info[f'privileged/block_{info["target_block"]}_pos']
             success = np.linalg.norm(block_pos - self._target_pos) < 0.04
@@ -87,16 +87,16 @@ class LearnedCubeOracle(oracle.Oracle):
 
         if self._phase in ['reach_midpoint', 'reach_target']:
             target_block_idx = 19 + 9 * info['target_block']
-            agent_obs = np.concatenate(
+            agent_ob = np.concatenate(
                 [
-                    obs[:19],
-                    obs[target_block_idx:target_block_idx + 9],
+                    ob[:19],
+                    ob[target_block_idx:target_block_idx + 9],
                     (self._target_pos - self._xyz_center) * self._xyz_scaler,
                     np.cos(self._target_yaw),
                     np.sin(self._target_yaw),
                 ]
             )
-            action = self.actor_fn(agent_obs, temperature=0)
+            action = self.actor_fn(agent_ob, temperature=0)
         elif self._phase == 'reinitialize':
             diff_pos = self._target_pos - info['proprio/effector_pos']
             diff_yaw = self._target_yaw - info['proprio/effector_yaw'][0]

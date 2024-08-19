@@ -1,6 +1,7 @@
 from gymnasium.envs.registration import register
 
 visual_dict = dict(
+    ob_type='pixels',
     render_mode='rgb_array',
     width=64,
     height=64,
@@ -26,7 +27,6 @@ register(
         loco_env_type='quad',
         maze_env_type='maze',
         maze_type='medium',
-        ob_type='pixels',
         **visual_dict,
     ),
 )
@@ -48,7 +48,6 @@ register(
         loco_env_type='quad',
         maze_env_type='maze',
         maze_type='large',
-        ob_type='pixels',
         **visual_dict,
     ),
 )
@@ -70,7 +69,6 @@ register(
         loco_env_type='quad',
         maze_env_type='maze',
         maze_type='giant',
-        ob_type='pixels',
         **visual_dict,
     ),
 )
@@ -114,7 +112,6 @@ register(
         loco_env_type='humanoid',
         maze_env_type='maze',
         maze_type='medium',
-        ob_type='pixels',
         **visual_dict,
     ),
 )
@@ -136,7 +133,6 @@ register(
         loco_env_type='humanoid',
         maze_env_type='maze',
         maze_type='large',
-        ob_type='pixels',
         **visual_dict,
     ),
 )

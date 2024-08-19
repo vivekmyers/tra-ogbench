@@ -10,7 +10,7 @@ SPEED_UP = 3.0
 
 def main() -> None:
     use_oracle = True
-    oracle_type = 'learned'
+    oracle_type = 'closed'
     env = RoboManipEnv(
         env_type='cube_double',
         absolute_action_space=(oracle_type == 'open'),

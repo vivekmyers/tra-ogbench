@@ -90,7 +90,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def compute_reward(self, obs, action) -> SupportsFloat:
+    def compute_reward(self, ob, action) -> SupportsFloat:
         """Computes the reward at each timestep."""
         raise NotImplementedError
 
@@ -211,9 +211,9 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         self._reset_next_step = False
         self.initialize_episode()
         mujoco.mj_forward(self._model, self._data)
-        obs = self.compute_observation()
+        ob = self.compute_observation()
         info = self.get_reset_info()
-        return obs, info
+        return ob, info
 
     def set_state(self, qpos, qvel):
         """Resets the environment to a specific state."""
@@ -235,8 +235,6 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         """
         if self._reset_next_step:
             return self.reset()
-        prev_qpos = self._data.qpos.copy()
-        prev_qvel = self._data.qvel.copy()
         self.set_control(action)
         self.pre_step()
         mujoco.mj_step(self._model, self._data, nstep=self._n_steps)
@@ -249,20 +247,10 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         # the termination / truncation methods (e.g., changing the color of a geom to
         # indicate success) is reflected in the final observation (e.g., when using
         # pixel observations).
-        obs = self.compute_observation()
-        reward = self.compute_reward(obs, action)
+        ob = self.compute_observation()
+        reward = self.compute_reward(ob, action)
         info = self.get_step_info()
-        qpos = self._data.qpos.copy()
-        qvel = self._data.qvel.copy()
-        info.update(
-            {
-                'prev_qpos': prev_qpos,
-                'prev_qvel': prev_qvel,
-                'qpos': qpos,
-                'qvel': qvel,
-            }
-        )
-        return obs, reward, terminated, truncated, info
+        return ob, reward, terminated, truncated, info
 
     @property
     def action_space(self):

@@ -12,7 +12,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
         d = np.argmin(np.abs(eff_yaw - symmetries))
         return symmetries[d]
 
-    def reset(self, obs, info):
+    def reset(self, ob, info):
         self._done = False
         self._step = 0
         self._max_step = 200
@@ -20,7 +20,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
         self._final_yaw = np.random.uniform(-np.pi, np.pi)
         self._block_above_offset = np.array([0, 0, 0.18])
 
-    def select_action(self, obs, info):
+    def select_action(self, ob, info):
         debug = False
 
         effector_pos = info['proprio/effector_pos']

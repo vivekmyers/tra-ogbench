@@ -97,7 +97,7 @@ class OpenLoopCubeOracle(oracle.Oracle):
 
         return times, X_WG, grasps
 
-    def reset(self, obs, info) -> None:
+    def reset(self, ob, info) -> None:
         target_block = info['target_block']
         X_O = {
             'initial': self.to_pose(
@@ -131,7 +131,7 @@ class OpenLoopCubeOracle(oracle.Oracle):
         self._traj = piecewise_pose.PiecewisePose.make_linear(sample_times, poses)
         self._gripper_traj = piecewise_polynomial.FirstOrderHold(sample_times, grasps)
 
-    def select_action(self, obs, info):
+    def select_action(self, ob, info):
         t = np.clip(info['time'][0] - self._t_init, 0.0, self._t_max)
         self._done = info['time'][0] - self._t_init >= self._t_max
         pose = self._traj.value(t)
