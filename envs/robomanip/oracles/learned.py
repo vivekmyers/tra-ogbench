@@ -75,7 +75,6 @@ class LearnedCubeOracle(oracle.Oracle):
             success = np.linalg.norm(effector_pos - self._target_pos) < 0.04
 
         if success:
-            print(self._phase, 'success')
             if self._phase == 'reach_midpoint':
                 self._phase = 'reach_target'
                 self._target_pos = info['privileged/target_pos']
