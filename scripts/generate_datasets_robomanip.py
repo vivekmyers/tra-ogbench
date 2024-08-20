@@ -11,11 +11,8 @@ from envs.robomanip import oracles
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('seed', 0, 'Random seed')
-flags.DEFINE_string('env_name', 'cubes-v0', 'Environment name')
+flags.DEFINE_string('env_name', 'cube-single-v0', 'Environment name')
 flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
-flags.DEFINE_string('oracle_type', 'closed', 'Oracle type')
-flags.DEFINE_string('cube_restore_path', None, 'Cube agent restore path')
-flags.DEFINE_integer('cube_restore_epoch', None, 'Cube agent restore epoch')
 flags.DEFINE_string('save_path', None, 'Save path')
 flags.DEFINE_float('noise', 0.05, 'Action noise')
 flags.DEFINE_float('min_norm', 0.3, 'Action min norm')
@@ -32,17 +29,7 @@ def main(_):
         max_episode_steps=FLAGS.max_episode_steps,
     )
 
-    if FLAGS.oracle_type == 'open':
-        agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
-    elif FLAGS.oracle_type == 'closed':
-        agent = oracles.ClosedLoopCubeOracle(min_norm=FLAGS.min_norm)
-    elif FLAGS.oracle_type == 'learned':
-        agent = oracles.LearnedCubeOracle(
-            FLAGS.cube_restore_path,
-            FLAGS.cube_restore_epoch,
-            env.observation_space.shape[0] + 5,
-            env.action_space.shape[0],
-        )
+    agent = oracles.ClosedLoopCubeOracle(min_norm=FLAGS.min_norm)
 
     dataset = defaultdict(list)
 
@@ -74,8 +61,6 @@ def main(_):
                 action = env.action_space.sample()
             else:
                 action = agent.select_action(ob, info)
-                if FLAGS.oracle_type == 'open':
-                    action = env.unwrapped.normalize_action(action)
                 action = np.array(action)
                 action = action + np.random.normal(0, [xi, xi, xi, xi * 3, xi * 10], action.shape)
             action = np.clip(action, -1, 1)

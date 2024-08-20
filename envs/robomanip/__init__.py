@@ -9,7 +9,7 @@ visual_dict = dict(
 
 register(
     id='cube-online-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=75,
     kwargs=dict(
         env_type='cube_single',
@@ -20,7 +20,7 @@ register(
 
 register(
     id='cube-single-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=200,
     kwargs=dict(
         env_type='cube_single',
@@ -28,7 +28,7 @@ register(
 )
 register(
     id='visual-cube-single-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=200,
     kwargs=dict(
         env_type='cube_single',
@@ -37,7 +37,7 @@ register(
 )
 register(
     id='cube-double-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=500,
     kwargs=dict(
         env_type='cube_double',
@@ -45,7 +45,7 @@ register(
 )
 register(
     id='visual-cube-double-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=500,
     kwargs=dict(
         env_type='cube_double',
@@ -54,7 +54,7 @@ register(
 )
 register(
     id='cube-triple-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_triple',
@@ -62,7 +62,7 @@ register(
 )
 register(
     id='visual-cube-triple-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_triple',
@@ -71,7 +71,7 @@ register(
 )
 register(
     id='cube-quadruple-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_quadruple',
@@ -79,7 +79,7 @@ register(
 )
 register(
     id='visual-cube-quadruple-v0',
-    entry_point='envs.robomanip.robomanip:RoboManipEnv',
+    entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_quadruple',

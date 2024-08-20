@@ -100,7 +100,6 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         This simply forwards the action to the underlying actuators. Override this
         method to provide custom control logic such as end-effector Cartesian control.
         """
-        # TODO(kevin): Check for NaNs and check space compatibility.
         self._data.ctrl[:] = action
 
     def post_compilation(self) -> None:
@@ -242,11 +241,6 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         self.post_step()
         terminated = self.terminate_episode()
         truncated = self.truncate_episode()
-        # NOTE(kevin): We explicitly check for termination/truncation before computing
-        # the observation so that any logic that potentially modifies the model/data in
-        # the termination / truncation methods (e.g., changing the color of a geom to
-        # indicate success) is reflected in the final observation (e.g., when using
-        # pixel observations).
         ob = self.compute_observation()
         reward = self.compute_reward(ob, action)
         info = self.get_step_info()

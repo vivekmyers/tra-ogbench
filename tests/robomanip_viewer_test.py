@@ -3,17 +3,15 @@ import time
 import numpy as np
 
 from envs.robomanip import oracles, viewer_utils
-from envs.robomanip.robomanip import RoboManipEnv
+from envs.robomanip.cube import CubeEnv
 
 SPEED_UP = 3.0
 
 
 def main() -> None:
     use_oracle = True
-    oracle_type = 'closed'
-    env = RoboManipEnv(
+    env = CubeEnv(
         env_type='cube_double',
-        absolute_action_space=(oracle_type == 'open'),
         terminate_at_goal=False,
         mode='data_collection',
         # mode='evaluation',
@@ -23,17 +21,7 @@ def main() -> None:
     obs, info = env.reset(seed=12345)
     key_callback = viewer_utils.KeyCallback(pause=True)
     if use_oracle:
-        if oracle_type == 'open':
-            agent = oracles.OpenLoopCubeOracle(segment_dt=0.32)
-        elif oracle_type == 'closed':
-            agent = oracles.ClosedLoopCubeOracle()
-        else:
-            agent = oracles.LearnedCubeOracle(
-                'exp/restore/sd320002',
-                4000000,
-                env.observation_space.shape[0] + 5,
-                env.action_space.shape[0],
-            )
+        agent = oracles.ClosedLoopCubeOracle()
         agent.reset(obs, info)
     step = 0
     with env.passive_viewer(key_callback=key_callback) as viewer:
@@ -50,8 +38,6 @@ def main() -> None:
                 if not key_callback.pause:
                     if use_oracle:
                         action = agent.select_action(obs, info)
-                        if oracle_type == 'open':
-                            action = env.normalize_action(action)
                         action = np.array(action)
                         action = np.clip(action, -1, 1)
                     else:
