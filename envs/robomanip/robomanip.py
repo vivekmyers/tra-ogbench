@@ -648,7 +648,10 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         ex_ob = self.compute_observation()
 
-        return Box(low=-np.inf, high=np.inf, shape=ex_ob.shape, dtype=ex_ob.dtype)
+        if self._ob_type == 'pixels':
+            return Box(low=0, high=255, shape=ex_ob.shape, dtype=ex_ob.dtype)
+        else:
+            return Box(low=-np.inf, high=np.inf, shape=ex_ob.shape, dtype=ex_ob.dtype)
 
     def set_control(self, action):
         action = self.unnormalize_action(action)
