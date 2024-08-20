@@ -706,9 +706,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * target_gripper_opening
 
     def pre_step(self) -> None:
-        self._prev_ob_info = self.compute_ob_info()
         self._prev_qpos = self._data.qpos.copy()
         self._prev_qvel = self._data.qvel.copy()
+        self._prev_ob_info = self.compute_ob_info()
 
     def post_step(self) -> None:
         object_successes = []

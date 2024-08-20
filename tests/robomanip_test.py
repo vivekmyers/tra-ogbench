@@ -5,15 +5,14 @@ from envs.robomanip.robomanip import RoboManipEnv
 
 
 def main():
-    use_oracle = True
     oracle_type = 'closed'
     env = RoboManipEnv(
         env_type='cube_single',
         absolute_action_space=(oracle_type == 'open'),
         terminate_at_goal=False,
         mode='data_collection',
+        # mode='evaluation',
         visualize_info=True,
-        pixel_observation=True,
     )
     ob, info = env.reset(seed=12345)
     if oracle_type == 'open':
