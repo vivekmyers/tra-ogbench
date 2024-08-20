@@ -3,9 +3,9 @@
     <asset>
         <texture name="T_btn" type="cube" file="metaworld/buttonbox/metal1.png"/>
 
-        <material name="btn_col" rgba="0.3 0.3 1.0 0.5" shininess="0" specular="0"/>
-        <material name="btn_red" rgba=".6 0 0 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="btn_yellow" rgba=".7 .5 0 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="btn_col" rgba="0.96 0.26 0.33 0.5" shininess="0" specular="0"/>
+        <material name="btn_red" rgba="0.96 0.26 0.33 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="btn_top" rgba=".7 .7 .7 1" shininess="1" reflectance=".7" specular=".5"/>
         <material name="btn_black" rgba=".15 .15 .15 1" shininess="1" reflectance=".7" specular=".5"/>
         <material name="btn_metal" rgba=".8 .8 .8 1" texture="T_btn" shininess="1" reflectance="1" specular="1"/>
 
@@ -27,11 +27,11 @@
     </default>
 
     <asset>
-        <mesh file="metaworld/buttonbox/stopbot.stl" name="stopbot"/>
-        <mesh file="metaworld/buttonbox/stopbutton.stl" name="stopbutton"/>
-        <mesh file="metaworld/buttonbox/stopbuttonrim.stl" name="stopbuttonrim"/>
-        <mesh file="metaworld/buttonbox/stopbuttonrod.stl" name="stopbuttonrod"/>
-        <mesh file="metaworld/buttonbox/stoptop.stl" name="stoptop"/>
+        <mesh file="metaworld/buttonbox/stopbot.stl" name="stopbot" scale="1.0 1.0 1.0"/>
+        <mesh file="metaworld/buttonbox/stopbutton.stl" name="stopbutton" scale="1.0 1.0 1.0"/>
+        <mesh file="metaworld/buttonbox/stopbuttonrim.stl" name="stopbuttonrim" scale="1.0 1.0 1.0"/>
+        <mesh file="metaworld/buttonbox/stopbuttonrod.stl" name="stopbuttonrod" scale="1.0 1.0 1.0"/>
+        <mesh file="metaworld/buttonbox/stoptop.stl" name="stoptop" scale="1.0 1.0 1.0"/>
     </asset>
 
     <worldbody>
@@ -39,7 +39,7 @@
             <body childclass="buttonbox_base" name="buttonbox">
                 <geom material="btn_black" mesh="stopbot" pos="0 -0.06 0"/>
                 <geom material="btn_metal" euler="1.57 0 0" mesh="stopbuttonrim" pos="0 -0.089 0"/>
-                <geom material="btn_yellow" mesh="stoptop" pos="0 -0.06 0"/>
+                <geom material="btn_top" mesh="stoptop" pos="0 -0.06 0"/>
 
                 <geom class="buttonbox_col" pos="0 0.012 0.072" size="0.12 0.102 0.048" type="box"/>
                 <geom class="buttonbox_col" pos="0 0.012 -0.072" size="0.12 0.102 0.048" type="box"/>

@@ -2,16 +2,15 @@
     <compiler angle="radian" inertiafromgeom="auto" inertiagrouprange="1 5"/>
     <asset>
 
-        <material name="drawer_col" rgba="0.3 0.3 1.0 0.5" shininess="0" specular="0"/>
-        <material name="drawer_red" rgba="0.19 0.38 0.2 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="drawer_white" rgba=".75 .75 .75 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="drawer_beige" rgba=".4 .65 .4 1" shininess="1" reflectance="1" specular=".5"/>
+        <material name="drawer_col" rgba="0.96 0.26 0.33 0.5" shininess="0" specular="0"/>
+        <material name="drawer_handle" rgba=".75 .75 .75 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="drawer_body" rgba="0.6 0.6 0.6 1" shininess="1" reflectance="1" specular=".5"/>
 
     </asset>
     <default>
 
         <default class="drawer_base">
-            <joint armature="0.001" damping="2" limited="true"/>
+            <joint armature="0.001" damping="2" frictionloss="2" limited="true"/>
             <geom conaffinity="0" contype="0" group="1" type="mesh"/>
             <position ctrllimited="true" ctrlrange="0 1.57"/>
             <default class="drawer_viz">
@@ -31,8 +30,8 @@
     </asset>
     <worldbody>
         <body childclass="drawer_base">
-            <body name="drawercase_link" pos="0.33 -0.48 0.084" euler="0 0 3.14">
-                <geom material="drawer_beige" mesh="drawercase"/>
+            <body name="drawercase_link" pos="0.33 -0.4 0.084" euler="0 0 3.14">
+                <geom material="drawer_body" mesh="drawercase"/>
                 <geom class="drawer_col" pos="-0.11 0 0" size="0.008 0.1 0.084" type="box" mass=".05"/>
                 <geom class="drawer_col" pos="0.11 0 0" size="0.008 0.1 0.084" type="box" mass=".05"/>
                 <geom class="drawer_col" pos="0 0.092 -0.008" size="0.102 0.008 0.076" type="box" mass=".05"/>
@@ -40,8 +39,8 @@
                 <geom class="drawer_col" pos="0 0 0.076" size="0.102 0.1 0.008" type="box" mass=".05"/>
                 <body name="drawer_link" pos="0 -0.01 0.006">
                     <joint type="slide" range="-0.16 0" axis="0 1 0" name="goal_slidey" pos="0 0 0" damping="2"/>
-                    <geom material="drawer_beige" mesh="drawer"/>
-                    <geom material="drawer_white" mesh="drawerhandle" pos="0 -0.114 0" name="objGeom"/>
+                    <geom material="drawer_body" mesh="drawer"/>
+                    <geom material="drawer_handle" mesh="drawerhandle" pos="0 -0.114 0" name="objGeom"/>
                     <geom class="drawer_col" pos="0 -0.082 0.008" size="0.1 0.008 0.052" type="box" mass=".04"/>
                     <geom class="drawer_col" pos="0 0.082 0.008" size="0.1 0.008 0.052" type="box" mass=".04"/>
                     <geom class="drawer_col" pos="-0.092 0 0.008" size="0.008 0.074 0.052" type="box" mass=".04"/>

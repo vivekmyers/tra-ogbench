@@ -2,17 +2,15 @@
     <compiler angle="radian" inertiafromgeom="auto" inertiagrouprange="1 5"/>
     <asset>
 
-        <material name="window_col" rgba="0.3 0.3 1.0 0.5" shininess="0" specular="0"/>
-        <material name="window_white" rgba=".65 .65 .65 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="window_red" rgba=".36 .26 .27 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="window_green" rgba=".51 .58 .55 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="window_black" rgba=".3 .3 .3 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="window_col" rgba="0.96 0.26 0.33 0.5" shininess="0" specular="0"/>
+        <material name="window_handle" rgba=".65 .65 .65 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="window_body" rgba=".3 .3 .3 1" shininess="1" reflectance=".7" specular=".5"/>
         <material name="window_glass" rgba="0 .3 .4 .1" shininess="1" reflectance="1" specular=".5"/>
 
     </asset>
     <default>
         <default class="window_base">
-            <joint armature="0.001" damping="2" limited="true"/>
+            <joint armature="0.001" damping="2" frictionloss="2" limited="true"/>
             <geom conaffinity="0" contype="0" group="1" type="mesh"/>
             <position ctrllimited="true" ctrlrange="0 1.57"/>
             <default class="window_viz">
@@ -43,8 +41,8 @@
     <worldbody>
         <body pos="0.3 0.36 .202">
             <body childclass="window_base">
-                <geom material="window_red" mesh="window_h_base" pos="0 0 -0.192"/>
-                <geom material="window_red" mesh="window_h_frame"/>
+                <geom material="window_body" mesh="window_h_base" pos="0 0 -0.192"/>
+                <geom material="window_body" mesh="window_h_frame"/>
                 <geom class="window_col" pos="-0.216 0 0" size="0.015 0.03 0.181" type="box"/>
                 <geom class="window_col" pos="0 0 -0.192" size="0.25 0.06 0.01" type="box"/>
                 <geom class="window_col" pos="0.216 0 0" size="0.015 0.03 0.181" type="box"/>
@@ -53,16 +51,16 @@
 
                 <body name="windowb_a">
                     <joint type="slide" range="0 .2" axis="1 0 0" name="window_slide"/>
-                    <geom material="window_white" euler="1.57 0 0" pos="-0.014 -0.028 0.045" size="0.012  0.003"
+                    <geom material="window_handle" euler="1.57 0 0" pos="-0.014 -0.028 0.045" size="0.012  0.003"
                           type="cylinder"/>
-                    <geom material="window_white" euler="1.57 0 0" pos="-0.014 -0.028 -0.045" size="0.012 0.003"
+                    <geom material="window_handle" euler="1.57 0 0" pos="-0.014 -0.028 -0.045" size="0.012 0.003"
                           type="cylinder"/>
-                    <geom material="window_white" euler="1.57 0 0" pos="-0.014 -0.06 0.045" size="0.008 0.035"
+                    <geom material="window_handle" euler="1.57 0 0" pos="-0.014 -0.06 0.045" size="0.008 0.035"
                           type="capsule"/>
-                    <geom material="window_white" euler="1.57 0 0" pos="-0.014 -0.06 -0.045" size="0.008 0.035"
+                    <geom material="window_handle" euler="1.57 0 0" pos="-0.014 -0.06 -0.045" size="0.008 0.035"
                           type="capsule"/>
-                    <geom material="window_white" pos="-0.014 -0.095 0" size="0.008 0.045" type="capsule"/>
-                    <geom material="window_red" mesh="windowb_h_frame" pos="-0.104 -0.022 0"/>
+                    <geom material="window_handle" pos="-0.014 -0.095 0" size="0.008 0.045" type="capsule"/>
+                    <geom material="window_body" mesh="windowb_h_frame" pos="-0.104 -0.022 0"/>
                     <geom material="window_glass" mesh="windowb_h_glass" pos="-0.104 -0.018 0"/>
 
                     <geom class="window_col" euler="1.57 0 0" pos="-0.014 -0.028 0.045" size="0.012  0.003"
@@ -82,7 +80,7 @@
                     <geom class="window_col" pos="-0.104 -0.022 0" size="0.076 0.003 0.005" type="box"/>
                 </body>
                 <body name="windowb_b" pos="0.1 0.013 0">
-                    <geom material="window_red" mesh="windowa_h_frame"/>
+                    <geom material="window_body" mesh="windowa_h_frame"/>
                     <geom material="window_glass" mesh="windowa_h_glass" pos="0 -0.005 0"/>
                     <geom class="window_col" pos="0 0 -0.14" size="0.08 0.012 0.01" type="box"/>
                     <geom class="window_col" pos="0 0 0.14" size="0.08 0.012 0.01" type="box"/>
