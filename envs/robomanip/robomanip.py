@@ -17,22 +17,7 @@ ROBOTIQ_XML = _HERE / 'common' / 'robotiq_2f85' / '2f85.xml'
 # Default joint configuration for the arm (used by the IK controller)
 _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi / 2, 0])
 
-# Box bounds (xy) for the end-effector, in meters
-_WORKSPACE_BOUNDS = np.asarray([[0.25, -0.35, 0.02], [0.6, 0.35, 0.35]])
-
-# Box bounds for sampling the initial object position, in meters
-_OBJECT_SAMPLING_BOUNDS = np.asarray([[0.3, -0.3], [0.55, 0.3]])
-
-# Box bounds for sampling the target position, in meters
-_TARGET_SAMPLING_BOUNDS = np.asarray([[0.3, -0.3], [0.55, 0.3]])
-
-# Actuator PD gains
-_ACTUATOR_KP = np.asarray([4500, 4500, 4500, 2000, 2000, 500])
-_ACTUATOR_KD = np.asarray([-450, -450, -450, -200, -200, -50])
-
 _EFFECTOR_DOWN_ROTATION = lie.SO3(np.asarray([0.0, 1.0, 0.0, 0.0]))
-
-_ROBOTIQ_CONSTANT = 255.0
 
 _OBJECT_RGBAS = np.asarray(
     [
@@ -42,7 +27,6 @@ _OBJECT_RGBAS = np.asarray(
         [0.06, 0.74, 0.21, 1.0],
     ]
 )
-_OBJECT_THICKNESS = 0.02
 
 _CAMERAS = {
     'front': {
@@ -69,17 +53,15 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             **kwargs,
         )
 
-        self._workspace_bounds = _WORKSPACE_BOUNDS
-        self._object_sampling_bounds = _OBJECT_SAMPLING_BOUNDS
-        self._target_sampling_bounds = _TARGET_SAMPLING_BOUNDS
+        self._workspace_bounds = np.asarray([[0.25, -0.35, 0.02], [0.6, 0.35, 0.35]])
+        self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
+        self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._ob_type = ob_type
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
         self._visualize_info = visualize_info
 
         assert ob_type in ['states', 'pixels']
-
-        self._object_z = _OBJECT_THICKNESS
 
         ik_mjcf = mjcf.from_path(UR5E_XML, escape_separators=True)
         xml_str = mjcf_utils.to_string(ik_mjcf)
@@ -88,7 +70,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         self._ik = controllers.DiffIKController(model=ik_model, sites=['attachment_site'])
 
-        action_range = np.array([0.05] * 3 + [0.3, 1.0])
+        action_range = np.array([0.05, 0.05, 0.05, 0.3, 1.0])
         self.action_low = -action_range
         self.action_high = action_range
 
@@ -164,14 +146,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         self.add_objects(arena_mjcf)
 
-        # TODO: Move
-        # drawer_mjcf = mjcf.from_path((_HERE / 'common' / 'drawer.xml').as_posix())
-        # arena_mjcf.include_copy(drawer_mjcf)
-        # window_mjcf = mjcf.from_path((_HERE / 'common' / 'window.xml').as_posix())
-        # arena_mjcf.include_copy(window_mjcf)
-        # buttonbox_mjcf = mjcf.from_path((_HERE / 'common' / 'buttonboxes.xml').as_posix())
-        # arena_mjcf.include_copy(buttonbox_mjcf)
-
         # Add cameras
         for camera_name, camera_kwargs in _CAMERAS.items():
             arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
@@ -198,6 +172,15 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             grid.builtin = 'gradient'
             grid.mark = 'edge'
 
+        mjcf_utils.add_bounding_box_site(
+            arena_mjcf.worldbody,
+            lower=np.asarray((*self._target_sampling_bounds[0], 0.02)),
+            upper=np.asarray((*self._target_sampling_bounds[1], 0.02)),
+            rgba=(0.6, 0.3, 0.3, 0.2),
+            group=4,
+            name='object_bounds',
+        )
+
         # TODO: Remove this
         ################## FOR DEBUGGING ###################
         with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
@@ -220,9 +203,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         self._gripper_opening_joint_id = self._model.joint('ur5e/robotiq/right_driver_joint').id
 
         # Modify PD gains
-        self._model.actuator_gainprm[self._arm_actuator_ids, 0] = _ACTUATOR_KP
-        self._model.actuator_gainprm[self._arm_actuator_ids, 2] = _ACTUATOR_KD
-        self._model.actuator_biasprm[self._arm_actuator_ids, 1] = -_ACTUATOR_KP
+        self._model.actuator_gainprm[self._arm_actuator_ids, 0] = np.asarray([4500, 4500, 4500, 2000, 2000, 500])
+        self._model.actuator_gainprm[self._arm_actuator_ids, 2] = np.asarray([-450, -450, -450, -200, -200, -50])
+        self._model.actuator_biasprm[self._arm_actuator_ids, 1] = -np.asarray([4500, 4500, 4500, 2000, 2000, 500])
 
         # Site IDs
         self._pinch_site_id = self._model.site('ur5e/robotiq/pinch').id
@@ -332,7 +315,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         # Set the desired joint positions for the underlying PD controller
         self._data.ctrl[self._arm_actuator_ids] = qpos_target
-        self._data.ctrl[self._gripper_actuator_ids] = _ROBOTIQ_CONSTANT * target_gripper_opening
+        self._data.ctrl[self._gripper_actuator_ids] = 255.0 * target_gripper_opening
 
     def pre_step(self):
         self._prev_qpos = self._data.qpos.copy()
@@ -376,7 +359,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         else:
             xyz_center = np.array([0.425, 0.0, 0.0])
             xyz_scaler = 10
-            gripper_scaler = 3
 
             ob_info = self.compute_ob_info()
             ob = [
@@ -385,9 +367,9 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
                 (ob_info['proprio/effector_pos'] - xyz_center) * xyz_scaler,
                 np.cos(ob_info['proprio/effector_yaw']),
                 np.sin(ob_info['proprio/effector_yaw']),
-                ob_info['proprio/gripper_opening'] * gripper_scaler,
+                ob_info['proprio/gripper_opening'] * 3,
                 ob_info['proprio/gripper_contact'],
-                ]
+            ]
 
             return np.concatenate(ob)
 

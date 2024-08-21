@@ -1,43 +1,44 @@
 <mujoco model="cube">
-  <default>
-    <default class="cube">
-      <geom type="box" size="0.02 0.02 0.02" rgba=".6 .2 .2 1" density="1240" solref="0.004 1" contype="3" group="1"/>
-      <site type="sphere" size=".005" rgba="0 1 0 1" group="5"/>
+    <default>
+        <default class="cube">
+            <geom type="box" size="0.02 0.02 0.02" rgba=".6 .2 .2 1" density="1240" solref="0.004 1" contype="3"
+                  group="1"/>
+            <site type="sphere" size=".005" rgba="0 1 0 1" group="5"/>
+        </default>
     </default>
-  </default>
 
-  <worldbody>
-    <body name="object_0" pos="0.3 0 .02">
-      <freejoint name="object_joint_0"/>
-      <geom name="object_0" class="cube"/>
-      <site name="com_0" group="5"/>
-    </body>
-    <body name="object_1" pos="0.3 0.1 .02">
-      <freejoint name="object_joint_1"/>
-      <geom name="object_1" class="cube"/>
-      <site name="com_1" group="5"/>
-    </body>
-    <body name="object_2" pos="0.3 0.2 .02">
-      <freejoint name="object_joint_2"/>
-      <geom name="object_2" class="cube"/>
-      <site name="com_2" group="5"/>
-    </body>
-    <body name="object_3" pos="0.3 0.3 .02">
-      <freejoint name="object_joint_3"/>
-      <geom name="object_3" class="cube"/>
-      <site name="com_3" group="5"/>
-    </body>
-    <body name="object_target_0" pos="0.45 0 .02" mocap="true">
-      <geom name="target_object_0" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
-    </body>
-    <body name="object_target_1" pos="0.45 0.1 .02" mocap="true">
-      <geom name="target_object_1" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
-    </body>
-    <body name="object_target_2" pos="0.45 0.2 .02" mocap="true">
-      <geom name="target_object_2" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
-    </body>
-    <body name="object_target_3" pos="0.45 0.3 .02" mocap="true">
-      <geom name="target_object_3" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
-    </body>
-  </worldbody>
+    <worldbody>
+        <body name="object_0" pos="0.3 0 .02">
+            <freejoint name="object_joint_0"/>
+            <geom name="object_0" class="cube"/>
+            <site name="com_0" group="5"/>
+        </body>
+        <body name="object_1" pos="0.3 0.1 .02">
+            <freejoint name="object_joint_1"/>
+            <geom name="object_1" class="cube"/>
+            <site name="com_1" group="5"/>
+        </body>
+        <body name="object_2" pos="0.3 0.2 .02">
+            <freejoint name="object_joint_2"/>
+            <geom name="object_2" class="cube"/>
+            <site name="com_2" group="5"/>
+        </body>
+        <body name="object_3" pos="0.3 0.3 .02">
+            <freejoint name="object_joint_3"/>
+            <geom name="object_3" class="cube"/>
+            <site name="com_3" group="5"/>
+        </body>
+        <body name="object_target_0" pos="0.45 0 .02" mocap="true">
+            <geom name="target_object_0" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
+        </body>
+        <body name="object_target_1" pos="0.45 0.1 .02" mocap="true">
+            <geom name="target_object_1" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
+        </body>
+        <body name="object_target_2" pos="0.45 0.2 .02" mocap="true">
+            <geom name="target_object_2" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
+        </body>
+        <body name="object_target_3" pos="0.45 0.3 .02" mocap="true">
+            <geom name="target_object_3" class="cube" rgba=".5 .5 .5 .2" contype="0" conaffinity="0"/>
+        </body>
+    </worldbody>
 </mujoco>
