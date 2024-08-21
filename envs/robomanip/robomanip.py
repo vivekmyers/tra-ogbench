@@ -54,6 +54,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         )
 
         self._workspace_bounds = np.asarray([[0.25, -0.35, 0.02], [0.6, 0.35, 0.35]])
+        self._arm_sampling_bounds = np.asarray([[0.25, -0.35, 0.20], [0.6, 0.35, 0.35]])
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._ob_type = ob_type
@@ -180,6 +181,14 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
             group=4,
             name='object_bounds',
         )
+        mjcf_utils.add_bounding_box_site(
+            arena_mjcf.worldbody,
+            lower=np.asarray(self._arm_sampling_bounds[0]),
+            upper=np.asarray(self._arm_sampling_bounds[1]),
+            rgba=(0.3, 0.6, 0.3, 0.2),
+            group=4,
+            name='arm_bounds',
+        )
 
         # TODO: Remove this
         ################## FOR DEBUGGING ###################
@@ -246,7 +255,7 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
     def initialize_arm(self):
         # Sample initial effector position and orientation
-        eff_pos = self.np_random.uniform(*self._workspace_bounds)
+        eff_pos = self.np_random.uniform(*self._arm_sampling_bounds)
         cur_ori = _EFFECTOR_DOWN_ROTATION
         yaw = self.np_random.uniform(-np.pi, np.pi)
         rotz = lie.SO3.from_z_radians(yaw)
@@ -347,7 +356,6 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         ob_info['qpos'] = self._data.qpos.copy()
         ob_info['qvel'] = self._data.qvel.copy()
         ob_info['control'] = self._data.ctrl.copy()
-        ob_info['contact'] = self._data.cfrc_ext.copy()
         ob_info['time'] = np.array([self._data.time])
 
         return ob_info

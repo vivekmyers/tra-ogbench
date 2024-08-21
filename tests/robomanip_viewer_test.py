@@ -3,8 +3,10 @@ import time
 
 import numpy as np
 
-from envs.robomanip import oracles, viewer_utils
+from envs.robomanip import viewer_utils
 from envs.robomanip.cube import CubeEnv
+from envs.robomanip.oracles.button import ButtonOracle
+from envs.robomanip.oracles.cube import CubeOracle
 from envs.robomanip.scene import SceneEnv
 
 SPEED_UP = 3.0
@@ -33,8 +35,18 @@ def main():
 
     ob, info = env.reset(seed=0)
     if use_oracle:
-        agent = oracles.ClosedLoopCubeOracle()
+        if 'cube' in env_type:
+            agents = {
+                'cube': CubeOracle(env),
+            }
+        else:
+            agents = {
+                'cube': CubeOracle(env),
+                'button': ButtonOracle(env),
+            }
+        agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)
+
     if use_viewer:
         key_callback = viewer_utils.KeyCallback(pause=True)
         step = 0
@@ -44,10 +56,10 @@ def main():
                 if key_callback.reset:
                     ob, info = env.reset()
                     if use_oracle:
+                        agent = agents[info['privileged/target_task']]
                         agent.reset(ob, info)
                     step = 0
                     key_callback.reset = False
-                    # key_callback.pause = True
                 else:
                     if not key_callback.pause:
                         if use_oracle:
@@ -66,12 +78,10 @@ def main():
 
                 if use_oracle and agent.done:
                     ob, info = env.set_new_target()
+                    agent = agents[info['privileged/target_task']]
                     agent.reset(ob, info)
                     print(step)
     else:
-        ob, info = env.reset()
-        if use_oracle:
-            agent.reset(ob, info)
         step = 0
         obs = []
         for _ in range(1000):
@@ -88,6 +98,7 @@ def main():
 
             if use_oracle and agent.done:
                 ob, info = env.set_new_target()
+                agent = agents[info['privileged/target_task']]
                 agent.reset(ob, info)
                 print('done', step)
 

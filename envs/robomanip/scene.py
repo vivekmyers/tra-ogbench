@@ -12,19 +12,20 @@ class SceneEnv(RoboManipEnv):
 
         super().__init__(*args, **kwargs)
 
+        self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.35]])
         self._object_sampling_bounds = np.asarray([[0.3, -0.15], [0.45, 0.15]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.15], [0.45, 0.15]])
         self._num_cubes = 1
-        self._num_buttonboxes = 2
+        self._num_buttons = 2
         self._num_button_states = 3
 
         self._target_task = 'cube'
         self._target_block = 0
         self._target_drawer_pos = 0.0
         self._target_window_pos = 0.0
-        self._cur_button_states = [0] * self._num_buttonboxes
+        self._cur_button_states = [0] * self._num_buttons
         self._target_button = 0
-        self._target_button_states = [0] * self._num_buttonboxes
+        self._target_button_states = [0] * self._num_buttons
 
     def set_tasks(self):
         raise NotImplementedError
@@ -37,8 +38,8 @@ class SceneEnv(RoboManipEnv):
         arena_mjcf.include_copy(drawer_mjcf)
         window_mjcf = mjcf.from_path((_HERE / 'common' / 'window.xml').as_posix())
         arena_mjcf.include_copy(window_mjcf)
-        buttonboxes_mjcf = mjcf.from_path((_HERE / 'common' / 'buttonboxes.xml').as_posix())
-        arena_mjcf.include_copy(buttonboxes_mjcf)
+        buttons_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
+        arena_mjcf.include_copy(buttons_mjcf)
 
         self._cube_geoms_list = []
         for i in range(self._num_cubes):
@@ -47,8 +48,8 @@ class SceneEnv(RoboManipEnv):
         for i in range(self._num_cubes):
             self._cube_target_geoms_list.append(cube_mjcf.find('body', f'object_target_{i}').find_all('geom'))
         self._button_geoms_list = []
-        for i in range(self._num_buttonboxes):
-            self._button_geoms_list.append([buttonboxes_mjcf.find('geom', f'btngeom_{i}')])
+        for i in range(self._num_buttons):
+            self._button_geoms_list.append([buttons_mjcf.find('geom', f'btngeom_{i}')])
 
     def post_compilation_objects(self):
         self._cube_geom_ids_list = [
@@ -65,6 +66,7 @@ class SceneEnv(RoboManipEnv):
             [self._model.geom(geom.full_identifier).id for geom in button_geoms]
             for button_geoms in self._button_geoms_list
         ]
+        self._button_site_ids = [self._model.site(f'btntop_{i}').id for i in range(self._num_buttons)]
 
     def initialize_episode(self):
         for i in range(self._num_cubes):
@@ -92,8 +94,8 @@ class SceneEnv(RoboManipEnv):
             self._data.joint('drawer_slide').qpos[0] = self.np_random.uniform(-0.16, 0)
             self._data.joint('window_slide').qpos[0] = self.np_random.uniform(0, 0.2)
 
-            # Randomize buttonbox states
-            for i in range(self._num_buttonboxes):
+            # Randomize button states
+            for i in range(self._num_buttons):
                 self._cur_button_states[i] = self.np_random.choice(self._num_button_states)
                 for gid in self._button_geom_ids_list[i]:
                     self._model.geom(gid).rgba = _OBJECT_RGBAS[self._cur_button_states[i] + 1]
@@ -113,7 +115,8 @@ class SceneEnv(RoboManipEnv):
     def set_new_target(self, return_info=True, p_stack=0.5):
         assert self._mode == 'data_collection'
 
-        self._target_task = self.np_random.choice(['cube', 'drawer', 'window', 'buttonbox'])
+        # self._target_task = self.np_random.choice(['cube', 'drawer', 'window', 'button'])
+        self._target_task = self.np_random.choice(['cube', 'button'])
         print(self._target_task)
 
         if self._target_task == 'cube':
@@ -171,18 +174,18 @@ class SceneEnv(RoboManipEnv):
             else:  # Window open
                 self._target_window_pos = 0.0
         else:
-            self._target_button = self.np_random.choice(self._num_buttonboxes)
-            self._target_button_states[self._target_button] = self.np_random.choice(
-                list(set(range(self._num_button_states)) - {self._cur_button_states[self._target_button]})
-            )
+            self._target_button = self.np_random.choice(self._num_buttons)
+            self._target_button_states[self._target_button] = (
+                self._cur_button_states[self._target_button] + 1
+            ) % self._num_button_states
 
         if return_info:
             return self.compute_observation(), self.get_reset_info()
 
     def post_step(self):
         # Change button states if pressed
-        for i in range(self._num_buttonboxes):
-            prev_joint_pos = self._prev_ob_info[f'privileged/buttonbox_{i}_pos'][0]
+        for i in range(self._num_buttons):
+            prev_joint_pos = self._prev_ob_info[f'privileged/button_{i}_pos'][0]
             cur_joint_pos = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()[0]
             if prev_joint_pos > -0.02 and cur_joint_pos <= -0.02:
                 self._cur_button_states[i] = (self._cur_button_states[i] + 1) % self._num_button_states
@@ -201,8 +204,8 @@ class SceneEnv(RoboManipEnv):
 
         drawer_success = np.abs(self._data.joint('drawer_slide').qpos[0] - self._target_drawer_pos) <= 0.04
         window_success = np.abs(self._data.joint('window_slide').qpos[0] - self._target_window_pos) <= 0.04
-        buttonbox_successes = [
-            (self._cur_button_states[i] == self._target_button_states[i]) for i in range(self._num_buttonboxes)
+        button_successes = [
+            (self._cur_button_states[i] == self._target_button_states[i]) for i in range(self._num_buttons)
         ]
 
         if self._mode == 'data_collection':
@@ -210,10 +213,10 @@ class SceneEnv(RoboManipEnv):
                 'cube': cube_successes[self._target_block],
                 'drawer': drawer_success,
                 'window': window_success,
-                'buttonbox': buttonbox_successes[self._target_button],
+                'button': button_successes[self._target_button],
             }[self._target_task]
         else:
-            self._success = all(cube_successes) and drawer_success and window_success and all(buttonbox_successes)
+            self._success = all(cube_successes) and drawer_success and window_success and all(button_successes)
 
         for i in range(self._num_cubes):
             if self._visualize_info and (self._mode == 'evaluation' or i == self._target_block):
@@ -242,17 +245,26 @@ class SceneEnv(RoboManipEnv):
         ob_info['privileged/drawer_vel'] = self._data.joint('drawer_slide').qvel.copy()
         ob_info['privileged/window_pos'] = self._data.joint('window_slide').qpos.copy()
         ob_info['privileged/window_vel'] = self._data.joint('window_slide').qvel.copy()
-        for i in range(self._num_buttonboxes):
-            ob_info[f'privileged/buttonbox_{i}_pos'] = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()
-            ob_info[f'privileged/buttonbox_{i}_vel'] = self._data.joint(f'buttonbox_joint_{i}').qvel.copy()
+        for i in range(self._num_buttons):
+            ob_info[f'privileged/button_{i}_state'] = self._cur_button_states[i]
+            ob_info[f'privileged/button_{i}_pos'] = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()
+            ob_info[f'privileged/button_{i}_vel'] = self._data.joint(f'buttonbox_joint_{i}').qvel.copy()
 
         if self._mode == 'data_collection':
             target_mocap_id = self._cube_target_mocap_ids[self._target_block]
-            ob_info['target_block'] = self._target_block
-            ob_info['privileged/target_pos'] = self._data.mocap_pos[target_mocap_id].copy()
-            ob_info['privileged/target_yaw'] = np.array(
+            ob_info['privileged/target_task'] = self._target_task
+            ob_info['privileged/target_block'] = self._target_block
+            ob_info['privileged/target_block_pos'] = self._data.mocap_pos[target_mocap_id].copy()
+            ob_info['privileged/target_block_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.mocap_quat[target_mocap_id]).compute_yaw_radians()]
             )
+            ob_info['privileged/target_drawer_pos'] = np.array([self._target_drawer_pos])
+            ob_info['privileged/target_window_pos'] = np.array([self._target_window_pos])
+            ob_info['privileged/target_button'] = self._target_button
+            ob_info['privileged/target_button_state'] = self._target_button_states[self._target_button]
+            ob_info['privileged/target_button_top_pos'] = self._data.site_xpos[
+                self._button_site_ids[self._target_button]
+            ].copy()
 
     def compute_observation(self):
         if self._ob_type == 'pixels':
@@ -289,12 +301,12 @@ class SceneEnv(RoboManipEnv):
                     ob_info['privileged/window_vel'],
                 ]
             )
-            for i in range(self._num_buttonboxes):
+            for i in range(self._num_buttons):
                 ob.extend(
                     [
                         np.eye(self._num_button_states)[self._cur_button_states[i]],
-                        ob_info[f'privileged/buttonbox_{i}_pos'] * 120,
-                        ob_info[f'privileged/buttonbox_{i}_vel'],
+                        ob_info[f'privileged/button_{i}_pos'] * 120,
+                        ob_info[f'privileged/button_{i}_vel'],
                     ]
                 )
 

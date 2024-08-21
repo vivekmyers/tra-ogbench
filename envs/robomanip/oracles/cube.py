@@ -1,38 +1,28 @@
 import numpy as np
 
-from envs.robomanip.oracles import oracle
+from envs.robomanip.oracles.oracle import Oracle
 
 
-class ClosedLoopCubeOracle(oracle.Oracle):
-    def __init__(self, min_norm=0.3):
-        self._min_norm = min_norm
-
-    def shortest_yaw(self, eff_yaw, obj_yaw):
-        symmetries = np.array([i * np.pi / 2 + obj_yaw for i in range(-4, 5)])
-        d = np.argmin(np.abs(eff_yaw - symmetries))
-        return symmetries[d]
-
+class CubeOracle(Oracle):
     def reset(self, ob, info):
         self._done = False
         self._step = 0
         self._max_step = 200
-        self._final_pos = np.random.uniform([0.25, -0.35, 0.20], [0.6, 0.35, 0.35])
+        self._final_pos = np.random.uniform(*self._env._arm_sampling_bounds)
         self._final_yaw = np.random.uniform(-np.pi, np.pi)
-        self._block_above_offset = np.array([0, 0, 0.18])
 
     def select_action(self, ob, info):
-        debug = False
-
         effector_pos = info['proprio/effector_pos']
         effector_yaw = info['proprio/effector_yaw'][0]
         gripper_opening = info['proprio/gripper_opening']
 
-        target_block = info['target_block']
+        target_block = info['privileged/target_block']
         block_pos = info[f'privileged/block_{target_block}_pos']
         block_yaw = self.shortest_yaw(effector_yaw, info[f'privileged/block_{target_block}_yaw'][0])
-        target_pos = info['privileged/target_pos']
-        target_yaw = self.shortest_yaw(effector_yaw, info['privileged/target_yaw'][0])
+        target_pos = info['privileged/target_block_pos']
+        target_yaw = self.shortest_yaw(effector_yaw, info['privileged/target_block_yaw'][0])
 
+        block_above_offset = np.array([0, 0, 0.18])
         gripper_closed = info['proprio/gripper_contact'] > 0.5
         gripper_open = info['proprio/gripper_contact'] < 0.1
         above = effector_pos[2] > 0.16
@@ -42,83 +32,72 @@ class ClosedLoopCubeOracle(oracle.Oracle):
         target_pos_aligned = np.linalg.norm(target_pos - block_pos) <= 0.02
         final_pos_aligned = np.linalg.norm(self._final_pos - effector_pos) <= 0.04
 
-        def print_phase(step):
-            if debug:
-                print(f'Phase {step}', end=' ')
-
-        def shape_diff(diff):
-            diff_norm = np.linalg.norm(diff)
-            if diff_norm >= self._min_norm:
-                return diff
-            else:
-                return diff / (diff_norm + 1e-6) * self._min_norm
-
         gain_pos = 5
         gain_yaw = 3
         action = np.zeros(5)
         if not target_pos_aligned:
             if not xy_aligned:
-                print_phase(1)
+                self.print_phase('1: Move above the block')
                 action = np.zeros(5)
-                diff = block_pos + self._block_above_offset - effector_pos
-                diff = shape_diff(diff)
+                diff = block_pos + block_above_offset - effector_pos
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (block_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
             elif not pos_aligned:
-                print_phase(2)
+                self.print_phase('2: Move to the block')
                 diff = block_pos - effector_pos
-                diff = shape_diff(diff)
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (block_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
             elif pos_aligned and not gripper_closed:
-                print_phase(3)
+                self.print_phase('3: Grasp')
                 diff = block_pos - effector_pos
-                diff = shape_diff(diff)
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (block_yaw - effector_yaw) * gain_yaw
                 action[4] = 1
             elif pos_aligned and gripper_closed and not above and not target_xy_aligned:
-                print_phase(4)
-                diff = np.array([block_pos[0], block_pos[1], self._block_above_offset[2] * 2]) - effector_pos
-                diff = shape_diff(diff)
+                self.print_phase('4: Move in the air')
+                diff = np.array([block_pos[0], block_pos[1], block_above_offset[2] * 2]) - effector_pos
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (target_yaw - block_yaw) * gain_yaw
                 action[4] = 1
             elif pos_aligned and gripper_closed and above and not target_xy_aligned:
-                print_phase(5)
-                diff = target_pos + self._block_above_offset - effector_pos
-                diff = shape_diff(diff)
+                self.print_phase('5: Move above the target')
+                diff = target_pos + block_above_offset - effector_pos
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (target_yaw - block_yaw) * gain_yaw
                 action[4] = 1
             else:
-                print_phase(6)
+                self.print_phase('6: Move to the target')
                 diff = target_pos - effector_pos
-                diff = shape_diff(diff)
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (target_yaw - block_yaw) * gain_yaw
                 action[4] = 1
         else:
             if not gripper_open:
-                print_phase(7)
+                self.print_phase('7: Release')
                 diff = target_pos - effector_pos
-                diff = shape_diff(diff)
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (target_yaw - block_yaw) * gain_yaw
                 action[4] = -1
             elif gripper_open and not above:
-                print_phase(8)
-                diff = np.array([block_pos[0], block_pos[1], self._block_above_offset[2] * 2]) - effector_pos
-                diff = shape_diff(diff)
+                self.print_phase('8: Move in the air')
+                diff = np.array([block_pos[0], block_pos[1], block_above_offset[2] * 2]) - effector_pos
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
-            elif gripper_open and above:
-                print_phase(9)
+            else:
+                self.print_phase('9: Move to the final position')
                 diff = self._final_pos - effector_pos
-                diff = shape_diff(diff)
+                diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
@@ -127,8 +106,7 @@ class ClosedLoopCubeOracle(oracle.Oracle):
                 self._done = True
 
         action = np.clip(action, -1, 1)
-        if debug:
-            np.set_printoptions(suppress=True)
+        if self._debug:
             print(action)
 
         self._step += 1
@@ -136,7 +114,3 @@ class ClosedLoopCubeOracle(oracle.Oracle):
             self._done = True
 
         return action
-
-    @property
-    def done(self):
-        return self._done

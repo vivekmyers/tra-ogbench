@@ -27,6 +27,7 @@ class CubeEnv(RoboManipEnv):
         else:
             raise ValueError(f'Invalid env_type: {env_type}')
 
+        self._target_task = 'cube'
         self._target_block = 0
 
     def set_tasks(self):
@@ -406,9 +407,10 @@ class CubeEnv(RoboManipEnv):
 
         if self._mode == 'data_collection':
             target_mocap_id = self._cube_target_mocap_ids[self._target_block]
-            ob_info['target_block'] = self._target_block
-            ob_info['privileged/target_pos'] = self._data.mocap_pos[target_mocap_id].copy()
-            ob_info['privileged/target_yaw'] = np.array(
+            ob_info['privileged/target_task'] = self._target_task
+            ob_info['privileged/target_block'] = self._target_block
+            ob_info['privileged/target_block_pos'] = self._data.mocap_pos[target_mocap_id].copy()
+            ob_info['privileged/target_block_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.mocap_quat[target_mocap_id]).compute_yaw_radians()]
             )
 

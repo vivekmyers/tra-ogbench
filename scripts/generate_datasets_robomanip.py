@@ -6,7 +6,7 @@ from absl import app, flags
 from tqdm import trange
 
 import envs.robomanip  # noqa
-from envs.robomanip import oracles
+from envs.robomanip.oracles.cube import CubeOracle
 
 FLAGS = flags.FLAGS
 
@@ -29,7 +29,7 @@ def main(_):
         max_episode_steps=FLAGS.max_episode_steps,
     )
 
-    agent = oracles.ClosedLoopCubeOracle(min_norm=FLAGS.min_norm)
+    agent = CubeOracle(env, min_norm=FLAGS.min_norm)
 
     dataset = defaultdict(list)
 
