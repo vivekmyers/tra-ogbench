@@ -35,14 +35,18 @@ def main(_):
     has_button_states = hasattr(env.unwrapped, '_cur_button_states')
     if 'cube' in FLAGS.env_name:
         agents = {
-            'cube': CubeOracle(env, min_norm=FLAGS.min_norm),
+            'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm),
         }
-    else:
+    elif 'button' in FLAGS.env_name:
         agents = {
-            'cube': CubeOracle(env, min_norm=FLAGS.min_norm),
-            'button': ButtonOracle(env, min_norm=FLAGS.min_norm),
-            'drawer': DrawerOracle(env, min_norm=FLAGS.min_norm),
-            'window': WindowOracle(env, min_norm=FLAGS.min_norm),
+            'button': ButtonOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
+        }
+    elif 'scene' in FLAGS.env_name:
+        agents = {
+            'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm),
+            'button': ButtonOracle(env=env, min_norm=FLAGS.min_norm),
+            'drawer': DrawerOracle(env=env, min_norm=FLAGS.min_norm),
+            'window': WindowOracle(env=env, min_norm=FLAGS.min_norm),
         }
 
     dataset = defaultdict(list)

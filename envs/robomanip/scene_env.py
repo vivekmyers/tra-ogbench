@@ -112,11 +112,11 @@ class SceneEnv(RoboManipEnv):
         ]
 
     def add_objects(self, arena_mjcf):
-        # Add object to scene
+        # Add objects to scene
         cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_1.xml').as_posix())
         arena_mjcf.include_copy(cube_mjcf)
-        buttons_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
-        arena_mjcf.include_copy(buttons_mjcf)
+        button_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
+        arena_mjcf.include_copy(button_mjcf)
         drawer_mjcf = mjcf.from_path((_HERE / 'common' / 'drawer.xml').as_posix())
         arena_mjcf.include_copy(drawer_mjcf)
         window_mjcf = mjcf.from_path((_HERE / 'common' / 'window.xml').as_posix())
@@ -131,7 +131,7 @@ class SceneEnv(RoboManipEnv):
 
         self._button_geoms_list = []
         for i in range(self._num_buttons):
-            self._button_geoms_list.append([buttons_mjcf.find('geom', f'btngeom_{i}')])
+            self._button_geoms_list.append([button_mjcf.find('geom', f'btngeom_{i}')])
 
     def post_compilation_objects(self):
         self._cube_geom_ids_list = [
@@ -406,8 +406,9 @@ class SceneEnv(RoboManipEnv):
         )
 
         if self._mode == 'data_collection':
-            target_mocap_id = self._cube_target_mocap_ids[self._target_block]
             ob_info['privileged/target_task'] = self._target_task
+
+            target_mocap_id = self._cube_target_mocap_ids[self._target_block]
             ob_info['privileged/target_block'] = self._target_block
             ob_info['privileged/target_block_pos'] = self._data.mocap_pos[target_mocap_id].copy()
             ob_info['privileged/target_block_yaw'] = np.array(

@@ -229,7 +229,7 @@ class CubeEnv(RoboManipEnv):
             raise NotImplementedError
 
     def add_objects(self, arena_mjcf):
-        # Add object to scene
+        # Add objects to scene
         cube_mjcf = mjcf.from_path(self._cube_xml.as_posix())
         arena_mjcf.include_copy(cube_mjcf)
 
@@ -402,8 +402,9 @@ class CubeEnv(RoboManipEnv):
             )
 
         if self._mode == 'data_collection':
-            target_mocap_id = self._cube_target_mocap_ids[self._target_block]
             ob_info['privileged/target_task'] = self._target_task
+
+            target_mocap_id = self._cube_target_mocap_ids[self._target_block]
             ob_info['privileged/target_block'] = self._target_block
             ob_info['privileged/target_block_pos'] = self._data.mocap_pos[target_mocap_id].copy()
             ob_info['privileged/target_block_yaw'] = np.array(

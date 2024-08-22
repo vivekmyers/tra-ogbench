@@ -4,6 +4,10 @@ from envs.robomanip.oracles.oracle import Oracle
 
 
 class ButtonOracle(Oracle):
+    def __init__(self, gripper_always_closed=False, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._gripper_always_closed = gripper_always_closed
+
     def reset(self, ob, info):
         self._done = False
         self._step = 0
@@ -54,14 +58,14 @@ class ButtonOracle(Oracle):
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw
-                action[4] = -1
+                action[4] = 1 if self._gripper_always_closed else -1
             else:
                 self.print_phase('4: Move to the final position')
                 diff = self._final_pos - effector_pos
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw
-                action[4] = -1
+                action[4] = 1 if self._gripper_always_closed else -1
 
             if final_pos_aligned:
                 self._done = True

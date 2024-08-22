@@ -4,12 +4,13 @@ import time
 import numpy as np
 
 from envs.robomanip import viewer_utils
-from envs.robomanip.cube import CubeEnv
+from envs.robomanip.button_env import ButtonEnv
+from envs.robomanip.cube_env import CubeEnv
 from envs.robomanip.oracles.button import ButtonOracle
 from envs.robomanip.oracles.cube import CubeOracle
 from envs.robomanip.oracles.drawer import DrawerOracle
 from envs.robomanip.oracles.window import WindowOracle
-from envs.robomanip.scene import SceneEnv
+from envs.robomanip.scene_env import SceneEnv
 
 SPEED_UP = 3.0
 
@@ -17,7 +18,7 @@ SPEED_UP = 3.0
 def main():
     use_oracle = True
     use_viewer = (os.environ.get('USE_VIEWER', 'False') == 'True')
-    env_type = 'scene'
+    env_type = 'button-game-3x3'
     mode = 'data_collection'
     # mode = 'evaluation'
     if 'cube' in env_type:
@@ -27,7 +28,14 @@ def main():
             mode=mode,
             visualize_info=True,
         )
-    else:
+    elif 'button' in env_type:
+        env = ButtonEnv(
+            env_type=env_type,
+            terminate_at_goal=False,
+            mode=mode,
+            visualize_info=True,
+        )
+    elif 'scene' in env_type:
         env = SceneEnv(
             env_type=env_type,
             terminate_at_goal=False,
@@ -39,14 +47,18 @@ def main():
     if use_oracle:
         if 'cube' in env_type:
             agents = {
-                'cube': CubeOracle(env),
+                'cube': CubeOracle(env=env),
+            }
+        elif 'button' in env_type:
+            agents = {
+                'button': ButtonOracle(env=env, gripper_always_closed=True),
             }
         else:
             agents = {
-                'cube': CubeOracle(env),
-                'button': ButtonOracle(env),
-                'drawer': DrawerOracle(env),
-                'window': WindowOracle(env),
+                'cube': CubeOracle(env=env),
+                'button': ButtonOracle(env=env),
+                'drawer': DrawerOracle(env=env),
+                'window': WindowOracle(env=env),
             }
         agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)
