@@ -18,12 +18,12 @@ class SceneEnv(RoboManipEnv):
         self._num_cubes = 1
         self._num_buttons = 2
         self._num_button_states = 3
-        self._cur_button_states = [0] * self._num_buttons
+        self._cur_button_states = np.array([0] * self._num_buttons)
 
         self._target_task = 'cube'
         self._target_block = 0
         self._target_button = 0
-        self._target_button_states = [0] * self._num_buttons
+        self._target_button_states = np.array([0] * self._num_buttons)
         self._target_drawer_pos = 0.0
         self._target_window_pos = 0.0
 
@@ -237,11 +237,14 @@ class SceneEnv(RoboManipEnv):
                 self._data.mocap_pos[self._cube_target_mocap_ids[i]] = goal_block_xyzs[i]
                 self._data.mocap_quat[self._cube_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
             self._cur_button_states = init_button_states.copy()
+            self._target_button_states = goal_button_states.copy()
             self._update_button_colors()
-            self._data.joint('drawer_slide').qpos[0] = init_drawer_pos
+            self._data.joint('drawer_slide').qpos[0] = init_drawer_pos + self.np_random.uniform(-0.005, 0.005)
             self._model.site('drawer_handle_center_target').pos[1] = goal_drawer_pos
-            self._data.joint('window_slide').qpos[0] = init_window_pos
+            self._target_drawer_pos = goal_drawer_pos
+            self._data.joint('window_slide').qpos[0] = init_window_pos + self.np_random.uniform(-0.005, 0.005)
             self._model.site('window_handle_center_target').pos[0] = goal_window_pos
+            self._target_window_pos = goal_window_pos
 
         # Forward kinematics to update site positions
         self.pre_step()
