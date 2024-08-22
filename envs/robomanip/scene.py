@@ -124,8 +124,6 @@ class SceneEnv(RoboManipEnv):
         assert self._mode == 'data_collection'
 
         self._target_task = self.np_random.choice(['cube', 'button', 'drawer', 'window'])
-        # self._target_task = self.np_random.choice(['drawer'])
-        print(self._target_task)
 
         if self._target_task == 'cube':
             block_xyzs = np.array([self._data.joint(f'object_joint_{i}').qpos[:3] for i in range(self._num_cubes)])

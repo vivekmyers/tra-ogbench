@@ -21,9 +21,10 @@ class ButtonOracle(Oracle):
         button_state = info[f'privileged/button_{target_button}_state']
         target_state = info['privileged/target_button_state']
 
-        above = effector_pos[2] > 0.16
+        above_threshold = 0.16
+        above = effector_pos[2] > above_threshold
         xy_aligned = np.linalg.norm(button_target_top_pos[:2] - effector_pos[:2]) <= 0.04
-        target_achieved = (button_state == target_state)
+        target_achieved = button_state == target_state
         final_pos_aligned = np.linalg.norm(self._final_pos - effector_pos) <= 0.04
 
         gain_pos = 5
@@ -47,7 +48,9 @@ class ButtonOracle(Oracle):
         else:
             if not above:
                 self.print_phase('3: Release the button')
-                diff = np.array([button_target_top_pos[0], button_target_top_pos[1], 0.32]) - effector_pos
+                diff = (
+                    np.array([button_target_top_pos[0], button_target_top_pos[1], above_threshold * 2]) - effector_pos
+                )
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw

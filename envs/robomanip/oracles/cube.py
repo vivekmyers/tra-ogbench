@@ -23,9 +23,10 @@ class CubeOracle(Oracle):
         target_yaw = self.shortest_yaw(effector_yaw, info['privileged/target_block_yaw'][0])
 
         block_above_offset = np.array([0, 0, 0.18])
+        above_threshold = 0.16
         gripper_closed = info['proprio/gripper_contact'] > 0.5
         gripper_open = info['proprio/gripper_contact'] < 0.1
-        above = effector_pos[2] > 0.16
+        above = effector_pos[2] > above_threshold
         xy_aligned = np.linalg.norm(block_pos[:2] - effector_pos[:2]) <= 0.04
         pos_aligned = np.linalg.norm(block_pos - effector_pos) <= 0.02
         target_xy_aligned = np.linalg.norm(target_pos[:2] - block_pos[:2]) <= 0.04
@@ -89,7 +90,7 @@ class CubeOracle(Oracle):
                 action[4] = -1
             elif gripper_open and not above:
                 self.print_phase('8: Move in the air')
-                diff = np.array([block_pos[0], block_pos[1], block_above_offset[2] * 2]) - effector_pos
+                diff = np.array([block_pos[0], block_pos[1], above_threshold * 2]) - effector_pos
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw

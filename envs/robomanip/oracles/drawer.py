@@ -20,12 +20,11 @@ class DrawerOracle(Oracle):
         drawer_yaw = self.shortest_yaw(effector_yaw, info['privileged/drawer_handle_yaw'][0], n=2)
         target_pos = info['privileged/target_drawer_handle_pos']
 
-        drawer_above_offset = np.array([0, 0, 0.1])
-        drawer_handle_offset = np.array([0, 0.02, 0])
-        above_threshold = 0.16
+        drawer_above_offset = np.array([0, 0, 0.12])
+        above_threshold = 0.18
         above = effector_pos[2] > above_threshold
-        xy_aligned = np.linalg.norm(drawer_pos[:2] + drawer_handle_offset[:2] - effector_pos[:2]) <= 0.04
-        pos_aligned = np.linalg.norm(drawer_pos + drawer_handle_offset - effector_pos) <= 0.03
+        xy_aligned = np.linalg.norm(drawer_pos[:2] - effector_pos[:2]) <= 0.04
+        pos_aligned = np.linalg.norm(drawer_pos - effector_pos) <= 0.03
         target_pos_aligned = np.linalg.norm(target_pos - drawer_pos) <= 0.01
         final_pos_aligned = np.linalg.norm(self._final_pos - effector_pos) <= 0.04
 
@@ -36,25 +35,25 @@ class DrawerOracle(Oracle):
             if not xy_aligned:
                 self.print_phase('1: Move above the drawer handle')
                 action = np.zeros(5)
-                diff = drawer_pos + drawer_handle_offset + drawer_above_offset - effector_pos
+                diff = drawer_pos + drawer_above_offset - effector_pos
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (drawer_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
             elif not pos_aligned:
                 self.print_phase('2: Move to the drawer handle')
-                diff = drawer_pos + drawer_handle_offset - effector_pos
+                diff = drawer_pos - effector_pos
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (drawer_yaw - effector_yaw) * gain_yaw
                 action[4] = -1
             else:
                 self.print_phase('3: Move to the target')
-                diff = target_pos + drawer_handle_offset - effector_pos
+                diff = target_pos - effector_pos
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (drawer_yaw - effector_yaw) * gain_yaw
-                action[4] = 1
+                action[4] = -1
         else:
             if not above:
                 self.print_phase('4: Move in the air')
