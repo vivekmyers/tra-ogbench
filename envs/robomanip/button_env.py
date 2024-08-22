@@ -110,7 +110,7 @@ class ButtonEnv(RoboManipEnv):
                     ]).flatten(),
                 ),
             ]
-        if self._num_rows == 4 and self._num_cols == 4:
+        elif self._num_rows == 4 and self._num_cols == 4:
             self.task_infos = [
                 dict(
                     task_name='task1',
@@ -188,7 +188,7 @@ class ButtonEnv(RoboManipEnv):
                     ]).flatten(),
                 ),
             ]
-        if self._num_rows == 4 and self._num_cols == 6:
+        elif self._num_rows == 4 and self._num_cols == 6:
             self.task_infos = [
                 dict(
                     task_name='task1',
