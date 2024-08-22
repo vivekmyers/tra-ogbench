@@ -8,17 +8,6 @@ visual_dict = dict(
 )
 
 register(
-    id='cube-online-v0',
-    entry_point='envs.robomanip.cube:CubeEnv',
-    max_episode_steps=75,
-    kwargs=dict(
-        env_type='cube_single',
-        mode='online',
-        terminate_at_goal=False,
-    ),
-)
-
-register(
     id='cube-single-v0',
     entry_point='envs.robomanip.cube:CubeEnv',
     max_episode_steps=200,
@@ -83,6 +72,24 @@ register(
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_quadruple',
+        **visual_dict,
+    ),
+)
+
+register(
+    id='scene-v0',
+    entry_point='envs.robomanip.scene:SceneEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='scene',
+    ),
+)
+register(
+    id='visual-scene-v0',
+    entry_point='envs.robomanip.scene:SceneEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='scene',
         **visual_dict,
     ),
 )

@@ -6,7 +6,10 @@ from absl import app, flags
 from tqdm import trange
 
 import envs.robomanip  # noqa
+from envs.robomanip.oracles.button import ButtonOracle
 from envs.robomanip.oracles.cube import CubeOracle
+from envs.robomanip.oracles.drawer import DrawerOracle
+from envs.robomanip.oracles.window import WindowOracle
 
 FLAGS = flags.FLAGS
 
@@ -29,7 +32,17 @@ def main(_):
         max_episode_steps=FLAGS.max_episode_steps,
     )
 
-    agent = CubeOracle(env, min_norm=FLAGS.min_norm)
+    if 'cube' in FLAGS.env_name:
+        agents = {
+            'cube': CubeOracle(env, min_norm=FLAGS.min_norm),
+        }
+    else:
+        agents = {
+            'cube': CubeOracle(env, min_norm=FLAGS.min_norm),
+            'button': ButtonOracle(env, min_norm=FLAGS.min_norm),
+            'drawer': DrawerOracle(env, min_norm=FLAGS.min_norm),
+            'window': WindowOracle(env, min_norm=FLAGS.min_norm),
+        }
 
     dataset = defaultdict(list)
 
@@ -51,6 +64,7 @@ def main(_):
         else:
             ob, info = env.reset()
         xi = np.random.uniform(0, FLAGS.noise)
+        agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)
 
         done = False
@@ -69,6 +83,7 @@ def main(_):
 
             if agent.done and FLAGS.dataset_type == 'play':
                 agent_ob, agent_info = env.unwrapped.set_new_target(p_stack=p_stack)
+                agent = agents[agent_info['privileged/target_task']]
                 agent.reset(agent_ob, agent_info)
 
             dataset['observations'].append(ob)
