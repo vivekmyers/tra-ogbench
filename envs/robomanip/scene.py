@@ -13,7 +13,7 @@ class SceneEnv(RoboManipEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.35]])
-        self._object_sampling_bounds = np.asarray([[0.3, -0.05], [0.45, 0.2]])
+        self._object_sampling_bounds = np.asarray([[0.3, -0.08], [0.45, 0.17]])
         self._target_sampling_bounds = self._object_sampling_bounds
         self._num_cubes = 1
         self._num_buttons = 2
