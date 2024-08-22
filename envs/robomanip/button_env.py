@@ -9,10 +9,6 @@ class ButtonEnv(RoboManipEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
-        super().__init__(*args, **kwargs)
-
-        self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
-
         if 'color' in env_type:
             self._num_button_states = 3
             self._effect_type = 'point'
@@ -33,6 +29,10 @@ class ButtonEnv(RoboManipEnv):
 
         self._num_rows = int(self._num_buttons**0.5)
         self._cur_button_states = np.array([0] * self._num_buttons)
+
+        super().__init__(*args, **kwargs)
+
+        self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
 
         self._target_task = 'button'
         self._target_button = 0
@@ -202,8 +202,8 @@ class ButtonEnv(RoboManipEnv):
             self.set_new_target(return_info=False)
         else:
             # Set object positions and orientations based on the current task
-            init_button_states = self.cur_task_info['init']['button_states'].copy()
-            goal_button_states = self.cur_task_info['goal']['button_states'].copy()
+            init_button_states = self.cur_task_info['init_button_states'].copy()
+            goal_button_states = self.cur_task_info['goal_button_states'].copy()
 
             # First set the current scene to the goal state to get the goal observation
             saved_qpos = self._data.qpos.copy()

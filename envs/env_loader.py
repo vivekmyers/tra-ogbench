@@ -168,7 +168,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
         train_dataset, val_dataset = get_dataset(
             dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
         )
-    elif 'cube' in env_name or 'scene' in env_name:
+    elif 'cube' in env_name or 'button' in env_name or 'scene' in env_name:
         import envs.robomanip  # noqa
 
         env = gymnasium.make(env_name)
@@ -214,11 +214,6 @@ def make_online_env(env_name):
             else:
                 env = GymXYWrapper(env, resample_interval=100 if 'Ant' in env_name else 200)
 
-        env = EpisodeMonitor(env)
-    elif 'cube' in env_name:
-        import envs.robomanip  # noqa
-
-        env = gymnasium.make(env_name)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
