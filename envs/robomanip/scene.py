@@ -27,6 +27,11 @@ class SceneEnv(RoboManipEnv):
         self._target_drawer_pos = 0.0
         self._target_window_pos = 0.0
 
+    def set_state(self, qpos, qvel, button_states):
+        self._cur_button_states = button_states
+        self._update_button_colors()
+        super().set_state(qpos, qvel)
+
     def set_tasks(self):
         self.task_infos = [
             dict(
@@ -320,6 +325,10 @@ class SceneEnv(RoboManipEnv):
         if return_info:
             return self.compute_observation(), self.get_reset_info()
 
+    def pre_step(self):
+        self._prev_button_states = self._cur_button_states.copy()
+        super().pre_step()
+
     def post_step(self):
         # Change button states if pressed
         for i in range(self._num_buttons):
@@ -416,6 +425,9 @@ class SceneEnv(RoboManipEnv):
 
             ob_info['privileged/target_window_pos'] = np.array([self._target_window_pos])
             ob_info['privileged/target_window_handle_pos'] = self._data.site_xpos[self._window_target_site_id].copy()
+
+        ob_info['prev_button_states'] = self._prev_button_states.copy()
+        ob_info['button_states'] = self._cur_button_states.copy()
 
     def compute_observation(self):
         if self._ob_type == 'pixels':

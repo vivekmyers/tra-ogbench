@@ -351,8 +351,8 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
 
         self.add_object_info(ob_info)
 
-        ob_info['prev_qpos'] = self._prev_qpos
-        ob_info['prev_qvel'] = self._prev_qvel
+        ob_info['prev_qpos'] = self._prev_qpos.copy()
+        ob_info['prev_qvel'] = self._prev_qvel.copy()
         ob_info['qpos'] = self._data.qpos.copy()
         ob_info['qvel'] = self._data.qvel.copy()
         ob_info['control'] = self._data.ctrl.copy()

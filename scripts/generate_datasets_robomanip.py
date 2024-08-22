@@ -32,6 +32,7 @@ def main(_):
         max_episode_steps=FLAGS.max_episode_steps,
     )
 
+    has_button_states = hasattr(env.unwrapped, '_cur_button_states')
     if 'cube' in FLAGS.env_name:
         agents = {
             'cube': CubeOracle(env, min_norm=FLAGS.min_norm),
@@ -91,6 +92,8 @@ def main(_):
             dataset['terminals'].append(done)
             dataset['qpos'].append(info['prev_qpos'])
             dataset['qvel'].append(info['prev_qvel'])
+            if has_button_states:
+                dataset['button_states'].append(info['prev_button_states'])
 
             ob = next_ob
             step += 1
@@ -111,6 +114,8 @@ def main(_):
             dtype = np.uint8
         elif k == 'terminals':
             dtype = bool
+        elif k == 'button_states':
+            dtype = np.int64
         else:
             dtype = np.float32
         train_dataset[k] = np.array(v[:total_train_steps], dtype=dtype)
