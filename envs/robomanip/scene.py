@@ -195,13 +195,8 @@ class SceneEnv(RoboManipEnv):
             block_permutation = self.np_random.permutation(self._num_cubes)
             init_block_xyzs = self.cur_task_info['init']['block_xyzs'].copy()[block_permutation]
             goal_block_xyzs = self.cur_task_info['goal']['block_xyzs'].copy()[block_permutation]
-            button_state_offset = self.np_random.integers(self._num_button_states)
-            init_button_states = (
-                self.cur_task_info['init']['button_states'].copy() + button_state_offset
-            ) % self._num_button_states
-            goal_button_states = (
-                self.cur_task_info['goal']['button_states'].copy() + button_state_offset
-            ) % self._num_button_states
+            init_button_states = self.cur_task_info['init']['button_states'].copy()
+            goal_button_states = self.cur_task_info['goal']['button_states'].copy()
             init_drawer_pos = self.cur_task_info['init']['drawer_pos']
             goal_drawer_pos = self.cur_task_info['goal']['drawer_pos']
             init_window_pos = self.cur_task_info['init']['window_pos']

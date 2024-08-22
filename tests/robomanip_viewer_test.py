@@ -105,6 +105,8 @@ def main():
                 agent = agents[info['privileged/target_task']]
                 agent.reset(ob, info)
                 print('done', step)
+        obs = np.array(obs)
+        print('done')
 
 
 if __name__ == '__main__':
