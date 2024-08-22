@@ -20,6 +20,7 @@
                 <geom conaffinity="1" condim="3" contype="1" group="4" material="drawer_col" solimp="0.99 0.99 0.01"
                       solref="0.01 1"/>
             </default>
+            <site type="sphere" size=".01" rgba="0 1 0 1" group="5"/>
         </default>
     </default>
 
@@ -36,7 +37,13 @@
             <geom class="drawer_col" pos="0 0.092 -0.008" size="0.102 0.008 0.076" type="box" mass=".05"/>
             <geom class="drawer_col" pos="0 -0.008 -0.07" size="0.102 0.092 0.014" type="box" mass=".05"/>
             <geom class="drawer_col" pos="0 0 0.076" size="0.102 0.1 0.008" type="box" mass=".05"/>
+            <body name="drawer_link_virtual" pos="0 -0.01 0.006">
+                <body name="drawer_link_virtual_handle" pos="0 -0.15 0">
+                    <site name="drawer_handle_center_target" pos="0 0 0.0001" group="5"/>
+                </body>
+            </body>
             <body name="drawer_link" pos="0 -0.01 0.006">
+                <site name="drawer_handle_center" pos="0 -0.15 0" group="5"/>
                 <joint type="slide" range="-0.16 0" axis="0 1 0" name="drawer_slide" pos="0 0 0" damping="2"/>
                 <geom material="drawer_body" mesh="drawer"/>
                 <geom material="drawer_handle" mesh="drawerhandle" pos="0 -0.114 0" name="drawer_handle"/>

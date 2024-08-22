@@ -7,6 +7,8 @@ from envs.robomanip import viewer_utils
 from envs.robomanip.cube import CubeEnv
 from envs.robomanip.oracles.button import ButtonOracle
 from envs.robomanip.oracles.cube import CubeOracle
+from envs.robomanip.oracles.drawer import DrawerOracle
+from envs.robomanip.oracles.window import WindowOracle
 from envs.robomanip.scene import SceneEnv
 
 SPEED_UP = 3.0
@@ -43,6 +45,8 @@ def main():
             agents = {
                 'cube': CubeOracle(env),
                 'button': ButtonOracle(env),
+                'drawer': DrawerOracle(env),
+                'window': WindowOracle(env),
             }
         agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)

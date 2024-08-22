@@ -20,6 +20,7 @@
                 <geom conaffinity="1" condim="3" contype="1" group="4" material="window_col" solimp="0.99 0.99 0.01"
                       solref="0.01 1"/>
             </default>
+            <site type="sphere" size=".01" rgba="0 1 0 1" group="5"/>
         </default>
     </default>
 
@@ -48,7 +49,12 @@
             <geom class="window_col" pos="0 0 -0.166" size="0.201 0.03 0.015" type="box"/>
             <geom class="window_col" pos="0 0 0.166" size="0.201 0.03 0.015" type="box"/>
 
+            <body name="windowb_a_virtual_handle" pos="-0.014 -0.075 0.035">
+                <site name="window_handle_center_target" pos="0 0 0.0001" euler="0 0 1.57" group="5"/>
+            </body>
+
             <body name="windowb_a">
+                <site name="window_handle_center" pos="-0.014 -0.075 0.035" euler="0 0 1.57" group="5"/>
                 <joint type="slide" range="0 .2" axis="1 0 0" name="window_slide"/>
                 <geom material="window_handle" euler="1.57 0 0" pos="-0.014 -0.028 0.045" size="0.012  0.003"
                       type="cylinder"/>

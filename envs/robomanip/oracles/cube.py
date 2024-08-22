@@ -8,7 +8,7 @@ class CubeOracle(Oracle):
         self._done = False
         self._step = 0
         self._max_step = 200
-        self._final_pos = np.random.uniform(*self._env._arm_sampling_bounds)
+        self._final_pos = np.random.uniform(*self._env.unwrapped._arm_sampling_bounds)
         self._final_yaw = np.random.uniform(-np.pi, np.pi)
 
     def select_action(self, ob, info):

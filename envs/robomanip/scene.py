@@ -13,19 +13,19 @@ class SceneEnv(RoboManipEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.35]])
-        self._object_sampling_bounds = np.asarray([[0.3, -0.15], [0.45, 0.15]])
-        self._target_sampling_bounds = np.asarray([[0.3, -0.15], [0.45, 0.15]])
+        self._object_sampling_bounds = np.asarray([[0.3, -0.05], [0.45, 0.2]])
+        self._target_sampling_bounds = self._object_sampling_bounds
         self._num_cubes = 1
         self._num_buttons = 2
         self._num_button_states = 3
+        self._cur_button_states = [0] * self._num_buttons
 
         self._target_task = 'cube'
         self._target_block = 0
-        self._target_drawer_pos = 0.0
-        self._target_window_pos = 0.0
-        self._cur_button_states = [0] * self._num_buttons
         self._target_button = 0
         self._target_button_states = [0] * self._num_buttons
+        self._target_drawer_pos = 0.0
+        self._target_window_pos = 0.0
 
     def set_tasks(self):
         raise NotImplementedError
@@ -34,12 +34,12 @@ class SceneEnv(RoboManipEnv):
         # Add object to scene
         cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_1.xml').as_posix())
         arena_mjcf.include_copy(cube_mjcf)
+        buttons_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
+        arena_mjcf.include_copy(buttons_mjcf)
         drawer_mjcf = mjcf.from_path((_HERE / 'common' / 'drawer.xml').as_posix())
         arena_mjcf.include_copy(drawer_mjcf)
         window_mjcf = mjcf.from_path((_HERE / 'common' / 'window.xml').as_posix())
         arena_mjcf.include_copy(window_mjcf)
-        buttons_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
-        arena_mjcf.include_copy(buttons_mjcf)
 
         self._cube_geoms_list = []
         for i in range(self._num_cubes):
@@ -47,6 +47,7 @@ class SceneEnv(RoboManipEnv):
         self._cube_target_geoms_list = []
         for i in range(self._num_cubes):
             self._cube_target_geoms_list.append(cube_mjcf.find('body', f'object_target_{i}').find_all('geom'))
+
         self._button_geoms_list = []
         for i in range(self._num_buttons):
             self._button_geoms_list.append([buttons_mjcf.find('geom', f'btngeom_{i}')])
@@ -62,11 +63,18 @@ class SceneEnv(RoboManipEnv):
             [self._model.geom(geom.full_identifier).id for geom in cube_target_geoms]
             for cube_target_geoms in self._cube_target_geoms_list
         ]
+
         self._button_geom_ids_list = [
             [self._model.geom(geom.full_identifier).id for geom in button_geoms]
             for button_geoms in self._button_geoms_list
         ]
         self._button_site_ids = [self._model.site(f'btntop_{i}').id for i in range(self._num_buttons)]
+
+        self._drawer_site_id = self._model.site('drawer_handle_center').id
+        self._drawer_target_site_id = self._model.site('drawer_handle_center_target').id
+
+        self._window_site_id = self._model.site('window_handle_center').id
+        self._window_target_site_id = self._model.site('window_handle_center_target').id
 
     def initialize_episode(self):
         for i in range(self._num_cubes):
@@ -90,15 +98,15 @@ class SceneEnv(RoboManipEnv):
                 self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
                 self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
 
-            # Randomize drawer and window positions
-            self._data.joint('drawer_slide').qpos[0] = self.np_random.uniform(-0.16, 0)
-            self._data.joint('window_slide').qpos[0] = self.np_random.uniform(0, 0.2)
-
             # Randomize button states
             for i in range(self._num_buttons):
                 self._cur_button_states[i] = self.np_random.choice(self._num_button_states)
                 for gid in self._button_geom_ids_list[i]:
                     self._model.geom(gid).rgba = _OBJECT_RGBAS[self._cur_button_states[i] + 1]
+
+            # Randomize drawer and window positions
+            self._data.joint('drawer_slide').qpos[0] = self.np_random.uniform(-0.16, 0)
+            self._data.joint('window_slide').qpos[0] = self.np_random.uniform(0, 0.2)
 
             # Set a new target
             self.set_new_target(return_info=False)
@@ -115,8 +123,8 @@ class SceneEnv(RoboManipEnv):
     def set_new_target(self, return_info=True, p_stack=0.5):
         assert self._mode == 'data_collection'
 
-        # self._target_task = self.np_random.choice(['cube', 'drawer', 'window', 'button'])
-        self._target_task = self.np_random.choice(['cube', 'button'])
+        self._target_task = self.np_random.choice(['cube', 'button', 'drawer', 'window'])
+        # self._target_task = self.np_random.choice(['drawer'])
         print(self._target_task)
 
         if self._target_task == 'cube':
@@ -163,21 +171,25 @@ class SceneEnv(RoboManipEnv):
                 else:
                     for gid in self._cube_target_geom_ids_list[i]:
                         self._model.geom(gid).rgba[3] = 0.0
+        elif self._target_task == 'button':
+            self._target_button = self.np_random.choice(self._num_buttons)
+            self._target_button_states[self._target_button] = (
+                self._cur_button_states[self._target_button] + 1
+            ) % self._num_button_states
         elif self._target_task == 'drawer':
             if self._data.joint('drawer_slide').qpos[0] >= -0.08:  # Drawer closed
                 self._target_drawer_pos = -0.16
             else:  # Drawer open
                 self._target_drawer_pos = 0.0
+            self._model.site('drawer_handle_center_target').pos[1] = self._target_drawer_pos
         elif self._target_task == 'window':
             if self._data.joint('window_slide').qpos[0] <= 0.1:  # Window closed
                 self._target_window_pos = 0.2
             else:  # Window open
                 self._target_window_pos = 0.0
-        else:
-            self._target_button = self.np_random.choice(self._num_buttons)
-            self._target_button_states[self._target_button] = (
-                self._cur_button_states[self._target_button] + 1
-            ) % self._num_button_states
+            self._model.site('window_handle_center_target').pos[0] = self._target_window_pos
+
+        mujoco.mj_kinematics(self._model, self._data)
 
         if return_info:
             return self.compute_observation(), self.get_reset_info()
@@ -201,22 +213,21 @@ class SceneEnv(RoboManipEnv):
                 cube_successes.append(True)
             else:
                 cube_successes.append(False)
-
-        drawer_success = np.abs(self._data.joint('drawer_slide').qpos[0] - self._target_drawer_pos) <= 0.04
-        window_success = np.abs(self._data.joint('window_slide').qpos[0] - self._target_window_pos) <= 0.04
         button_successes = [
             (self._cur_button_states[i] == self._target_button_states[i]) for i in range(self._num_buttons)
         ]
+        drawer_success = np.abs(self._data.joint('drawer_slide').qpos[0] - self._target_drawer_pos) <= 0.04
+        window_success = np.abs(self._data.joint('window_slide').qpos[0] - self._target_window_pos) <= 0.04
 
         if self._mode == 'data_collection':
             self._success = {
                 'cube': cube_successes[self._target_block],
+                'button': button_successes[self._target_button],
                 'drawer': drawer_success,
                 'window': window_success,
-                'button': button_successes[self._target_button],
             }[self._target_task]
         else:
-            self._success = all(cube_successes) and drawer_success and window_success and all(button_successes)
+            self._success = all(cube_successes) and all(button_successes) and drawer_success and window_success
 
         for i in range(self._num_cubes):
             if self._visualize_info and (self._mode == 'evaluation' or i == self._target_block):
@@ -241,14 +252,24 @@ class SceneEnv(RoboManipEnv):
                 [lie.SO3(wxyz=self._data.joint(f'object_joint_{i}').qpos[3:]).compute_yaw_radians()]
             )
 
-        ob_info['privileged/drawer_pos'] = self._data.joint('drawer_slide').qpos.copy()
-        ob_info['privileged/drawer_vel'] = self._data.joint('drawer_slide').qvel.copy()
-        ob_info['privileged/window_pos'] = self._data.joint('window_slide').qpos.copy()
-        ob_info['privileged/window_vel'] = self._data.joint('window_slide').qvel.copy()
         for i in range(self._num_buttons):
             ob_info[f'privileged/button_{i}_state'] = self._cur_button_states[i]
             ob_info[f'privileged/button_{i}_pos'] = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()
             ob_info[f'privileged/button_{i}_vel'] = self._data.joint(f'buttonbox_joint_{i}').qvel.copy()
+
+        ob_info['privileged/drawer_pos'] = self._data.joint('drawer_slide').qpos.copy()
+        ob_info['privileged/drawer_vel'] = self._data.joint('drawer_slide').qvel.copy()
+        ob_info['privileged/drawer_handle_pos'] = self._data.site_xpos[self._drawer_site_id].copy()
+        ob_info['privileged/drawer_handle_yaw'] = np.array(
+            [lie.SO3.from_matrix(self._data.site_xmat[self._drawer_site_id].reshape(3, 3)).compute_yaw_radians()]
+        )
+
+        ob_info['privileged/window_pos'] = self._data.joint('window_slide').qpos.copy()
+        ob_info['privileged/window_vel'] = self._data.joint('window_slide').qvel.copy()
+        ob_info['privileged/window_handle_pos'] = self._data.site_xpos[self._window_site_id].copy()
+        ob_info['privileged/window_handle_yaw'] = np.array(
+            [lie.SO3.from_matrix(self._data.site_xmat[self._window_site_id].reshape(3, 3)).compute_yaw_radians()]
+        )
 
         if self._mode == 'data_collection':
             target_mocap_id = self._cube_target_mocap_ids[self._target_block]
@@ -258,13 +279,18 @@ class SceneEnv(RoboManipEnv):
             ob_info['privileged/target_block_yaw'] = np.array(
                 [lie.SO3(wxyz=self._data.mocap_quat[target_mocap_id]).compute_yaw_radians()]
             )
-            ob_info['privileged/target_drawer_pos'] = np.array([self._target_drawer_pos])
-            ob_info['privileged/target_window_pos'] = np.array([self._target_window_pos])
+
             ob_info['privileged/target_button'] = self._target_button
             ob_info['privileged/target_button_state'] = self._target_button_states[self._target_button]
             ob_info['privileged/target_button_top_pos'] = self._data.site_xpos[
                 self._button_site_ids[self._target_button]
             ].copy()
+
+            ob_info['privileged/target_drawer_pos'] = np.array([self._target_drawer_pos])
+            ob_info['privileged/target_drawer_handle_pos'] = self._data.site_xpos[self._drawer_target_site_id].copy()
+
+            ob_info['privileged/target_window_pos'] = np.array([self._target_window_pos])
+            ob_info['privileged/target_window_handle_pos'] = self._data.site_xpos[self._window_target_site_id].copy()
 
     def compute_observation(self):
         if self._ob_type == 'pixels':
@@ -293,14 +319,6 @@ class SceneEnv(RoboManipEnv):
                         np.sin(ob_info[f'privileged/block_{i}_yaw']),
                     ]
                 )
-            ob.extend(
-                [
-                    ob_info['privileged/drawer_pos'] * 18,
-                    ob_info['privileged/drawer_vel'],
-                    ob_info['privileged/window_pos'] * 15,
-                    ob_info['privileged/window_vel'],
-                ]
-            )
             for i in range(self._num_buttons):
                 ob.extend(
                     [
@@ -309,5 +327,13 @@ class SceneEnv(RoboManipEnv):
                         ob_info[f'privileged/button_{i}_vel'],
                     ]
                 )
+            ob.extend(
+                [
+                    ob_info['privileged/drawer_pos'] * 18,
+                    ob_info['privileged/drawer_vel'],
+                    ob_info['privileged/window_pos'] * 15,
+                    ob_info['privileged/window_vel'],
+                ]
+            )
 
             return np.concatenate(ob)
