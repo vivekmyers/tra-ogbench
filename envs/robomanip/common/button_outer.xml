@@ -1,4 +1,4 @@
-<mujoco model="buttonbox">
+<mujoco model="button_outer">
     <compiler angle="radian" inertiafromgeom="auto" inertiagrouprange="1 5"/>
     <asset>
         <texture name="T_btn" type="cube" file="metaworld/button/metal1.png"/>

@@ -18,7 +18,7 @@ SPEED_UP = 3.0
 def main():
     use_oracle = True
     use_viewer = (os.environ.get('USE_VIEWER', 'False') == 'True')
-    env_type = 'button-game-3x3'
+    env_type = 'button_game_4x4'
     mode = 'data_collection'
     # mode = 'evaluation'
     if 'cube' in env_type:

@@ -113,7 +113,7 @@ class SceneEnv(RoboManipEnv):
 
     def add_objects(self, arena_mjcf):
         # Add objects to scene
-        cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_1.xml').as_posix())
+        cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube.xml').as_posix())
         arena_mjcf.include_copy(cube_mjcf)
         button_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
         arena_mjcf.include_copy(button_mjcf)

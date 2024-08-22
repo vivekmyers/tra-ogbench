@@ -13,16 +13,12 @@ class CubeEnv(RoboManipEnv):
         super().__init__(*args, **kwargs)
 
         if self._env_type == 'cube_single':
-            self._cube_xml = _HERE / 'common' / 'cube_1.xml'
             self._num_cubes = 1
         elif self._env_type == 'cube_double':
-            self._cube_xml = _HERE / 'common' / 'cube_2.xml'
             self._num_cubes = 2
         elif self._env_type == 'cube_triple':
-            self._cube_xml = _HERE / 'common' / 'cube_3.xml'
             self._num_cubes = 3
         elif self._env_type == 'cube_quadruple':
-            self._cube_xml = _HERE / 'common' / 'cube_4.xml'
             self._num_cubes = 4
         else:
             raise ValueError(f'Invalid env_type: {env_type}')
@@ -230,20 +226,31 @@ class CubeEnv(RoboManipEnv):
 
     def add_objects(self, arena_mjcf):
         # Add objects to scene
-        cube_mjcf = mjcf.from_path(self._cube_xml.as_posix())
-        arena_mjcf.include_copy(cube_mjcf)
+        cube_outer_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_outer.xml').as_posix())
+        arena_mjcf.include_copy(cube_outer_mjcf)
+
+        r = 0.05
+        for i in range(self._num_cubes):
+            cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_inner.xml').as_posix())
+            pos = -r * (self._num_cubes - 1) + 2 * r * i
+            cube_mjcf.find('body', 'object_0').pos[1] = pos
+            cube_mjcf.find('body', 'object_target_0').pos[1] = pos
+            for tag in ['body', 'joint', 'geom', 'site']:
+                for item in cube_mjcf.find_all(tag):
+                    if hasattr(item, 'name') and item.name is not None and item.name.endswith('_0'):
+                        item.name = item.name[:-2] + f'_{i}'
+            arena_mjcf.include_copy(cube_mjcf)
 
         self._cube_geoms_list = []
         for i in range(self._num_cubes):
-            self._cube_geoms_list.append(cube_mjcf.find('body', f'object_{i}').find_all('geom'))
+            self._cube_geoms_list.append(arena_mjcf.find('body', f'object_{i}').find_all('geom'))
         self._cube_target_geoms_list = []
         for i in range(self._num_cubes):
-            self._cube_target_geoms_list.append(cube_mjcf.find('body', f'object_target_{i}').find_all('geom'))
+            self._cube_target_geoms_list.append(arena_mjcf.find('body', f'object_target_{i}').find_all('geom'))
 
     def post_compilation_objects(self):
         self._cube_geom_ids_list = [
-            [self._model.geom(geom.full_identifier).id for geom in cube_geoms]
-            for cube_geoms in self._cube_geoms_list
+            [self._model.geom(geom.full_identifier).id for geom in cube_geoms] for cube_geoms in self._cube_geoms_list
         ]
         self._cube_target_mocap_ids = [
             self._model.body(f'object_target_{i}').mocapid[0] for i in range(self._num_cubes)
@@ -317,7 +324,7 @@ class CubeEnv(RoboManipEnv):
         self._success = False
 
     def set_new_target(self, return_info=True, p_stack=0.5):
-        assert self._mode  == 'data_collection'
+        assert self._mode == 'data_collection'
 
         block_xyzs = np.array([self._data.joint(f'object_joint_{i}').qpos[:3] for i in range(self._num_cubes)])
         top_blocks = []
