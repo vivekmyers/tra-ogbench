@@ -9,25 +9,23 @@ class ButtonEnv(RoboManipEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
-        if 'color' in env_type:
-            self._num_button_states = 3
-            self._effect_type = 'point'
-        elif 'game' in env_type:
-            self._num_button_states = 2
-            self._effect_type = 'plus'
-        else:
-            raise ValueError(f'Unknown env_type: {env_type}')
+        self._num_button_states = 2
+        self._effect_type = 'plus'
 
-        if '2x2' in env_type:
-            self._num_buttons = 4
-        elif '3x3' in env_type:
-            self._num_buttons = 9
+        if '3x3' in env_type:
+            self._num_rows = 3
+            self._num_cols = 3
         elif '4x4' in env_type:
-            self._num_buttons = 16
+            self._num_rows = 4
+            self._num_cols = 4
+        elif '4x6' in env_type:
+            self._num_rows = 4
+            self._num_cols = 6
         else:
             raise ValueError(f'Unknown env_type: {env_type}')
 
-        self._num_rows = int(self._num_buttons**0.5)
+        self._num_buttons = self._num_rows * self._num_cols
+
         self._cur_button_states = np.array([0] * self._num_buttons)
 
         super().__init__(*args, **kwargs)
@@ -44,35 +42,7 @@ class ButtonEnv(RoboManipEnv):
         super().set_state(qpos, qvel)
 
     def set_tasks(self):
-        if self._num_rows == 2 and self._num_button_states == 3:
-            self.task_infos = [
-                dict(
-                    task_name='task1',
-                    init_button_states=np.array([0, 0, 0, 0]),
-                    goal_button_states=np.array([0, 1, 2, 0]),
-                ),
-                dict(
-                    task_name='task2',
-                    init_button_states=np.array([0, 0, 0, 0]),
-                    goal_button_states=np.array([1, 1, 1, 1]),
-                ),
-                dict(
-                    task_name='task3',
-                    init_button_states=np.array([2, 0, 1, 2]),
-                    goal_button_states=np.array([0, 2, 1, 0]),
-                ),
-                dict(
-                    task_name='task4',
-                    init_button_states=np.array([2, 2, 2, 2]),
-                    goal_button_states=np.array([1, 1, 1, 1]),
-                ),
-                dict(
-                    task_name='task5',
-                    init_button_states=np.array([1, 1, 2, 0]),
-                    goal_button_states=np.array([0, 0, 1, 2]),
-                ),
-            ]
-        elif self._num_rows == 3 and self._num_button_states == 2:
+        if self._num_rows == 3 and self._num_cols == 3:
             self.task_infos = [
                 dict(
                     task_name='task1',
@@ -140,6 +110,162 @@ class ButtonEnv(RoboManipEnv):
                     ]).flatten(),
                 ),
             ]
+        if self._num_rows == 4 and self._num_cols == 4:
+            self.task_infos = [
+                dict(
+                    task_name='task1',
+                    init_button_states=np.array([
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [1, 1, 1, 1],
+                        [1, 0, 0, 1],
+                        [1, 0, 0, 1],
+                        [1, 1, 1, 1],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task2',
+                    init_button_states=np.array([
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [1, 0, 0, 1],
+                        [0, 1, 1, 0],
+                        [0, 1, 1, 0],
+                        [1, 0, 0, 1],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task3',
+                    init_button_states=np.array([
+                        [1, 1, 1, 1],
+                        [1, 1, 1, 1],
+                        [1, 1, 1, 1],
+                        [1, 1, 1, 1],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task4',
+                    init_button_states=np.array([
+                        [1, 0, 0, 1],
+                        [1, 0, 0, 1],
+                        [1, 0, 0, 1],
+                        [1, 0, 0, 1],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task5',
+                    init_button_states=np.array([
+                        [1, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 1],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [0, 1, 0, 1],
+                        [1, 0, 1, 0],
+                        [0, 1, 0, 1],
+                        [1, 0, 1, 0],
+                    ]).flatten(),
+                ),
+            ]
+        if self._num_rows == 4 and self._num_cols == 6:
+            self.task_infos = [
+                dict(
+                    task_name='task1',
+                    init_button_states=np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [0, 1, 1, 1, 1, 0],
+                        [1, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 1, 1, 1],
+                        [0, 1, 1, 1, 1, 0],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task2',
+                    init_button_states=np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [1, 0, 0, 0, 0, 1],
+                        [0, 1, 1, 1, 1, 0],
+                        [0, 1, 1, 1, 1, 0],
+                        [1, 0, 0, 0, 0, 1],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task3',
+                    init_button_states=np.array([
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task4',
+                    init_button_states=np.array([
+                        [0, 1, 0, 1, 0, 1],
+                        [1, 0, 1, 0, 1, 0],
+                        [0, 1, 0, 1, 0, 1],
+                        [1, 0, 1, 0, 1, 0],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [1, 0, 0, 0, 0, 1],
+                        [0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0],
+                        [1, 0, 0, 0, 0, 1],
+                    ]).flatten(),
+                ),
+                dict(
+                    task_name='task5',
+                    init_button_states=np.array([
+                        [0, 0, 0, 0, 0, 0],
+                        [1, 1, 1, 1, 1, 1],
+                        [1, 1, 1, 1, 1, 1],
+                        [0, 0, 0, 0, 0, 0],
+                    ]).flatten(),
+                    goal_button_states=np.array([
+                        [0, 0, 1, 1, 0, 0],
+                        [0, 0, 1, 1, 0, 0],
+                        [0, 0, 1, 1, 0, 0],
+                        [0, 0, 1, 1, 0, 0],
+                    ]).flatten(),
+                ),
+            ]
         else:
             raise NotImplementedError
 
@@ -150,15 +276,15 @@ class ButtonEnv(RoboManipEnv):
 
         r = 0.05
         for i in range(self._num_rows):
-            for j in range(self._num_rows):
+            for j in range(self._num_cols):
                 button_mjcf = mjcf.from_path((_HERE / 'common' / 'button_inner.xml').as_posix())
                 pos_x = 0.425 - r * (self._num_rows - 1) + 2 * r * i
-                pos_y = 0.0 - r * (self._num_rows - 1) + 2 * r * j
+                pos_y = 0.0 - r * (self._num_cols - 1) + 2 * r * j
                 button_mjcf.find('body', 'buttonbox_0').pos[:2] = np.array([pos_x, pos_y])
                 for tag in ['body', 'joint', 'geom', 'site']:
                     for item in button_mjcf.find_all(tag):
                         if hasattr(item, 'name') and item.name is not None and item.name.endswith('_0'):
-                            item.name = item.name[:-2] + f'_{i * self._num_rows + j}'
+                            item.name = item.name[:-2] + f'_{i * self._num_cols + j}'
                 arena_mjcf.include_copy(button_mjcf)
 
         self._button_geoms_list = []
@@ -257,12 +383,12 @@ class ButtonEnv(RoboManipEnv):
                 if self._effect_type == 'point':
                     self._cur_button_states[i] = (self._cur_button_states[i] + 1) % self._num_button_states
                 elif self._effect_type == 'plus':
-                    x, y = i // self._num_rows, i % self._num_rows
-                    for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:  # 4-connected
+                    x, y = i // self._num_cols, i % self._num_cols
+                    for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
                         nx, ny = x + dx, y + dy
-                        if 0 <= nx < self._num_rows and 0 <= ny < self._num_rows:
-                            self._cur_button_states[nx * self._num_rows + ny] = (
-                                self._cur_button_states[nx * self._num_rows + ny] + 1
+                        if 0 <= nx < self._num_rows and 0 <= ny < self._num_cols:
+                            self._cur_button_states[nx * self._num_cols + ny] = (
+                                self._cur_button_states[nx * self._num_cols + ny] + 1
                             ) % self._num_button_states
         self._update_button_colors()
 

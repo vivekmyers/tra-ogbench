@@ -77,104 +77,53 @@ register(
 )
 
 register(
-    id='button-color-2x2-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=300,
-    kwargs=dict(
-        env_type='button_color_2x2',
-    ),
-)
-register(
-    id='visual-button-color-2x2-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=300,
-    kwargs=dict(
-        env_type='button_color_2x2',
-        **visual_dict,
-    ),
-)
-register(
-    id='button-color-3x3-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=1000,
-    kwargs=dict(
-        env_type='button_color_3x3',
-    ),
-)
-register(
-    id='visual-button-color-3x3-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=1000,
-    kwargs=dict(
-        env_type='button_color_3x3',
-        **visual_dict,
-    ),
-)
-register(
-    id='button-color-4x4-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=2000,
-    kwargs=dict(
-        env_type='button_color_4x4',
-    ),
-)
-register(
-    id='visual-button-color-4x4-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=2000,
-    kwargs=dict(
-        env_type='button_color_4x4',
-        **visual_dict,
-    ),
-)
-register(
-    id='button-game-2x2-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=200,
-    kwargs=dict(
-        env_type='button_game_2x2',
-    ),
-)
-register(
-    id='visual-button-game-2x2-v0',
-    entry_point='envs.robomanip.button_env:ButtonEnv',
-    max_episode_steps=200,
-    kwargs=dict(
-        env_type='button_game_2x2',
-        **visual_dict,
-    ),
-)
-register(
-    id='button-game-3x3-v0',
+    id='button-3x3-v0',
     entry_point='envs.robomanip.button_env:ButtonEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='button_game_3x3',
+        env_type='button_3x3',
     ),
 )
 register(
-    id='visual-button-game-3x3-v0',
+    id='visual-button-3x3-v0',
     entry_point='envs.robomanip.button_env:ButtonEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='button_game_3x3',
+        env_type='button_3x3',
         **visual_dict,
     ),
 )
 register(
-    id='button-game-4x4-v0',
+    id='button-4x4-v0',
     entry_point='envs.robomanip.button_env:ButtonEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='button_game_4x4',
+        env_type='button_4x4',
     ),
 )
 register(
-    id='visual-button-game-4x4-v0',
+    id='visual-button-4x4-v0',
     entry_point='envs.robomanip.button_env:ButtonEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='button_game_4x4',
+        env_type='button_4x4',
+        **visual_dict,
+    ),
+)
+register(
+    id='button-4x6-v0',
+    entry_point='envs.robomanip.button_env:ButtonEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='button_4x6',
+    ),
+)
+register(
+    id='visual-button-4x6-v0',
+    entry_point='envs.robomanip.button_env:ButtonEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='button_4x6',
         **visual_dict,
     ),
 )
