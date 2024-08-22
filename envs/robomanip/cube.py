@@ -34,27 +34,27 @@ class CubeEnv(RoboManipEnv):
         if self._env_type == 'cube_single':
             self.task_infos = [
                 dict(
-                    task_name='task1',
+                    task_name='task1_horizontal',
                     init_xyzs=np.array([[0.425, 0.1, 0.02]]),
                     goal_xyzs=np.array([[0.425, -0.1, 0.02]]),
                 ),
                 dict(
-                    task_name='task2',
+                    task_name='task2_vertical1',
                     init_xyzs=np.array([[0.35, 0.0, 0.02]]),
                     goal_xyzs=np.array([[0.50, 0.0, 0.02]]),
                 ),
                 dict(
-                    task_name='task3',
+                    task_name='task3_vertical2',
                     init_xyzs=np.array([[0.50, 0.0, 0.02]]),
                     goal_xyzs=np.array([[0.35, 0.0, 0.02]]),
                 ),
                 dict(
-                    task_name='task4',
+                    task_name='task4_diagonal1',
                     init_xyzs=np.array([[0.35, -0.2, 0.02]]),
                     goal_xyzs=np.array([[0.50, 0.2, 0.02]]),
                 ),
                 dict(
-                    task_name='task5',
+                    task_name='task5_diagonal2',
                     init_xyzs=np.array([[0.35, 0.2, 0.02]]),
                     goal_xyzs=np.array([[0.50, -0.2, 0.02]]),
                 ),
@@ -62,7 +62,7 @@ class CubeEnv(RoboManipEnv):
         elif self._env_type == 'cube_double':
             self.task_infos = [
                 dict(
-                    task_name='task1',
+                    task_name='task1_single_pnp',
                     init_xyzs=np.array(
                         [
                             [0.425, 0.0, 0.02],
@@ -77,7 +77,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task2',
+                    task_name='task2_double_pnp1',
                     init_xyzs=np.array(
                         [
                             [0.35, -0.1, 0.02],
@@ -92,7 +92,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task3',
+                    task_name='task3_double_pnp2',
                     init_xyzs=np.array(
                         [
                             [0.35, 0.0, 0.02],
@@ -107,7 +107,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task4',
+                    task_name='task4_swap',
                     init_xyzs=np.array(
                         [
                             [0.425, -0.1, 0.02],
@@ -122,7 +122,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task5',
+                    task_name='task5_stack',
                     init_xyzs=np.array(
                         [
                             [0.425, -0.2, 0.02],
@@ -140,7 +140,7 @@ class CubeEnv(RoboManipEnv):
         elif self._env_type == 'cube_triple':
             self.task_infos = [
                 dict(
-                    task_name='task1',
+                    task_name='task1_single_pnp',
                     init_xyzs=np.array(
                         [
                             [0.35, -0.1, 0.02],
@@ -157,7 +157,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task2',
+                    task_name='task2_triple_pnp',
                     init_xyzs=np.array(
                         [
                             [0.35, -0.2, 0.02],
@@ -174,7 +174,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task3',
+                    task_name='task3_cycle',
                     init_xyzs=np.array(
                         [
                             [0.35, 0.0, 0.02],
@@ -191,7 +191,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task4',
+                    task_name='task4_pnp_from_stack',
                     init_xyzs=np.array(
                         [
                             [0.425, 0.2, 0.02],
@@ -208,7 +208,7 @@ class CubeEnv(RoboManipEnv):
                     ),
                 ),
                 dict(
-                    task_name='task5',
+                    task_name='task5_stack',
                     init_xyzs=np.array(
                         [
                             [0.35, -0.1, 0.02],
@@ -279,11 +279,9 @@ class CubeEnv(RoboManipEnv):
             self.set_new_target(return_info=False)
         else:
             # Set object positions and orientations based on the current task
-            init_xyzs = self.cur_task_info['init_xyzs'].copy()
-            goal_xyzs = self.cur_task_info['goal_xyzs'].copy()
             permutation = self.np_random.permutation(self._num_cubes)
-            init_xyzs = init_xyzs[permutation]
-            goal_xyzs = goal_xyzs[permutation]
+            init_xyzs = self.cur_task_info['init_xyzs'].copy()[permutation]
+            goal_xyzs = self.cur_task_info['goal_xyzs'].copy()[permutation]
 
             # First set the current scene to the goal state to get the goal observation
             saved_qpos = self._data.qpos.copy()
@@ -292,8 +290,6 @@ class CubeEnv(RoboManipEnv):
             for i in range(self._num_cubes):
                 self._data.joint(f'object_joint_{i}').qpos[:3] = goal_xyzs[i]
                 self._data.joint(f'object_joint_{i}').qpos[3:] = lie.SO3.identity().wxyz.tolist()
-                self._data.mocap_pos[self._cube_target_mocap_ids[i]] = goal_xyzs[i]
-                self._data.mocap_quat[self._cube_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
             mujoco.mj_forward(self._model, self._data)
             for _ in range(2):
                 self.step(self.action_space.sample())
