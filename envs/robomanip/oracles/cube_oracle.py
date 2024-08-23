@@ -4,6 +4,10 @@ from envs.robomanip.oracles.oracle import Oracle
 
 
 class CubeOracle(Oracle):
+    def __init__(self, max_step=200, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._max_step = max_step
+
     def reset(self, ob, info):
         self._done = False
         self._step = 0

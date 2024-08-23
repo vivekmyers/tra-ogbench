@@ -13,8 +13,9 @@ class SceneEnv(RoboManipEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.35]])
-        self._object_sampling_bounds = np.asarray([[0.3, -0.08], [0.45, 0.17]])
+        self._object_sampling_bounds = np.asarray([[0.3, -0.07], [0.45, 0.18]])
         self._target_sampling_bounds = self._object_sampling_bounds
+        self._drawer_center = np.array([0.33, -0.24, 0.066])
         self._num_cubes = 1
         self._num_buttons = 2
         self._num_button_states = 3
@@ -35,37 +36,7 @@ class SceneEnv(RoboManipEnv):
     def set_tasks(self):
         self.task_infos = [
             dict(
-                task_name='task1_block',
-                init=dict(
-                    block_xyzs=np.array([[0.4, -0.05, 0.02]]),
-                    button_states=np.array([0, 1]),
-                    drawer_pos=0.0,
-                    window_pos=0.0,
-                ),
-                goal=dict(
-                    block_xyzs=np.array([[0.4, 0.15, 0.02]]),
-                    button_states=np.array([0, 1]),
-                    drawer_pos=0.0,
-                    window_pos=0.0,
-                ),
-            ),
-            dict(
-                task_name='task2_button',
-                init=dict(
-                    block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([0, 1]),
-                    drawer_pos=0.0,
-                    window_pos=0.0,
-                ),
-                goal=dict(
-                    block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([2, 2]),
-                    drawer_pos=0.0,
-                    window_pos=0.0,
-                ),
-            ),
-            dict(
-                task_name='task3_drawer_window',
+                task_name='task1_drawer_window',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
                     button_states=np.array([0, 1]),
@@ -80,16 +51,46 @@ class SceneEnv(RoboManipEnv):
                 ),
             ),
             dict(
-                task_name='task4_drawer_window_button',
+                task_name='task2_block_button_window',
+                init=dict(
+                    block_xyzs=np.array([[0.4, -0.05, 0.02]]),
+                    button_states=np.array([0, 1]),
+                    drawer_pos=0.0,
+                    window_pos=0.0,
+                ),
+                goal=dict(
+                    block_xyzs=np.array([[0.4, 0.15, 0.02]]),
+                    button_states=np.array([1, 1]),
+                    drawer_pos=0.0,
+                    window_pos=0.2,
+                ),
+            ),
+            dict(
+                task_name='task3_block_in_drawer',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([0, 1]),
+                    button_states=np.array([0, 2]),
+                    drawer_pos=0.0,
+                    window_pos=0.0,
+                ),
+                goal=dict(
+                    block_xyzs=np.array([[0.33, -0.36, 0.066]]),
+                    button_states=np.array([0, 2]),
+                    drawer_pos=0.0,
+                    window_pos=0.0,
+                ),
+            ),
+            dict(
+                task_name='task4_button_drawer_window',
+                init=dict(
+                    block_xyzs=np.array([[0.35, 0.05, 0.02]]),
+                    button_states=np.array([1, 2]),
                     drawer_pos=0.0,
                     window_pos=0.2,
                 ),
                 goal=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([0, 2]),
+                    button_states=np.array([0, 0]),
                     drawer_pos=-0.16,
                     window_pos=0.0,
                 ),
@@ -99,11 +100,11 @@ class SceneEnv(RoboManipEnv):
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.15, 0.02]]),
                     button_states=np.array([0, 1]),
-                    drawer_pos=-0.16,
+                    drawer_pos=0.0,
                     window_pos=0.0,
                 ),
                 goal=dict(
-                    block_xyzs=np.array([[0.4, -0.05, 0.02]]),
+                    block_xyzs=np.array([[0.33, -0.36, 0.066]]),
                     button_states=np.array([2, 0]),
                     drawer_pos=0.0,
                     window_pos=0.2,
@@ -253,15 +254,26 @@ class SceneEnv(RoboManipEnv):
 
         self._success = False
 
-    def set_new_target(self, return_info=True, p_stack=0.5):
+    def set_new_target(self, return_info=True, p_drawer=0.1, p_stack=0.5):
         assert self._mode == 'data_collection'
 
-        self._target_task = self.np_random.choice(['cube', 'button', 'drawer', 'window'])
+        # Only consider blocks not in the drawer
+        available_blocks = []
+        for i in range(self._num_cubes):
+            if self._data.joint(f'object_joint_{self._target_block}').qpos[1] > -0.16:
+                available_blocks.append(i)
+
+        if len(available_blocks) == 0:
+            self._target_task = self.np_random.choice(['button', 'drawer', 'window'])
+        else:
+            self._target_task = self.np_random.choice(['cube', 'button', 'drawer', 'window'])
 
         if self._target_task == 'cube':
             block_xyzs = np.array([self._data.joint(f'object_joint_{i}').qpos[:3] for i in range(self._num_cubes)])
             top_blocks = []
             for i in range(self._num_cubes):
+                if i not in available_blocks:
+                    continue
                 for j in range(self._num_cubes):
                     if i == j:
                         continue
@@ -276,8 +288,15 @@ class SceneEnv(RoboManipEnv):
             # Pick one of the top cubes as the target
             self._target_block = self.np_random.choice(top_blocks)
 
+            put_in_drawer = (
+                self._data.joint('drawer_slide').qpos[0] < -0.12
+                and self.np_random.uniform() < p_drawer
+            )
             stack = len(top_blocks) >= 2 and self.np_random.uniform() < p_stack
-            if stack:
+            if put_in_drawer:
+                tar_pos = self._drawer_center.copy()
+                tar_pos[:2] = tar_pos[:2] + self.np_random.uniform(-0.005, 0.005, size=2)
+            elif stack:
                 # Stack the target block on top of another block
                 block_idx = self.np_random.choice(list(set(top_blocks) - {self._target_block}))
                 block_pos = self._data.joint(f'object_joint_{block_idx}').qpos[:3]

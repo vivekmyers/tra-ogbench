@@ -6,10 +6,10 @@ import numpy as np
 from envs.robomanip import viewer_utils
 from envs.robomanip.button_env import ButtonEnv
 from envs.robomanip.cube_env import CubeEnv
-from envs.robomanip.oracles.button import ButtonOracle
-from envs.robomanip.oracles.cube import CubeOracle
-from envs.robomanip.oracles.drawer import DrawerOracle
-from envs.robomanip.oracles.window import WindowOracle
+from envs.robomanip.oracles.button_oracle import ButtonOracle
+from envs.robomanip.oracles.cube_oracle import CubeOracle
+from envs.robomanip.oracles.drawer_oracle import DrawerOracle
+from envs.robomanip.oracles.window_oracle import WindowOracle
 from envs.robomanip.scene_env import SceneEnv
 
 SPEED_UP = 3.0
@@ -18,7 +18,9 @@ SPEED_UP = 3.0
 def main():
     use_oracle = True
     use_viewer = (os.environ.get('USE_VIEWER', 'False') == 'True')
-    env_type = 'button_4x6'
+    # env_type = 'cube_quadruple'
+    env_type = 'scene'
+    # env_type = 'button_4x6'
     mode = 'data_collection'
     # mode = 'evaluation'
     if 'cube' in env_type:
@@ -55,7 +57,7 @@ def main():
             }
         else:
             agents = {
-                'cube': CubeOracle(env=env),
+                'cube': CubeOracle(env=env, max_step=100),
                 'button': ButtonOracle(env=env),
                 'drawer': DrawerOracle(env=env),
                 'window': WindowOracle(env=env),

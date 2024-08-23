@@ -4,14 +4,14 @@ from envs.robomanip.oracles.oracle import Oracle
 
 
 class ButtonOracle(Oracle):
-    def __init__(self, gripper_always_closed=False, *args, **kwargs):
+    def __init__(self, max_step=100, gripper_always_closed=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._max_step = max_step
         self._gripper_always_closed = gripper_always_closed
 
     def reset(self, ob, info):
         self._done = False
         self._step = 0
-        self._max_step = 100
         self._final_pos = np.random.uniform(*self._env.unwrapped._arm_sampling_bounds)
         self._final_yaw = np.random.uniform(-np.pi, np.pi)
 

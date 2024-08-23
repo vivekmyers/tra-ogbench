@@ -6,10 +6,10 @@ from absl import app, flags
 from tqdm import trange
 
 import envs.robomanip  # noqa
-from envs.robomanip.oracles.button import ButtonOracle
-from envs.robomanip.oracles.cube import CubeOracle
-from envs.robomanip.oracles.drawer import DrawerOracle
-from envs.robomanip.oracles.window import WindowOracle
+from envs.robomanip.oracles.button_oracle import ButtonOracle
+from envs.robomanip.oracles.cube_oracle import CubeOracle
+from envs.robomanip.oracles.drawer_oracle import DrawerOracle
+from envs.robomanip.oracles.window_oracle import WindowOracle
 
 FLAGS = flags.FLAGS
 
@@ -43,7 +43,7 @@ def main(_):
         }
     elif 'scene' in FLAGS.env_name:
         agents = {
-            'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm),
+            'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm, max_step=100),
             'button': ButtonOracle(env=env, min_norm=FLAGS.min_norm),
             'drawer': DrawerOracle(env=env, min_norm=FLAGS.min_norm),
             'window': WindowOracle(env=env, min_norm=FLAGS.min_norm),

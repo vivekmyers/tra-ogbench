@@ -40,7 +40,7 @@
         <mesh file="metaworld/window/windowb_glass.stl" name="windowb_glass"/>
     </asset>
     <worldbody>
-        <body childclass="window_base" pos="0.3 0.29 .202" name="window">
+        <body childclass="window_base" pos="0.3 0.3 .202" name="window">
             <geom material="window_body" mesh="window_h_base" pos="0 0 -0.192"/>
             <geom material="window_body" mesh="window_h_frame"/>
             <geom class="window_col" pos="-0.216 0 0" size="0.015 0.03 0.181" type="box"/>

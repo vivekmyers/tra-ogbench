@@ -191,10 +191,13 @@ class RoboManipEnv(env.CustomMuJoCoEnv):
         )
 
         # TODO: Remove this
-        # ################## FOR DEBUGGING ###################
-        # with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
-        #     file.write(mjcf_utils.to_string(arena_mjcf))
-        # ################## FOR DEBUGGING ###################
+        ################## FOR DEBUGGING ###################
+        import sys
+
+        if sys.platform == 'darwin':
+            with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
+                file.write(mjcf_utils.to_string(arena_mjcf))
+        ################## FOR DEBUGGING ###################
 
         return arena_mjcf
 
