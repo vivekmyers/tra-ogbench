@@ -260,7 +260,7 @@ class SceneEnv(RoboManipEnv):
         # Only consider blocks not in the drawer
         available_blocks = []
         for i in range(self._num_cubes):
-            if self._data.joint(f'object_joint_{self._target_block}').qpos[1] > -0.16:
+            if self._data.joint(f'object_joint_{i}').qpos[1] > -0.16:
                 available_blocks.append(i)
 
         if len(available_blocks) == 0:
