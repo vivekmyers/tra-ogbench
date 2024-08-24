@@ -8,7 +8,7 @@ import mujoco.viewer
 import numpy as np
 from dm_control import mjcf
 
-from envs.robomanip import mjcf_utils
+from envs.manipspace import mjcf_utils
 
 
 class CustomMuJoCoEnv(gym.Env, abc.ABC):

@@ -9,7 +9,7 @@ visual_dict = dict(
 
 register(
     id='cube-single-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=200,
     kwargs=dict(
         env_type='cube_single',
@@ -17,7 +17,7 @@ register(
 )
 register(
     id='visual-cube-single-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=200,
     kwargs=dict(
         env_type='cube_single',
@@ -26,7 +26,7 @@ register(
 )
 register(
     id='cube-double-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=500,
     kwargs=dict(
         env_type='cube_double',
@@ -34,7 +34,7 @@ register(
 )
 register(
     id='visual-cube-double-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=500,
     kwargs=dict(
         env_type='cube_double',
@@ -43,7 +43,7 @@ register(
 )
 register(
     id='cube-triple-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_triple',
@@ -51,7 +51,7 @@ register(
 )
 register(
     id='visual-cube-triple-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_triple',
@@ -60,7 +60,7 @@ register(
 )
 register(
     id='cube-quadruple-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_quadruple',
@@ -68,7 +68,7 @@ register(
 )
 register(
     id='visual-cube-quadruple-v0',
-    entry_point='envs.robomanip.cube_env:CubeEnv',
+    entry_point='envs.manipspace.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='cube_quadruple',
@@ -78,7 +78,7 @@ register(
 
 register(
     id='puzzle-3x3-v0',
-    entry_point='envs.robomanip.puzzle_env:PuzzleEnv',
+    entry_point='envs.manipspace.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
     kwargs=dict(
         env_type='puzzle_3x3',
@@ -86,7 +86,7 @@ register(
 )
 register(
     id='visual-puzzle-3x3-v0',
-    entry_point='envs.robomanip.puzzle_env:PuzzleEnv',
+    entry_point='envs.manipspace.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
     kwargs=dict(
         env_type='puzzle_3x3',
@@ -95,7 +95,7 @@ register(
 )
 register(
     id='puzzle-4x4-v0',
-    entry_point='envs.robomanip.puzzle_env:PuzzleEnv',
+    entry_point='envs.manipspace.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='puzzle_4x4',
@@ -103,7 +103,7 @@ register(
 )
 register(
     id='visual-puzzle-4x4-v0',
-    entry_point='envs.robomanip.puzzle_env:PuzzleEnv',
+    entry_point='envs.manipspace.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='puzzle_4x4',
@@ -112,7 +112,7 @@ register(
 )
 register(
     id='puzzle-4x6-v0',
-    entry_point='envs.robomanip.puzzle_env:PuzzleEnv',
+    entry_point='envs.manipspace.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='puzzle_4x6',
@@ -120,7 +120,7 @@ register(
 )
 register(
     id='visual-puzzle-4x6-v0',
-    entry_point='envs.robomanip.puzzle_env:PuzzleEnv',
+    entry_point='envs.manipspace.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
         env_type='puzzle_4x6',
@@ -130,7 +130,7 @@ register(
 
 register(
     id='scene-v0',
-    entry_point='envs.robomanip.scene_env:SceneEnv',
+    entry_point='envs.manipspace.scene_env:SceneEnv',
     max_episode_steps=750,
     kwargs=dict(
         env_type='scene',
@@ -138,7 +138,7 @@ register(
 )
 register(
     id='visual-scene-v0',
-    entry_point='envs.robomanip.scene_env:SceneEnv',
+    entry_point='envs.manipspace.scene_env:SceneEnv',
     max_episode_steps=750,
     kwargs=dict(
         env_type='scene',

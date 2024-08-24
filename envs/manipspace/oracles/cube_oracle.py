@@ -1,6 +1,6 @@
 import numpy as np
 
-from envs.robomanip.oracles.oracle import Oracle
+from envs.manipspace.oracles.oracle import Oracle
 
 
 class CubeOracle(Oracle):

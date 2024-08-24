@@ -3,14 +3,14 @@ import time
 
 import numpy as np
 
-from envs.robomanip import viewer_utils
-from envs.robomanip.cube_env import CubeEnv
-from envs.robomanip.oracles.button_oracle import ButtonOracle
-from envs.robomanip.oracles.cube_oracle import CubeOracle
-from envs.robomanip.oracles.drawer_oracle import DrawerOracle
-from envs.robomanip.oracles.window_oracle import WindowOracle
-from envs.robomanip.puzzle_env import PuzzleEnv
-from envs.robomanip.scene_env import SceneEnv
+from envs.manipspace import viewer_utils
+from envs.manipspace.envs.cube_env import CubeEnv
+from envs.manipspace.envs.puzzle_env import PuzzleEnv
+from envs.manipspace.envs.scene_env import SceneEnv
+from envs.manipspace.oracles.button_oracle import ButtonOracle
+from envs.manipspace.oracles.cube_oracle import CubeOracle
+from envs.manipspace.oracles.drawer_oracle import DrawerOracle
+from envs.manipspace.oracles.window_oracle import WindowOracle
 
 SPEED_UP = 3.0
 

@@ -2,11 +2,11 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 
-from envs.robomanip import lie
-from envs.robomanip.robomanip import _COLORS, _HERE, _HOME_QPOS, RoboManipEnv
+from envs.manipspace import lie
+from envs.manipspace.envs.manipspace_env import _COLORS, _DESC_DIR, _HOME_QPOS, ManipSpaceEnv
 
 
-class SceneEnv(RoboManipEnv):
+class SceneEnv(ManipSpaceEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
@@ -115,13 +115,13 @@ class SceneEnv(RoboManipEnv):
 
     def add_objects(self, arena_mjcf):
         # Add objects to scene
-        cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube.xml').as_posix())
+        cube_mjcf = mjcf.from_path((_DESC_DIR / 'cube.xml').as_posix())
         arena_mjcf.include_copy(cube_mjcf)
-        button_mjcf = mjcf.from_path((_HERE / 'common' / 'buttons.xml').as_posix())
+        button_mjcf = mjcf.from_path((_DESC_DIR / 'buttons.xml').as_posix())
         arena_mjcf.include_copy(button_mjcf)
-        drawer_mjcf = mjcf.from_path((_HERE / 'common' / 'drawer.xml').as_posix())
+        drawer_mjcf = mjcf.from_path((_DESC_DIR / 'drawer.xml').as_posix())
         arena_mjcf.include_copy(drawer_mjcf)
-        window_mjcf = mjcf.from_path((_HERE / 'common' / 'window.xml').as_posix())
+        window_mjcf = mjcf.from_path((_DESC_DIR / 'window.xml').as_posix())
         arena_mjcf.include_copy(window_mjcf)
 
         self._cube_geoms_list = []
@@ -506,9 +506,12 @@ class SceneEnv(RoboManipEnv):
                     ]
                 )
             for i in range(self._num_buttons):
+                button_state = np.eye(self._num_button_states)[self._cur_button_states[i]]
+                if self._num_button_states == 2:
+                    button_state = button_state[1:]
                 ob.extend(
                     [
-                        np.eye(self._num_button_states)[self._cur_button_states[i]],
+                        button_state,
                         ob_info[f'privileged/button_{i}_pos'] * 120,
                         ob_info[f'privileged/button_{i}_vel'],
                     ]

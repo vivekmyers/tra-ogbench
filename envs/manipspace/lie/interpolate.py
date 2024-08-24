@@ -1,4 +1,4 @@
-from envs.robomanip.lie import SE3, SO3
+from envs.manipspace.lie import SE3, SO3
 
 
 def interpolate(

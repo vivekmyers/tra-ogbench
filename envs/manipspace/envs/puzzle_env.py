@@ -2,10 +2,10 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 
-from envs.robomanip.robomanip import _COLORS, _HERE, _HOME_QPOS, RoboManipEnv
+from envs.manipspace.envs.manipspace_env import _COLORS, _DESC_DIR, _HOME_QPOS, ManipSpaceEnv
 
 
-class PuzzleEnv(RoboManipEnv):
+class PuzzleEnv(ManipSpaceEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
@@ -331,13 +331,13 @@ class PuzzleEnv(RoboManipEnv):
 
     def add_objects(self, arena_mjcf):
         # Add objects to scene
-        button_outer_mjcf = mjcf.from_path((_HERE / 'common' / 'button_outer.xml').as_posix())
+        button_outer_mjcf = mjcf.from_path((_DESC_DIR / 'button_outer.xml').as_posix())
         arena_mjcf.include_copy(button_outer_mjcf)
 
         r = 0.05
         for i in range(self._num_rows):
             for j in range(self._num_cols):
-                button_mjcf = mjcf.from_path((_HERE / 'common' / 'button_inner.xml').as_posix())
+                button_mjcf = mjcf.from_path((_DESC_DIR / 'button_inner.xml').as_posix())
                 pos_x = 0.425 - r * (self._num_rows - 1) + 2 * r * i
                 pos_y = 0.0 - r * (self._num_cols - 1) + 2 * r * j
                 button_mjcf.find('body', 'buttonbox_0').pos[:2] = np.array([pos_x, pos_y])
@@ -495,9 +495,12 @@ class PuzzleEnv(RoboManipEnv):
                 ob_info['proprio/gripper_contact'],
             ]
             for i in range(self._num_buttons):
+                button_state = np.eye(self._num_button_states)[self._cur_button_states[i]]
+                if self._num_button_states == 2:
+                    button_state = button_state[1:]
                 ob.extend(
                     [
-                        np.eye(self._num_button_states)[self._cur_button_states[i]],
+                        button_state,
                         ob_info[f'privileged/button_{i}_pos'] * 120,
                         ob_info[f'privileged/button_{i}_vel'],
                     ]

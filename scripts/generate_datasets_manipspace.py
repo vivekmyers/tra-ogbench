@@ -5,11 +5,11 @@ import numpy as np
 from absl import app, flags
 from tqdm import trange
 
-import envs.robomanip  # noqa
-from envs.robomanip.oracles.button_oracle import ButtonOracle
-from envs.robomanip.oracles.cube_oracle import CubeOracle
-from envs.robomanip.oracles.drawer_oracle import DrawerOracle
-from envs.robomanip.oracles.window_oracle import WindowOracle
+import envs.manipspace  # noqa
+from envs.manipspace.oracles.button_oracle import ButtonOracle
+from envs.manipspace.oracles.cube_oracle import CubeOracle
+from envs.manipspace.oracles.drawer_oracle import DrawerOracle
+from envs.manipspace.oracles.window_oracle import WindowOracle
 
 FLAGS = flags.FLAGS
 

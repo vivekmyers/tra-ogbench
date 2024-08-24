@@ -6,17 +6,16 @@ import numpy as np
 from dm_control import mjcf
 from gymnasium.spaces import Box
 
-from envs.robomanip import controllers, env, lie, mjcf_utils
+from envs.manipspace import controllers, lie, mjcf_utils
+from envs.manipspace.envs.env import CustomMuJoCoEnv
 
-# XML files
 _HERE = Path(__file__).resolve().parent
-ARENA_XML = _HERE / 'common' / 'floor_wall.xml'
-UR5E_XML = _HERE / 'common' / 'universal_robots_ur5e' / 'ur5e.xml'
-ROBOTIQ_XML = _HERE / 'common' / 'robotiq_2f85' / '2f85.xml'
+_DESC_DIR = _HERE / '..' / 'descriptions'
+ARENA_XML = _DESC_DIR / 'floor_wall.xml'
+UR5E_XML = _DESC_DIR / 'universal_robots_ur5e' / 'ur5e.xml'
+ROBOTIQ_XML = _DESC_DIR / 'robotiq_2f85' / '2f85.xml'
 
-# Default joint configuration for the arm (used by the IK controller)
 _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi / 2, 0])
-
 _EFFECTOR_DOWN_ROTATION = lie.SO3(np.asarray([0.0, 1.0, 0.0, 0.0]))
 
 _COLORS = dict(
@@ -39,7 +38,7 @@ _CAMERAS = {
 }
 
 
-class RoboManipEnv(env.CustomMuJoCoEnv):
+class ManipSpaceEnv(CustomMuJoCoEnv):
     def __init__(
         self,
         ob_type='states',

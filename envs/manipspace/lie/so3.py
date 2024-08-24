@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import mujoco
 import numpy as np
 
-from envs.robomanip.lie.utils import get_epsilon
+from envs.manipspace.lie.utils import get_epsilon
 
 _IDENTITIY_WXYZ = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float64)
 _INVERT_QUAT_SIGN = np.array([1.0, -1.0, -1.0, -1.0], dtype=np.float64)

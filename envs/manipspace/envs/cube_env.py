@@ -2,11 +2,11 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 
-from envs.robomanip import lie
-from envs.robomanip.robomanip import _COLORS, _HERE, _HOME_QPOS, RoboManipEnv
+from envs.manipspace import lie
+from envs.manipspace.envs.manipspace_env import _COLORS, _DESC_DIR, _HOME_QPOS, ManipSpaceEnv
 
 
-class CubeEnv(RoboManipEnv):
+class CubeEnv(ManipSpaceEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
@@ -227,12 +227,12 @@ class CubeEnv(RoboManipEnv):
 
     def add_objects(self, arena_mjcf):
         # Add objects to scene
-        cube_outer_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_outer.xml').as_posix())
+        cube_outer_mjcf = mjcf.from_path((_DESC_DIR / 'cube_outer.xml').as_posix())
         arena_mjcf.include_copy(cube_outer_mjcf)
 
         r = 0.05
         for i in range(self._num_cubes):
-            cube_mjcf = mjcf.from_path((_HERE / 'common' / 'cube_inner.xml').as_posix())
+            cube_mjcf = mjcf.from_path((_DESC_DIR / 'cube_inner.xml').as_posix())
             pos = -r * (self._num_cubes - 1) + 2 * r * i
             cube_mjcf.find('body', 'object_0').pos[1] = pos
             cube_mjcf.find('body', 'object_target_0').pos[1] = pos

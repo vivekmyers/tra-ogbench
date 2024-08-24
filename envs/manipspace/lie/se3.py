@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from envs.robomanip.lie.so3 import SO3
-from envs.robomanip.lie.utils import get_epsilon, skew
+from envs.manipspace.lie.so3 import SO3
+from envs.manipspace.lie.utils import get_epsilon, skew
 
 _IDENTITY_WXYZ_XYZ = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.float64)
 
