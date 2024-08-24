@@ -3,8 +3,8 @@
     <asset>
 
         <material name="drawer_col" rgba="0.96 0.26 0.33 0.5" shininess="0" specular="0"/>
-        <material name="drawer_handle" rgba=".75 .75 .75 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="drawer_body" rgba="0.6 0.6 0.6 1" shininess="1" reflectance="1" specular=".5"/>
+        <material name="drawer_handle" rgba=".9 .9 .9 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="drawer_body" rgba="0.6 0.72 0.94 1" shininess="1" reflectance="1" specular=".5"/>
 
     </asset>
     <default>

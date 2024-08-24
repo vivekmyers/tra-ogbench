@@ -23,6 +23,7 @@ def main():
     # env_type = 'button_4x6'
     mode = 'data_collection'
     # mode = 'evaluation'
+    min_norm = 0.4
     if 'cube' in env_type:
         env = CubeEnv(
             env_type=env_type,
@@ -49,18 +50,18 @@ def main():
     if use_oracle:
         if 'cube' in env_type:
             agents = {
-                'cube': CubeOracle(env=env),
+                'cube': CubeOracle(env=env, min_norm=min_norm),
             }
         elif 'button' in env_type:
             agents = {
-                'button': ButtonOracle(env=env, gripper_always_closed=True),
+                'button': ButtonOracle(env=env, min_norm=min_norm, gripper_always_closed=True),
             }
-        else:
+        elif 'scene' in env_type:
             agents = {
-                'cube': CubeOracle(env=env, max_step=100),
-                'button': ButtonOracle(env=env),
-                'drawer': DrawerOracle(env=env),
-                'window': WindowOracle(env=env),
+                'cube': CubeOracle(env=env, min_norm=min_norm, max_step=100),
+                'button': ButtonOracle(env=env, min_norm=min_norm),
+                'drawer': DrawerOracle(env=env, min_norm=min_norm),
+                'window': WindowOracle(env=env, min_norm=min_norm),
             }
         agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)

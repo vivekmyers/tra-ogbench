@@ -16,7 +16,7 @@ class SceneEnv(RoboManipEnv):
         self._object_sampling_bounds = np.asarray([[0.3, -0.07], [0.45, 0.18]])
         self._target_sampling_bounds = self._object_sampling_bounds
         self._drawer_center = np.array([0.33, -0.24, 0.066])
-        self._cube_colors = np.array([_COLORS['blue'], _COLORS['orange']])
+        self._cube_colors = np.array([_COLORS['red'], _COLORS['blue']])
         self._num_cubes = 1
         self._num_buttons = 2
         self._num_button_states = 2
@@ -163,7 +163,7 @@ class SceneEnv(RoboManipEnv):
         # Change colors
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _COLORS['red' if self._cur_button_states[i] == 0 else 'lightgray']
+                self._model.geom(gid).rgba = _COLORS['red' if self._cur_button_states[i] == 0 else 'white']
 
         # Lock the drawer and window based on button states
         if self._cur_button_states[0] == 0:
@@ -171,13 +171,13 @@ class SceneEnv(RoboManipEnv):
             self._model.material('drawer_handle').rgba = _COLORS['red']
         else:
             self._model.joint('drawer_slide').damping[0] = 2.0
-            self._model.material('drawer_handle').rgba = _COLORS['lightgray']
+            self._model.material('drawer_handle').rgba = _COLORS['white']
         if self._cur_button_states[1] == 0:
             self._model.joint('window_slide').damping[0] = 1e8
             self._model.material('window_handle').rgba = _COLORS['red']
         else:
             self._model.joint('window_slide').damping[0] = 2.0
-            self._model.material('window_handle').rgba = _COLORS['lightgray']
+            self._model.material('window_handle').rgba = _COLORS['white']
 
         mujoco.mj_forward(self._model, self._data)
 

@@ -5,7 +5,8 @@
 
         <material name="btn_col" rgba="0.96 0.26 0.33 0.5" shininess="0" specular="0"/>
         <material name="btn_red" rgba="0.96 0.26 0.33 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="btn_top" rgba=".7 .7 .7 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="btn_top_0" rgba="0.6 0.72 0.94 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="btn_top_1" rgba="1 1 1 1" shininess="1" reflectance=".7" specular=".5"/>
         <material name="btn_black" rgba=".15 .15 .15 1" shininess="1" reflectance=".7" specular=".5"/>
         <material name="btn_metal" rgba=".8 .8 .8 1" texture="T_btn" shininess="1" reflectance="1" specular="1"/>
 
@@ -39,7 +40,7 @@
         <body childclass="buttonbox_base" name="buttonbox_0" pos="0.58 -0.05 0.048" euler="-1.57 0 0">
             <geom material="btn_black" mesh="stopbot" pos="0.0 -0.024 0.0"/>
             <geom material="btn_metal" euler="1.57 0 0" mesh="stopbuttonrim" pos="0.0 -0.0356 0.0"/>
-            <geom material="btn_top" mesh="stoptop" pos="0.0 -0.024 0.0"/>
+            <geom material="btn_top_0" mesh="stoptop" pos="0.0 -0.024 0.0"/>
 
             <geom class="buttonbox_col" pos="0.0 0.0048 0.0288" size="0.048 0.0408 0.0192" type="box"/>
             <geom class="buttonbox_col" pos="0.0 0.0048 -0.0288" size="0.048 0.0408 0.0192" type="box"/>
@@ -65,7 +66,7 @@
         <body childclass="buttonbox_base" name="buttonbox_1" pos="0.58 0.05 0.048" euler="-1.57 0 0">
             <geom material="btn_black" mesh="stopbot" pos="0.0 -0.024 0.0"/>
             <geom material="btn_metal" euler="1.57 0 0" mesh="stopbuttonrim" pos="0.0 -0.0356 0.0"/>
-            <geom material="btn_top" mesh="stoptop" pos="0.0 -0.024 0.0"/>
+            <geom material="btn_top_1" mesh="stoptop" pos="0.0 -0.024 0.0"/>
 
             <geom class="buttonbox_col" pos="0.0 0.0048 0.0288" size="0.048 0.0408 0.0192" type="box"/>
             <geom class="buttonbox_col" pos="0.0 0.0048 -0.0288" size="0.048 0.0408 0.0192" type="box"/>

@@ -3,8 +3,8 @@
     <asset>
 
         <material name="window_col" rgba="0.96 0.26 0.33 0.5" shininess="0" specular="0"/>
-        <material name="window_handle" rgba=".65 .65 .65 1" shininess="1" reflectance=".7" specular=".5"/>
-        <material name="window_body" rgba=".3 .3 .3 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="window_handle" rgba=".9 .9 .9 1" shininess="1" reflectance=".7" specular=".5"/>
+        <material name="window_body" rgba="1 1 1 1" shininess="1" reflectance=".7" specular=".5"/>
         <material name="window_glass" rgba="0 .3 .4 .1" shininess="1" reflectance="1" specular=".5"/>
 
     </asset>
