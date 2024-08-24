@@ -60,7 +60,16 @@ class DrawerOracle(Oracle):
         else:
             if not above:
                 self.print_phase('4: Move in the air')
-                diff = np.array([drawer_pos[0], drawer_pos[1], above_threshold * 2,]) - effector_pos
+                diff = (
+                    np.array(
+                        [
+                            drawer_pos[0],
+                            drawer_pos[1],
+                            above_threshold * 2,
+                        ]
+                    )
+                    - effector_pos
+                )
                 diff = self.shape_diff(diff)
                 action[:3] = diff[:3] * gain_pos
                 action[3] = (self._final_yaw - effector_yaw) * gain_yaw

@@ -2,10 +2,10 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 
-from envs.robomanip.robomanip import RoboManipEnv, _HERE, _COLORS, _HOME_QPOS
+from envs.robomanip.robomanip import _COLORS, _HERE, _HOME_QPOS, RoboManipEnv
 
 
-class ButtonEnv(RoboManipEnv):
+class PuzzleEnv(RoboManipEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
@@ -46,224 +46,284 @@ class ButtonEnv(RoboManipEnv):
             self.task_infos = [
                 dict(
                     task_name='task1',
-                    init_button_states=np.array([
-                        [0, 0, 0],
-                        [0, 0, 0],
-                        [0, 0, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 1, 0],
-                        [1, 0, 1],
-                        [0, 1, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0],
+                            [0, 0, 0],
+                            [0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 0],
+                            [1, 0, 1],
+                            [0, 1, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task2',
-                    init_button_states=np.array([
-                        [1, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [0, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 1, 1],
+                            [1, 1, 1],
+                            [1, 1, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 1, 1],
+                            [1, 1, 1],
+                            [1, 1, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task3',
-                    init_button_states=np.array([
-                        [0, 1, 0],
-                        [1, 1, 1],
-                        [0, 1, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 0, 1],
-                        [0, 1, 0],
-                        [1, 0, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 1, 0],
+                            [1, 1, 1],
+                            [0, 1, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 0, 1],
+                            [0, 1, 0],
+                            [1, 0, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task4',
-                    init_button_states=np.array([
-                        [0, 1, 0],
-                        [1, 0, 1],
-                        [0, 1, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 1, 0],
+                            [1, 0, 1],
+                            [0, 1, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 1],
+                            [1, 1, 1],
+                            [1, 1, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task5',
-                    init_button_states=np.array([
-                        [1, 1, 1],
-                        [1, 1, 1],
-                        [1, 1, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 0, 1],
-                        [1, 0, 1],
-                        [1, 0, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 1, 1],
+                            [1, 1, 1],
+                            [1, 1, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 0, 1],
+                            [1, 0, 1],
+                            [1, 0, 1],
+                        ]
+                    ).flatten(),
                 ),
             ]
         elif self._num_rows == 4 and self._num_cols == 4:
             self.task_infos = [
                 dict(
                     task_name='task1',
-                    init_button_states=np.array([
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 1, 1, 1],
-                        [1, 1, 1, 1],
-                        [1, 1, 1, 1],
-                        [1, 1, 1, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 1, 1],
+                            [1, 1, 1, 1],
+                            [1, 1, 1, 1],
+                            [1, 1, 1, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
-                    init_button_states=np.array([
-                        [1, 1, 1, 1],
-                        [1, 1, 1, 1],
-                        [1, 1, 1, 1],
-                        [1, 1, 1, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 1, 1, 1],
-                        [1, 0, 0, 1],
-                        [1, 0, 0, 1],
-                        [1, 1, 1, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 1, 1, 1],
+                            [1, 1, 1, 1],
+                            [1, 1, 1, 1],
+                            [1, 1, 1, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 1, 1],
+                            [1, 0, 0, 1],
+                            [1, 0, 0, 1],
+                            [1, 1, 1, 1],
+                        ]
+                    ).flatten(),
                     task_name='task2',
                 ),
                 dict(
                     task_name='task3',
-                    init_button_states=np.array([
-                        [1, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [0, 1, 0, 1],
-                        [1, 0, 1, 0],
-                        [0, 1, 0, 1],
-                        [1, 0, 1, 0],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 1, 0, 1],
+                            [1, 0, 1, 0],
+                            [0, 1, 0, 1],
+                            [1, 0, 1, 0],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task4',
-                    init_button_states=np.array([
-                        [1, 0, 0, 1],
-                        [1, 0, 0, 1],
-                        [1, 0, 0, 1],
-                        [1, 0, 0, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 0, 0, 1],
+                            [1, 0, 0, 1],
+                            [1, 0, 0, 1],
+                            [1, 0, 0, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task5',
-                    init_button_states=np.array([
-                        [0, 1, 0, 1],
-                        [0, 0, 1, 0],
-                        [0, 0, 0, 1],
-                        [1, 0, 0, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                        [0, 0, 0, 0],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 1, 0, 1],
+                            [0, 0, 1, 0],
+                            [0, 0, 0, 1],
+                            [1, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0],
+                        ]
+                    ).flatten(),
                 ),
             ]
         elif self._num_rows == 4 and self._num_cols == 6:
             self.task_infos = [
                 dict(
                     task_name='task1',
-                    init_button_states=np.array([
-                        [1, 1, 0, 1, 1, 1],
-                        [0, 0, 1, 0, 1, 0],
-                        [0, 1, 0, 1, 0, 0],
-                        [1, 1, 1, 0, 1, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 1, 0, 1, 1, 1],
+                            [0, 0, 1, 0, 1, 0],
+                            [0, 1, 0, 1, 0, 0],
+                            [1, 1, 1, 0, 1, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task2',
-                    init_button_states=np.array([
-                        [1, 1, 1, 1, 1, 1],
-                        [1, 1, 1, 1, 1, 1],
-                        [1, 1, 1, 1, 1, 1],
-                        [1, 1, 1, 1, 1, 1],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task3',
-                    init_button_states=np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 1, 1, 1, 1, 0],
-                        [1, 1, 0, 1, 0, 1],
-                        [1, 0, 1, 0, 1, 1],
-                        [0, 1, 1, 1, 1, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 1, 1, 1, 0],
+                            [1, 1, 0, 1, 0, 1],
+                            [1, 0, 1, 0, 1, 1],
+                            [0, 1, 1, 1, 1, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task4',
-                    init_button_states=np.array([
-                        [0, 1, 0, 1, 0, 1],
-                        [1, 0, 1, 0, 1, 0],
-                        [0, 1, 0, 1, 0, 1],
-                        [1, 0, 1, 0, 1, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 0, 0, 0, 0, 1],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [1, 0, 0, 0, 0, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 1, 0, 1, 0, 1],
+                            [1, 0, 1, 0, 1, 0],
+                            [0, 1, 0, 1, 0, 1],
+                            [1, 0, 1, 0, 1, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 0, 0, 0, 0, 1],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [1, 0, 0, 0, 0, 1],
+                        ]
+                    ).flatten(),
                 ),
                 dict(
                     task_name='task5',
-                    init_button_states=np.array([
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0],
-                    ]).flatten(),
-                    goal_button_states=np.array([
-                        [1, 0, 0, 0, 0, 1],
-                        [0, 1, 1, 1, 1, 0],
-                        [0, 1, 1, 1, 1, 0],
-                        [1, 0, 0, 0, 0, 1],
-                    ]).flatten(),
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 0, 0, 0, 0, 1],
+                            [0, 1, 1, 1, 1, 0],
+                            [0, 1, 1, 1, 1, 0],
+                            [1, 0, 0, 0, 0, 1],
+                        ]
+                    ).flatten(),
                 ),
             ]
         else:

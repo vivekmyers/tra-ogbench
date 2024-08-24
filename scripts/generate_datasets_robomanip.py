@@ -37,7 +37,7 @@ def main(_):
         agents = {
             'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm),
         }
-    elif 'button' in FLAGS.env_name:
+    elif 'puzzle' in FLAGS.env_name:
         agents = {
             'button': ButtonOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
         }

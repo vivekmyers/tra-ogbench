@@ -3,7 +3,7 @@ import numpy as np
 from dm_control import mjcf
 
 from envs.robomanip import lie
-from envs.robomanip.robomanip import RoboManipEnv, _HERE, _COLORS, _HOME_QPOS
+from envs.robomanip.robomanip import _COLORS, _HERE, _HOME_QPOS, RoboManipEnv
 
 
 class CubeEnv(RoboManipEnv):
