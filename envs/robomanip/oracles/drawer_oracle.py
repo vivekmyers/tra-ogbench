@@ -4,7 +4,7 @@ from envs.robomanip.oracles.oracle import Oracle
 
 
 class DrawerOracle(Oracle):
-    def __init__(self, max_step=100, *args, **kwargs):
+    def __init__(self, max_step=75, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._max_step = max_step
 

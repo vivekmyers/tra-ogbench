@@ -3,7 +3,7 @@ import numpy as np
 from dm_control import mjcf
 
 from envs.robomanip import lie
-from envs.robomanip.robomanip import RoboManipEnv, _HERE, _OBJECT_RGBAS, _HOME_QPOS
+from envs.robomanip.robomanip import RoboManipEnv, _HERE, _COLORS, _HOME_QPOS
 
 
 class CubeEnv(RoboManipEnv):
@@ -23,6 +23,7 @@ class CubeEnv(RoboManipEnv):
         else:
             raise ValueError(f'Invalid env_type: {env_type}')
 
+        self._cube_colors = np.array([_COLORS['red'], _COLORS['blue'], _COLORS['orange'], _COLORS['green']])
         self._target_task = 'cube'
         self._target_block = 0
 
@@ -263,9 +264,9 @@ class CubeEnv(RoboManipEnv):
     def initialize_episode(self):
         for i in range(self._num_cubes):
             for gid in self._cube_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
+                self._model.geom(gid).rgba = self._cube_colors[i]
             for gid in self._cube_target_geom_ids_list[i]:
-                self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
+                self._model.geom(gid).rgba[:3] = self._cube_colors[i, :3]
 
         self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
         mujoco.mj_kinematics(self._model, self._data)
@@ -398,7 +399,7 @@ class CubeEnv(RoboManipEnv):
                     self._model.geom(gid).rgba[:3] = (0, 1, 1)
             else:
                 for gid in self._cube_geom_ids_list[i]:
-                    self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
+                    self._model.geom(gid).rgba[:3] = self._cube_colors[i, :3]
 
     def add_object_info(self, ob_info):
         for i in range(self._num_cubes):

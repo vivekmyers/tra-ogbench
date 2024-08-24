@@ -19,13 +19,16 @@ _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi /
 
 _EFFECTOR_DOWN_ROTATION = lie.SO3(np.asarray([0.0, 1.0, 0.0, 0.0]))
 
-_OBJECT_RGBAS = np.asarray(
-    [
-        [0.96, 0.26, 0.33, 1.0],
-        [0.35, 0.55, 0.91, 1.0],
-        [1.0, 0.69, 0.21, 1.0],
-        [0.06, 0.74, 0.21, 1.0],
-    ]
+_COLORS = dict(
+    red=np.array([0.96, 0.26, 0.33, 1.0]),
+    orange=np.array([1.0, 0.69, 0.21, 1.0]),
+    green=np.array([0.06, 0.74, 0.21, 1.0]),
+    blue=np.array([0.35, 0.55, 0.91, 1.0]),
+    white=np.array([0.9, 0.9, 0.9, 1.0]),
+    lightgray=np.array([0.7, 0.7, 0.7, 1.0]),
+    gray=np.array([0.5, 0.5, 0.5, 1.0]),
+    darkgray=np.array([0.3, 0.3, 0.3, 1.0]),
+    black=np.array([0.1, 0.1, 0.1, 1.0]),
 )
 
 _CAMERAS = {

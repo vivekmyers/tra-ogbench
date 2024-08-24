@@ -3,7 +3,7 @@ import numpy as np
 from dm_control import mjcf
 
 from envs.robomanip import lie
-from envs.robomanip.robomanip import RoboManipEnv, _HERE, _OBJECT_RGBAS, _HOME_QPOS
+from envs.robomanip.robomanip import RoboManipEnv, _HERE, _COLORS, _HOME_QPOS
 
 
 class SceneEnv(RoboManipEnv):
@@ -16,9 +16,10 @@ class SceneEnv(RoboManipEnv):
         self._object_sampling_bounds = np.asarray([[0.3, -0.07], [0.45, 0.18]])
         self._target_sampling_bounds = self._object_sampling_bounds
         self._drawer_center = np.array([0.33, -0.24, 0.066])
+        self._cube_colors = np.array([_COLORS['blue'], _COLORS['orange']])
         self._num_cubes = 1
         self._num_buttons = 2
-        self._num_button_states = 3
+        self._num_button_states = 2
         self._cur_button_states = np.array([0] * self._num_buttons)
 
         self._target_task = 'cube'
@@ -30,82 +31,82 @@ class SceneEnv(RoboManipEnv):
 
     def set_state(self, qpos, qvel, button_states):
         self._cur_button_states = button_states
-        self._update_button_colors()
+        self._apply_button_states()
         super().set_state(qpos, qvel)
 
     def set_tasks(self):
         self.task_infos = [
             dict(
-                task_name='task1_drawer_window',
+                task_name='task1_open_drawer_window',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([0, 1]),
+                    button_states=np.array([1, 1]),
                     drawer_pos=0.0,
                     window_pos=0.0,
                 ),
                 goal=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([0, 1]),
+                    button_states=np.array([1, 1]),
                     drawer_pos=-0.16,
                     window_pos=0.2,
                 ),
             ),
             dict(
-                task_name='task2_block_window',
+                task_name='task2_lock_drawer_window',
+                init=dict(
+                    block_xyzs=np.array([[0.35, -0.05, 0.02]]),
+                    button_states=np.array([0, 0]),
+                    drawer_pos=-0.16,
+                    window_pos=0.2,
+                ),
+                goal=dict(
+                    block_xyzs=np.array([[0.35, -0.05, 0.02]]),
+                    button_states=np.array([0, 0]),
+                    drawer_pos=0.0,
+                    window_pos=0.0,
+                ),
+            ),
+            dict(
+                task_name='task3_block_window',
                 init=dict(
                     block_xyzs=np.array([[0.4, -0.05, 0.02]]),
-                    button_states=np.array([1, 2]),
+                    button_states=np.array([1, 0]),
                     drawer_pos=0.0,
                     window_pos=0.2,
                 ),
                 goal=dict(
                     block_xyzs=np.array([[0.4, 0.15, 0.02]]),
-                    button_states=np.array([1, 2]),
+                    button_states=np.array([1, 1]),
                     drawer_pos=0.0,
                     window_pos=0.0,
                 ),
             ),
             dict(
-                task_name='task3_block_in_drawer',
+                task_name='task4_block_in_drawer',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([2, 0]),
+                    button_states=np.array([1, 0]),
                     drawer_pos=0.0,
                     window_pos=0.0,
                 ),
                 goal=dict(
                     block_xyzs=np.array([[0.33, -0.36, 0.066]]),
-                    button_states=np.array([2, 0]),
+                    button_states=np.array([1, 0]),
                     drawer_pos=0.0,
                     window_pos=0.0,
                 ),
             ),
             dict(
-                task_name='task4_button_drawer_window',
-                init=dict(
-                    block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([1, 2]),
-                    drawer_pos=0.0,
-                    window_pos=0.2,
-                ),
-                goal=dict(
-                    block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([0, 0]),
-                    drawer_pos=-0.16,
-                    window_pos=0.0,
-                ),
-            ),
-            dict(
-                task_name='task5_rearrange_all',
+                task_name='task5_block_drawer_window',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.15, 0.02]]),
-                    button_states=np.array([0, 1]),
+                    button_states=np.array([0, 0]),
                     drawer_pos=0.0,
                     window_pos=0.0,
                 ),
                 goal=dict(
                     block_xyzs=np.array([[0.4, -0.05, 0.02]]),
-                    button_states=np.array([2, 0]),
+                    button_states=np.array([0, 0]),
                     drawer_pos=-0.16,
                     window_pos=0.2,
                 ),
@@ -158,17 +159,34 @@ class SceneEnv(RoboManipEnv):
         self._window_site_id = self._model.site('window_handle_center').id
         self._window_target_site_id = self._model.site('window_handle_center_target').id
 
-    def _update_button_colors(self):
+    def _apply_button_states(self):
+        # Change colors
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _OBJECT_RGBAS[self._cur_button_states[i] + 1]
+                self._model.geom(gid).rgba = _COLORS['red' if self._cur_button_states[i] == 0 else 'lightgray']
+
+        # Lock the drawer and window based on button states
+        if self._cur_button_states[0] == 0:
+            self._model.joint('drawer_slide').damping[0] = 1e8
+            self._model.material('drawer_handle').rgba = _COLORS['red']
+        else:
+            self._model.joint('drawer_slide').damping[0] = 2.0
+            self._model.material('drawer_handle').rgba = _COLORS['lightgray']
+        if self._cur_button_states[1] == 0:
+            self._model.joint('window_slide').damping[0] = 1e8
+            self._model.material('window_handle').rgba = _COLORS['red']
+        else:
+            self._model.joint('window_slide').damping[0] = 2.0
+            self._model.material('window_handle').rgba = _COLORS['lightgray']
+
+        mujoco.mj_forward(self._model, self._data)
 
     def initialize_episode(self):
         for i in range(self._num_cubes):
             for gid in self._cube_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _OBJECT_RGBAS[i]
+                self._model.geom(gid).rgba = self._cube_colors[i]
             for gid in self._cube_target_geom_ids_list[i]:
-                self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
+                self._model.geom(gid).rgba[:3] = self._cube_colors[i, :3]
 
         self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
         mujoco.mj_kinematics(self._model, self._data)
@@ -188,7 +206,7 @@ class SceneEnv(RoboManipEnv):
             # Randomize button states
             for i in range(self._num_buttons):
                 self._cur_button_states[i] = self.np_random.choice(self._num_button_states)
-            self._update_button_colors()
+            self._apply_button_states()
 
             # Randomize drawer and window positions
             self._data.joint('drawer_slide').qpos[0] = self.np_random.uniform(-0.16, 0)
@@ -216,7 +234,7 @@ class SceneEnv(RoboManipEnv):
                 self._data.joint(f'object_joint_{i}').qpos[:3] = goal_block_xyzs[i]
                 self._data.joint(f'object_joint_{i}').qpos[3:] = lie.SO3.identity().wxyz.tolist()
             self._cur_button_states = goal_button_states.copy()
-            self._update_button_colors()
+            self._apply_button_states()
             self._data.joint('drawer_slide').qpos[0] = goal_drawer_pos
             self._data.joint('window_slide').qpos[0] = goal_window_pos
             mujoco.mj_forward(self._model, self._data)
@@ -239,11 +257,15 @@ class SceneEnv(RoboManipEnv):
                 self._data.mocap_quat[self._cube_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
             self._cur_button_states = init_button_states.copy()
             self._target_button_states = goal_button_states.copy()
-            self._update_button_colors()
-            self._data.joint('drawer_slide').qpos[0] = init_drawer_pos + self.np_random.uniform(-0.005, 0.005)
+            self._apply_button_states()
+            self._data.joint('drawer_slide').qpos[0] = np.clip(
+                init_drawer_pos + self.np_random.uniform(-0.01, 0.01), -0.16, 0
+            )
             self._model.site('drawer_handle_center_target').pos[1] = goal_drawer_pos
             self._target_drawer_pos = goal_drawer_pos
-            self._data.joint('window_slide').qpos[0] = init_window_pos + self.np_random.uniform(-0.005, 0.005)
+            self._data.joint('window_slide').qpos[0] = np.clip(
+                init_window_pos + self.np_random.uniform(-0.01, 0.01), 0, 0.2
+            )
             self._model.site('window_handle_center_target').pos[0] = goal_window_pos
             self._target_window_pos = goal_window_pos
 
@@ -254,19 +276,29 @@ class SceneEnv(RoboManipEnv):
 
         self._success = False
 
-    def set_new_target(self, return_info=True, p_drawer=0.1, p_stack=0.5):
+    def _is_in_drawer(self, obj_pos):
+        drawer_pos_y = self._data.site_xpos[self._drawer_site_id][1]
+        drawer_low = np.array([0.21, drawer_pos_y - 0.27, 0.0])
+        drawer_high = np.array([0.45, drawer_pos_y - 0.07, 0.15])
+        return np.all(drawer_low <= obj_pos) and np.all(obj_pos <= drawer_high)
+
+    def set_new_target(self, return_info=True, p_drawer=0.2, p_stack=0.5):
         assert self._mode == 'data_collection'
 
         # Only consider blocks not in the drawer
         available_blocks = []
         for i in range(self._num_cubes):
-            if self._data.joint(f'object_joint_{i}').qpos[1] > -0.16:
+            if not self._is_in_drawer(self._data.joint(f'object_joint_{i}').qpos[:3]):
                 available_blocks.append(i)
 
-        if len(available_blocks) == 0:
-            self._target_task = self.np_random.choice(['button', 'drawer', 'window'])
-        else:
-            self._target_task = self.np_random.choice(['cube', 'button', 'drawer', 'window'])
+        p_cube = 1.0 if len(available_blocks) > 0 else 0.0
+        p_button = 1.0
+        p_drawer = 0.25 if self._cur_button_states[0] == 0 else 1.0
+        p_window = 0.25 if self._cur_button_states[1] == 0 else 1.0
+        probs = np.array([p_cube, p_button, p_drawer, p_window])
+        probs /= probs.sum()
+
+        self._target_task = self.np_random.choice(['cube', 'button', 'drawer', 'window'], p=probs)
 
         if self._target_task == 'cube':
             block_xyzs = np.array([self._data.joint(f'object_joint_{i}').qpos[:3] for i in range(self._num_cubes)])
@@ -288,10 +320,7 @@ class SceneEnv(RoboManipEnv):
             # Pick one of the top cubes as the target
             self._target_block = self.np_random.choice(top_blocks)
 
-            put_in_drawer = (
-                self._data.joint('drawer_slide').qpos[0] < -0.12
-                and self.np_random.uniform() < p_drawer
-            )
+            put_in_drawer = self._data.joint('drawer_slide').qpos[0] < -0.12 and self.np_random.uniform() < p_drawer
             stack = len(top_blocks) >= 2 and self.np_random.uniform() < p_stack
             if put_in_drawer:
                 tar_pos = self._drawer_center.copy()
@@ -355,7 +384,7 @@ class SceneEnv(RoboManipEnv):
             cur_joint_pos = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()[0]
             if prev_joint_pos > -0.02 and cur_joint_pos <= -0.02:
                 self._cur_button_states[i] = (self._cur_button_states[i] + 1) % self._num_button_states
-        self._update_button_colors()
+        self._apply_button_states()
 
         # Evaluate successes
         cube_successes = []
@@ -395,7 +424,7 @@ class SceneEnv(RoboManipEnv):
                     self._model.geom(gid).rgba[:3] = (0, 1, 1)
             else:
                 for gid in self._cube_geom_ids_list[i]:
-                    self._model.geom(gid).rgba[:3] = _OBJECT_RGBAS[i, :3]
+                    self._model.geom(gid).rgba[:3] = self._cube_colors[i, :3]
 
     def add_object_info(self, ob_info):
         for i in range(self._num_cubes):

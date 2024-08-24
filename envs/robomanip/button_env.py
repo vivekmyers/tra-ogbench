@@ -2,7 +2,7 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 
-from envs.robomanip.robomanip import RoboManipEnv, _HERE, _OBJECT_RGBAS, _HOME_QPOS
+from envs.robomanip.robomanip import RoboManipEnv, _HERE, _COLORS, _HOME_QPOS
 
 
 class ButtonEnv(RoboManipEnv):
@@ -38,7 +38,7 @@ class ButtonEnv(RoboManipEnv):
 
     def set_state(self, qpos, qvel, button_states):
         self._cur_button_states = button_states
-        self._update_button_colors()
+        self._apply_button_states()
         super().set_state(qpos, qvel)
 
     def set_tasks(self):
@@ -298,19 +298,15 @@ class ButtonEnv(RoboManipEnv):
         ]
         self._button_site_ids = [self._model.site(f'btntop_{i}').id for i in range(self._num_buttons)]
 
-    def _update_button_colors(self):
+    def _apply_button_states(self):
+        # Change colors
         if self._num_button_states > 2:
-            colors = _OBJECT_RGBAS
-        else:
-            colors = np.asarray(
-                [
-                    [0.1, 0.1, 0.1, 1.0],
-                    [0.9, 0.9, 0.9, 1.0],
-                ]
-            )
+            raise NotImplementedError
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                self._model.geom(gid).rgba = colors[self._cur_button_states[i]]
+                self._model.geom(gid).rgba = _COLORS['black' if self._cur_button_states[i] == 0 else 'white']
+
+        mujoco.mj_forward(self._model, self._data)
 
     def initialize_episode(self):
         self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
@@ -322,7 +318,7 @@ class ButtonEnv(RoboManipEnv):
             # Randomize button states
             for i in range(self._num_buttons):
                 self._cur_button_states[i] = self.np_random.choice(self._num_button_states)
-            self._update_button_colors()
+            self._apply_button_states()
 
             # Set a new target
             self.set_new_target(return_info=False)
@@ -336,7 +332,7 @@ class ButtonEnv(RoboManipEnv):
             saved_qvel = self._data.qvel.copy()
             self.initialize_arm()
             self._cur_button_states = goal_button_states.copy()
-            self._update_button_colors()
+            self._apply_button_states()
             mujoco.mj_forward(self._model, self._data)
             for _ in range(2):
                 self.step(self.action_space.sample())
@@ -348,7 +344,7 @@ class ButtonEnv(RoboManipEnv):
             self.initialize_arm()
             self._cur_button_states = init_button_states.copy()
             self._target_button_states = goal_button_states.copy()
-            self._update_button_colors()
+            self._apply_button_states()
 
         # Forward kinematics to update site positions
         self.pre_step()
@@ -390,7 +386,7 @@ class ButtonEnv(RoboManipEnv):
                             self._cur_button_states[nx * self._num_cols + ny] = (
                                 self._cur_button_states[nx * self._num_cols + ny] + 1
                             ) % self._num_button_states
-        self._update_button_colors()
+        self._apply_button_states()
 
         # Evaluate successes
         button_successes = [
