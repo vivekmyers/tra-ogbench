@@ -29,6 +29,8 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
                 value is Mujoco's default of 2ms.
             control_timestep: The timestep used for the control signal. By default,
                 this is the same as the physics timestep.
+            render_mode: The render mode to use. This is for compatibility with the
+                `MujocoEnv` class in `gymnasium`. It is not used in this class.
             width: The width of the rendered image in pixels.
             height: The height of the rendered image in pixels.
         """

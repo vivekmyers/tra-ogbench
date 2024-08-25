@@ -86,6 +86,8 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             self._cur_goal_frame = None
             self._render_goal = False
 
+        self._success = False
+
     @property
     def observation_space(self):
         if self._model is None:
