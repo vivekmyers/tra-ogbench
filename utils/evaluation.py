@@ -30,15 +30,6 @@ def add_to(dict_of_lists, single_dict):
         dict_of_lists[k].append(v)
 
 
-def kitchen_render(kitchen_env, wh=64):
-    from dm_control.mujoco import engine
-
-    camera = engine.MovableCamera(kitchen_env.sim, wh, wh)
-    camera.set_pose(distance=1.86, lookat=[-0.3, 0.5, 2.0], azimuth=90, elevation=-60)
-    img = camera.render()
-    return img
-
-
 def evaluate(
     agent,
     env,
@@ -57,9 +48,11 @@ def evaluate(
     renders = []
     for i in trange(num_eval_episodes + num_video_episodes):
         traj = defaultdict(list)
+        should_render = i >= num_eval_episodes
 
-        observation, info = env.reset(options=dict(task_idx=task_idx))
+        observation, info = env.reset(options=dict(task_idx=task_idx, render_goal=should_render))
         goal = info.get('goal')
+        goal_frame = info.get('goal_frame')
         done = False
         step = 0
         render = []
@@ -74,9 +67,12 @@ def evaluate(
             done = terminated or truncated
             step += 1
 
-            if i >= num_eval_episodes and step % video_frame_skip == 0:
+            if should_render and step % video_frame_skip == 0:
                 frame = env.render().copy()
-                render.append(frame)
+                if goal_frame is not None:
+                    render.append(np.concatenate([goal_frame, frame], axis=0))
+                else:
+                    render.append(frame)
 
             transition = dict(
                 observation=observation,

@@ -168,7 +168,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
         train_dataset, val_dataset = get_dataset(
             dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
         )
-    elif 'cube' in env_name or 'button' in env_name or 'scene' in env_name:
+    elif 'cube' in env_name or 'puzzle' in env_name or 'scene' in env_name:
         import envs.manipspace  # noqa
 
         env = gymnasium.make(env_name)

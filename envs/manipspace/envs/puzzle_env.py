@@ -397,6 +397,10 @@ class PuzzleEnv(ManipSpaceEnv):
             for _ in range(2):
                 self.step(self.action_space.sample())
             self._cur_goal_ob = self.compute_observation()
+            if self._render_goal:
+                self._cur_goal_frame = self.render()
+            else:
+                self._cur_goal_frame = None
 
             # Now do the actual reset
             self._data.qpos[:] = saved_qpos

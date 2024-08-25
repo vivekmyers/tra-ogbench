@@ -166,7 +166,7 @@ def main(_):
                 eval_metrics[f'evaluation/overall_{k}'] = np.mean(v)
 
             if FLAGS.video_episodes > 0:
-                video = get_wandb_video(renders=renders)
+                video = get_wandb_video(renders=renders, n_cols=num_tasks)
                 eval_metrics['video'] = video
 
             wandb.log(eval_metrics, step=i)

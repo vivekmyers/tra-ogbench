@@ -17,6 +17,7 @@ class SceneEnv(ManipSpaceEnv):
         self._target_sampling_bounds = self._object_sampling_bounds
         self._drawer_center = np.array([0.33, -0.24, 0.066])
         self._cube_colors = np.array([_COLORS['red'], _COLORS['blue']])
+        self._cube_success_colors = np.array([_COLORS['lightred'], _COLORS['lightblue']])
         self._num_cubes = 1
         self._num_buttons = 2
         self._num_button_states = 2
@@ -233,6 +234,8 @@ class SceneEnv(ManipSpaceEnv):
             for i in range(self._num_cubes):
                 self._data.joint(f'object_joint_{i}').qpos[:3] = goal_block_xyzs[i]
                 self._data.joint(f'object_joint_{i}').qpos[3:] = lie.SO3.identity().wxyz.tolist()
+                self._data.mocap_pos[self._cube_target_mocap_ids[i]] = goal_block_xyzs[i]
+                self._data.mocap_quat[self._cube_target_mocap_ids[i]] = lie.SO3.identity().wxyz.tolist()
             self._cur_button_states = goal_button_states.copy()
             self._apply_button_states()
             self._data.joint('drawer_slide').qpos[0] = goal_drawer_pos
@@ -241,6 +244,10 @@ class SceneEnv(ManipSpaceEnv):
             for _ in range(2):
                 self.step(self.action_space.sample())
             self._cur_goal_ob = self.compute_observation()
+            if self._render_goal:
+                self._cur_goal_frame = self.render()
+            else:
+                self._cur_goal_frame = None
 
             # Now do the actual reset
             self._data.qpos[:] = saved_qpos
@@ -421,7 +428,7 @@ class SceneEnv(ManipSpaceEnv):
 
             if self._visualize_info and cube_successes[i]:
                 for gid in self._cube_geom_ids_list[i]:
-                    self._model.geom(gid).rgba[:3] = (0, 1, 1)
+                    self._model.geom(gid).rgba[:3] = self._cube_success_colors[i, :3]
             else:
                 for gid in self._cube_geom_ids_list[i]:
                     self._model.geom(gid).rgba[:3] = self._cube_colors[i, :3]

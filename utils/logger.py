@@ -3,6 +3,7 @@ import tempfile
 import absl.flags as flags
 import ml_collections
 import numpy as np
+from PIL import Image, ImageEnhance
 import wandb
 
 
@@ -69,14 +70,23 @@ def get_wandb_video(renders=None, n_cols=None, frame_skip=1):
     # Pad videos to the same length
     max_length = max([len(render) for render in renders])
     for i, render in enumerate(renders):
-        renders[i] = np.concatenate(
-            [render, np.zeros((max_length - render.shape[0], *render.shape[1:]), dtype=render.dtype)], axis=0
-        )
+        assert render.dtype == np.uint8
+
+        # Decrease brightness for padding frames
+        final_frame = render[-1]
+        final_image = Image.fromarray(final_frame)
+        enhancer = ImageEnhance.Brightness(final_image)
+        final_image = enhancer.enhance(0.5)
+        final_frame = np.array(final_image)
+
+        pad = np.repeat(final_frame[np.newaxis, ...], max_length - len(render), axis=0)
+        renders[i] = np.concatenate([render, pad], axis=0)
         renders[i] = renders[i][::frame_skip]
+
+        # Add borders
+        renders[i] = np.pad(renders[i], ((0, 0), (1, 1), (1, 1), (0, 0)), mode='constant', constant_values=0)
     renders = np.array(renders)  # (n, t, h, w, c)
 
-    # Reshape
-    assert renders.dtype == np.uint8
     renders = reshape_video(renders, n_cols)  # (t, c, nr * h, nc * w)
 
     return wandb.Video(renders, fps=15, format='mp4')

@@ -23,6 +23,12 @@ _COLORS = dict(
     orange=np.array([1.0, 0.69, 0.21, 1.0]),
     green=np.array([0.06, 0.74, 0.21, 1.0]),
     blue=np.array([0.35, 0.55, 0.91, 1.0]),
+    purple=np.array([0.61, 0.28, 0.82, 1.0]),
+    lightred=np.array([0.99, 0.85, 0.86, 1.0]),
+    lightorange=np.array([1.0, 0.94, 0.84, 1.0]),
+    lightgreen=np.array([0.77, 0.95, 0.81, 1.0]),
+    lightblue=np.array([0.86, 0.9, 0.98, 1.0]),
+    lightpurple=np.array([0.91, 0.84, 0.96, 1.0]),
     white=np.array([0.9, 0.9, 0.9, 1.0]),
     lightgray=np.array([0.7, 0.7, 0.7, 1.0]),
     gray=np.array([0.5, 0.5, 0.5, 1.0]),
@@ -85,6 +91,8 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             self.num_tasks = len(self.task_infos)
 
             self._cur_goal_ob = None
+            self._cur_goal_frame = None
+            self._render_goal = False
 
     @property
     def observation_space(self):
@@ -251,6 +259,11 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
                     self.cur_task_info = options['task_info']
                 else:
                     raise ValueError('`options` must contain either `task_idx` or `task_info`')
+
+                if 'render_goal' in options:
+                    self._render_goal = options['render_goal']
+                else:
+                    self._render_goal = False
             else:
                 # Randomly sample task
                 self.cur_task_idx = np.random.randint(self.num_tasks)
@@ -396,6 +409,8 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         reset_info = self.compute_ob_info()
         if self._mode == 'evaluation':
             reset_info['goal'] = self._cur_goal_ob
+            if self._render_goal is not None:
+                reset_info['goal_frame'] = self._cur_goal_frame
         return reset_info
 
     def get_step_info(self):
