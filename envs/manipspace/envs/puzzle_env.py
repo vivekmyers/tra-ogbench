@@ -34,6 +34,7 @@ class PuzzleEnv(ManipSpaceEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
+        # TODO: Remove this later
         self._goal_arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.23], [0.3, 0.2, 0.25]])
 
         self._target_task = 'button'
@@ -466,8 +467,12 @@ class PuzzleEnv(ManipSpaceEnv):
             raise NotImplementedError
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                color_zero = _COLORS['black']
-                color_one = _COLORS['red'] if self._ob_type == 'pixels' and self._increase_color_contrast else _COLORS['white']
+                if self._ob_type == 'pixels':
+                    color_zero = _COLORS['red']
+                    color_one = _COLORS['blue']
+                else:
+                    color_zero = _COLORS['black']
+                    color_one = _COLORS['white']
                 self._model.geom(gid).rgba = color_zero if self._cur_button_states[i] == 0 else color_one
 
         mujoco.mj_forward(self._model, self._data)
@@ -494,13 +499,17 @@ class PuzzleEnv(ManipSpaceEnv):
             # First set the current scene to the goal state to get the goal observation
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
-            self.initialize_arm(arm_sampling_bounds=self._goal_arm_sampling_bounds)
+            # self.initialize_arm(arm_sampling_bounds=self._goal_arm_sampling_bounds)
+            self.initialize_arm()
             self._cur_button_states = goal_button_states.copy()
             self._apply_button_states()
             mujoco.mj_forward(self._model, self._data)
-            for _ in range(5):
-                action = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
-                self.step(action)
+            # TODO: Remove this
+            # for _ in range(5):
+            #     action = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
+            #     self.step(action)
+            for _ in range(2):
+                self.step(self.action_space.sample())
             self._cur_goal_ob = self.compute_observation()
             if self._render_goal:
                 self._cur_goal_frame = self.render()

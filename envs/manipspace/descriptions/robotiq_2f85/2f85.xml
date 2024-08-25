@@ -8,6 +8,7 @@
     <material name="silicone" rgba="0.1882 0.1882 0.1882 1"/>
     <material name="gray" rgba="0.4627 0.4627 0.4627 1"/>
     <material name="black" rgba="0.149 0.149 0.149 1"/>
+    <material name="pad_gray" rgba="0.5 0.5 0.5 1"/>
 
     <mesh class="2f85" file="base_mount.stl"/>
     <mesh class="2f85" file="base.stl"/>
@@ -97,7 +98,7 @@
               <geom class="pad_box2" name="right_pad2"/>
               <inertial mass="0.0035" pos="0 -0.0025 0.0185" quat="0.707107 0 0 0.707107"
                 diaginertia="4.73958e-07 3.64583e-07 1.23958e-07"/>
-              <geom class="visual" mesh="pad"/>
+              <geom class="visual" mesh="pad" material="pad_gray"/>
               <body name="right_silicone_pad">
                 <geom class="visual" mesh="silicone_pad" material="black"/>
               </body>
@@ -136,7 +137,7 @@
               <geom class="pad_box2" name="left_pad2"/>
               <inertial mass="0.0035" pos="0 -0.0025 0.0185" quat="1 0 0 1"
                 diaginertia="4.73958e-07 3.64583e-07 1.23958e-07"/>
-              <geom class="visual" mesh="pad"/>
+              <geom class="visual" mesh="pad" material="pad_gray"/>
               <body name="left_silicone_pad">
                 <geom class="visual" mesh="silicone_pad" material="black"/>
               </body>

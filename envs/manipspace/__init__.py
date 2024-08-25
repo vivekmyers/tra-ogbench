@@ -42,16 +42,6 @@ register(
     ),
 )
 register(
-    id='visual-cc-cube-double-v0',
-    entry_point='envs.manipspace.envs.cube_env:CubeEnv',
-    max_episode_steps=500,
-    kwargs=dict(
-        env_type='cube_double',
-        increase_color_contrast=True,
-        **visual_dict,
-    ),
-)
-register(
     id='cube-triple-v0',
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=1000,
@@ -104,16 +94,6 @@ register(
     ),
 )
 register(
-    id='visual-cc-puzzle-3x3-v0',
-    entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
-    max_episode_steps=500,
-    kwargs=dict(
-        env_type='puzzle_3x3',
-        increase_color_contrast=True,
-        **visual_dict,
-    ),
-)
-register(
     id='puzzle-4x4-v0',
     entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
@@ -127,16 +107,6 @@ register(
     max_episode_steps=500,
     kwargs=dict(
         env_type='puzzle_4x4',
-        **visual_dict,
-    ),
-)
-register(
-    id='visual-cc-puzzle-4x4-v0',
-    entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
-    max_episode_steps=500,
-    kwargs=dict(
-        env_type='puzzle_4x4',
-        increase_color_contrast=True,
         **visual_dict,
     ),
 )
@@ -189,16 +159,6 @@ register(
     max_episode_steps=750,
     kwargs=dict(
         env_type='scene',
-        **visual_dict,
-    ),
-)
-register(
-    id='visual-cc-scene-v0',
-    entry_point='envs.manipspace.envs.scene_env:SceneEnv',
-    max_episode_steps=750,
-    kwargs=dict(
-        env_type='scene',
-        increase_color_contrast=True,
         **visual_dict,
     ),
 )
