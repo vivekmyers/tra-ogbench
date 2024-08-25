@@ -508,8 +508,10 @@ class PuzzleEnv(ManipSpaceEnv):
             # for _ in range(5):
             #     action = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
             #     self.step(action)
-            for _ in range(2):
-                self.step(self.action_space.sample())
+            for _ in range(5):
+                action = self.action_space.sample()
+                action[-1] = 1  # Close gripper
+                self.step(action)
             self._cur_goal_ob = self.compute_observation()
             if self._render_goal:
                 self._cur_goal_frame = self.render()
