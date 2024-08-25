@@ -38,6 +38,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
     def __init__(
         self,
         ob_type='states',
+        increase_color_contrast=False,
         physics_timestep=0.002,
         control_timestep=0.05,
         terminate_at_goal=True,
@@ -56,6 +57,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._ob_type = ob_type
+        self._increase_color_contrast = increase_color_contrast
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
         self._visualize_info = visualize_info
@@ -171,7 +173,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._gripper_jnts = mjcf_utils.safe_find_all(gripper_mjcf, 'joint', exclude_attachments=True)
         self._gripper_acts = mjcf_utils.safe_find_all(gripper_mjcf, 'actuator', exclude_attachments=True)
 
-        if self._ob_type == 'pixels':
+        if self._ob_type == 'pixels' and self._increase_color_contrast:
             # Change the colors
             arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = np.array([1.0, 1.0, 1.0, 1.0])
             arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba = np.array([1.0, 1.0, 1.0, 1.0])

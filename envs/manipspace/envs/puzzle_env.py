@@ -365,7 +365,9 @@ class PuzzleEnv(ManipSpaceEnv):
             raise NotImplementedError
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                self._model.geom(gid).rgba = _COLORS['black' if self._cur_button_states[i] == 0 else 'white']
+                color_zero = _COLORS['black']
+                color_one = _COLORS['red'] if self._ob_type == 'pixels' and self._increase_color_contrast else _COLORS['white']
+                self._model.geom(gid).rgba = color_zero if self._cur_button_states[i] == 0 else color_one
 
         mujoco.mj_forward(self._model, self._data)
 
