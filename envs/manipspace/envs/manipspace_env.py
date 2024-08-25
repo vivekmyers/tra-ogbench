@@ -378,7 +378,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
     def compute_observation(self):
         if self._ob_type == 'pixels':
-            frame = self.render(camera='front')
+            frame = self.render()
             return frame
         else:
             xyz_center = np.array([0.425, 0.0, 0.0])
@@ -421,3 +421,14 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             return self._success
         else:
             return False
+
+    def render(
+        self,
+        camera=None,
+        *args,
+        **kwargs,
+    ):
+        if camera is None:
+            camera = None if self._ob_type == 'states' else 'front'
+
+        return super().render(camera=camera, *args, **kwargs)

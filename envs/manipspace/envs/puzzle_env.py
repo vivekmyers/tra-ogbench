@@ -391,7 +391,7 @@ class PuzzleEnv(ManipSpaceEnv):
             # First set the current scene to the goal state to get the goal observation
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
-            self.initialize_arm()
+            self.initialize_arm(arm_sampling_bounds=self._goal_arm_sampling_bounds)
             self._cur_button_states = goal_button_states.copy()
             self._apply_button_states()
             mujoco.mj_forward(self._model, self._data)
@@ -407,7 +407,7 @@ class PuzzleEnv(ManipSpaceEnv):
             # Now do the actual reset
             self._data.qpos[:] = saved_qpos
             self._data.qvel[:] = saved_qvel
-            self.initialize_arm(arm_sampling_bounds=self._goal_arm_sampling_bounds)
+            self.initialize_arm()
             self._cur_button_states = init_button_states.copy()
             self._target_button_states = goal_button_states.copy()
             self._apply_button_states()
@@ -484,7 +484,7 @@ class PuzzleEnv(ManipSpaceEnv):
 
     def compute_observation(self):
         if self._ob_type == 'pixels':
-            frame = self.render(camera='front')
+            frame = self.render()
             return frame
         else:
             xyz_center = np.array([0.425, 0.0, 0.0])

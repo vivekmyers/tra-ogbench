@@ -487,7 +487,7 @@ class SceneEnv(ManipSpaceEnv):
 
     def compute_observation(self):
         if self._ob_type == 'pixels':
-            frame = self.render(camera='front')
+            frame = self.render()
             return frame
         else:
             xyz_center = np.array([0.425, 0.0, 0.0])
