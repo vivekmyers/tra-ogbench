@@ -271,9 +271,11 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         return super().reset(*args, **kwargs)
 
-    def initialize_arm(self):
+    def initialize_arm(self, arm_sampling_bounds=None):
         # Sample initial effector position and orientation
-        eff_pos = self.np_random.uniform(*self._arm_sampling_bounds)
+        if arm_sampling_bounds is None:
+            arm_sampling_bounds = self._arm_sampling_bounds
+        eff_pos = self.np_random.uniform(*arm_sampling_bounds)
         cur_ori = _EFFECTOR_DOWN_ROTATION
         yaw = self.np_random.uniform(-np.pi, np.pi)
         rotz = lie.SO3.from_z_radians(yaw)

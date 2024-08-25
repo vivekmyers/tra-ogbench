@@ -31,6 +31,7 @@ class PuzzleEnv(ManipSpaceEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
+        self._goal_arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.23], [0.3, 0.2, 0.25]])
 
         self._target_task = 'button'
         self._target_button = 0
@@ -394,8 +395,9 @@ class PuzzleEnv(ManipSpaceEnv):
             self._cur_button_states = goal_button_states.copy()
             self._apply_button_states()
             mujoco.mj_forward(self._model, self._data)
-            for _ in range(2):
-                self.step(self.action_space.sample())
+            for _ in range(5):
+                action = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
+                self.step(action)
             self._cur_goal_ob = self.compute_observation()
             if self._render_goal:
                 self._cur_goal_frame = self.render()
@@ -405,7 +407,7 @@ class PuzzleEnv(ManipSpaceEnv):
             # Now do the actual reset
             self._data.qpos[:] = saved_qpos
             self._data.qvel[:] = saved_qvel
-            self.initialize_arm()
+            self.initialize_arm(arm_sampling_bounds=self._goal_arm_sampling_bounds)
             self._cur_button_states = init_button_states.copy()
             self._target_button_states = goal_button_states.copy()
             self._apply_button_states()
