@@ -141,6 +141,23 @@ register(
     ),
 )
 register(
+    id='puzzle-4x5-v0',
+    entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='puzzle_4x5',
+    ),
+)
+register(
+    id='visual-puzzle-4x5-v0',
+    entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
+    max_episode_steps=1000,
+    kwargs=dict(
+        env_type='puzzle_4x5',
+        **visual_dict,
+    ),
+)
+register(
     id='puzzle-4x6-v0',
     entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,

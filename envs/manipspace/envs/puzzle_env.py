@@ -18,6 +18,9 @@ class PuzzleEnv(ManipSpaceEnv):
         elif '4x4' in env_type:
             self._num_rows = 4
             self._num_cols = 4
+        elif '4x5' in env_type:
+            self._num_rows = 4
+            self._num_cols = 5
         elif '4x6' in env_type:
             self._num_rows = 4
             self._num_cols = 6
@@ -225,6 +228,104 @@ class PuzzleEnv(ManipSpaceEnv):
                             [0, 0, 0, 0],
                             [0, 0, 0, 0],
                             [0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                ),
+            ]
+        elif self._num_rows == 4 and self._num_cols == 5:
+            self.task_infos = [
+                dict(
+                    task_name='task1',
+                    init_button_states=np.array(
+                        [
+                            [1, 0, 1, 0, 1],
+                            [1, 0, 1, 0, 1],
+                            [1, 0, 1, 0, 1],
+                            [1, 0, 1, 0, 1],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                ),
+                dict(
+                    task_name='task2',
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1],
+                            [1, 1, 1, 1, 1],
+                        ]
+                    ).flatten(),
+                ),
+                dict(
+                    task_name='task3',
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0],
+                            [0, 0, 1, 0, 0],
+                            [0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 1, 1, 1, 1],
+                            [1, 0, 0, 0, 1],
+                            [1, 0, 0, 0, 1],
+                            [1, 1, 1, 1, 1],
+                        ]
+                    ).flatten(),
+                ),
+                dict(
+                    task_name='task4',
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0],
+                            [0, 0, 1, 0, 0],
+                            [0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                ),
+                dict(
+                    task_name='task5',
+                    init_button_states=np.array(
+                        [
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0],
+                        ]
+                    ).flatten(),
+                    goal_button_states=np.array(
+                        [
+                            [1, 0, 0, 0, 1],
+                            [0, 1, 1, 1, 0],
+                            [0, 1, 1, 1, 0],
+                            [1, 0, 0, 0, 1],
                         ]
                     ).flatten(),
                 ),
