@@ -67,7 +67,7 @@ def evaluate(
             done = terminated or truncated
             step += 1
 
-            if should_render and step % video_frame_skip == 0:
+            if should_render and (step % video_frame_skip == 0 or done):
                 frame = env.render().copy()
                 if goal_frame is not None:
                     render.append(np.concatenate([goal_frame, frame], axis=0))

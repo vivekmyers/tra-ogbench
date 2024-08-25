@@ -66,7 +66,7 @@ def reshape_video(v, n_cols=None):
     return v
 
 
-def get_wandb_video(renders=None, n_cols=None, frame_skip=1):
+def get_wandb_video(renders=None, n_cols=None):
     # Pad videos to the same length
     max_length = max([len(render) for render in renders])
     for i, render in enumerate(renders):
@@ -81,7 +81,6 @@ def get_wandb_video(renders=None, n_cols=None, frame_skip=1):
 
         pad = np.repeat(final_frame[np.newaxis, ...], max_length - len(render), axis=0)
         renders[i] = np.concatenate([render, pad], axis=0)
-        renders[i] = renders[i][::frame_skip]
 
         # Add borders
         renders[i] = np.pad(renders[i], ((0, 0), (1, 1), (1, 1), (0, 0)), mode='constant', constant_values=0)
