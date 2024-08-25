@@ -96,7 +96,7 @@ register(
 register(
     id='puzzle-4x4-v0',
     entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
-    max_episode_steps=1000,
+    max_episode_steps=500,
     kwargs=dict(
         env_type='puzzle_4x4',
     ),
@@ -104,7 +104,7 @@ register(
 register(
     id='visual-puzzle-4x4-v0',
     entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
-    max_episode_steps=1000,
+    max_episode_steps=500,
     kwargs=dict(
         env_type='puzzle_4x4',
         **visual_dict,

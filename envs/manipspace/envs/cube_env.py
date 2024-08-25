@@ -174,24 +174,7 @@ class CubeEnv(ManipSpaceEnv):
                     ),
                 ),
                 dict(
-                    task_name='task3_cycle',
-                    init_xyzs=np.array(
-                        [
-                            [0.35, 0.0, 0.02],
-                            [0.50, -0.1, 0.02],
-                            [0.50, 0.1, 0.02],
-                        ]
-                    ),
-                    goal_xyzs=np.array(
-                        [
-                            [0.50, -0.1, 0.02],
-                            [0.50, 0.1, 0.02],
-                            [0.35, 0.0, 0.02],
-                        ]
-                    ),
-                ),
-                dict(
-                    task_name='task4_pnp_from_stack',
+                    task_name='task3_pnp_from_stack',
                     init_xyzs=np.array(
                         [
                             [0.425, 0.2, 0.02],
@@ -204,6 +187,23 @@ class CubeEnv(ManipSpaceEnv):
                             [0.35, -0.1, 0.02],
                             [0.50, -0.2, 0.02],
                             [0.50, 0.0, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task4_cycle',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, 0.0, 0.02],
+                            [0.50, -0.1, 0.02],
+                            [0.50, 0.1, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.50, -0.1, 0.02],
+                            [0.50, 0.1, 0.02],
+                            [0.35, 0.0, 0.02],
                         ]
                     ),
                 ),
@@ -225,8 +225,104 @@ class CubeEnv(ManipSpaceEnv):
                     ),
                 ),
             ]
-        else:
-            raise NotImplementedError
+        elif self._env_type == 'cube_quadruple':
+            self.task_infos = [
+                dict(
+                    task_name='task1_double_pnp',
+                    init_xyzs=np.array(
+                        [
+                            [0.35, -0.1, 0.02],
+                            [0.35, 0.1, 0.02],
+                            [0.50, -0.1, 0.02],
+                            [0.50, 0.1, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.35, -0.25, 0.02],
+                            [0.35, 0.1, 0.02],
+                            [0.50, -0.1, 0.02],
+                            [0.50, 0.25, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task2_quadruple_pnp',
+                    init_xyzs=np.array(
+                        [
+                            [0.325, -0.2, 0.02],
+                            [0.325, 0.2, 0.02],
+                            [0.525, -0.2, 0.02],
+                            [0.525, 0.2, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.375, 0.1, 0.02],
+                            [0.475, 0.1, 0.02],
+                            [0.375, -0.1, 0.02],
+                            [0.475, -0.1, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task3_pnp_from_stack',
+                    init_xyzs=np.array(
+                        [
+                            [0.425, -0.02, 0.02],
+                            [0.425, 0.02, 0.02],
+                            [0.425, -0.02, 0.06],
+                            [0.425, 0.02, 0.06],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.525, -0.2, 0.02],
+                            [0.325, 0.2, 0.02],
+                            [0.325, -0.2, 0.02],
+                            [0.525, 0.2, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task4_cycle',
+                    init_xyzs=np.array(
+                        [
+                            [0.525, -0.1, 0.02],
+                            [0.525, 0.1, 0.02],
+                            [0.325, 0.1, 0.02],
+                            [0.325, -0.1, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.525, 0.1, 0.02],
+                            [0.325, 0.1, 0.02],
+                            [0.325, -0.1, 0.02],
+                            [0.525, -0.1, 0.02],
+                        ]
+                    ),
+                ),
+                dict(
+                    task_name='task5_stack',
+                    init_xyzs=np.array(
+                        [
+                            [0.50, -0.05, 0.02],
+                            [0.50, -0.2, 0.02],
+                            [0.35, -0.2, 0.02],
+                            [0.35, -0.05, 0.02],
+                        ]
+                    ),
+                    goal_xyzs=np.array(
+                        [
+                            [0.425, 0.2, 0.02],
+                            [0.425, 0.2, 0.06],
+                            [0.425, 0.2, 0.10],
+                            [0.425, 0.2, 0.14],
+                        ]
+                    ),
+                ),
+            ]
 
     def add_objects(self, arena_mjcf):
         # Add objects to scene
