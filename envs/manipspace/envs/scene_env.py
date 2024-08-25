@@ -86,7 +86,7 @@ class SceneEnv(ManipSpaceEnv):
                 task_name='task4_block_in_drawer',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.05, 0.02]]),
-                    button_states=np.array([1, 0]),
+                    button_states=np.array([0, 0]),
                     drawer_pos=0.0,
                     window_pos=0.0,
                 ),
@@ -514,8 +514,6 @@ class SceneEnv(ManipSpaceEnv):
                 )
             for i in range(self._num_buttons):
                 button_state = np.eye(self._num_button_states)[self._cur_button_states[i]]
-                if self._num_button_states == 2:
-                    button_state = button_state[1:]
                 ob.extend(
                     [
                         button_state,

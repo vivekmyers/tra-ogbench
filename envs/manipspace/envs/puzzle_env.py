@@ -500,8 +500,6 @@ class PuzzleEnv(ManipSpaceEnv):
             ]
             for i in range(self._num_buttons):
                 button_state = np.eye(self._num_button_states)[self._cur_button_states[i]]
-                if self._num_button_states == 2:
-                    button_state = button_state[1:]
                 ob.extend(
                     [
                         button_state,
