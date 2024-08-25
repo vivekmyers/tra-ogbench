@@ -11,9 +11,6 @@ from envs.manipspace.envs.env import CustomMuJoCoEnv
 
 _HERE = Path(__file__).resolve().parent
 _DESC_DIR = _HERE / '..' / 'descriptions'
-ARENA_XML = _DESC_DIR / 'floor_wall.xml'
-UR5E_XML = _DESC_DIR / 'universal_robots_ur5e' / 'ur5e.xml'
-ROBOTIQ_XML = _DESC_DIR / 'robotiq_2f85' / '2f85.xml'
 
 _HOME_QPOS = np.asarray([-np.pi / 2, -np.pi / 2, np.pi / 2, -np.pi / 2, -np.pi / 2, 0])
 _EFFECTOR_DOWN_ROTATION = lie.SO3(np.asarray([0.0, 1.0, 0.0, 0.0]))
@@ -35,13 +32,6 @@ _COLORS = dict(
     darkgray=np.array([0.3, 0.3, 0.3, 1.0]),
     black=np.array([0.1, 0.1, 0.1, 1.0]),
 )
-
-_CAMERAS = {
-    'front': {
-        'pos': (0.905, 0.000, 0.762),
-        'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
-    },
-}
 
 
 class ManipSpaceEnv(CustomMuJoCoEnv):
@@ -72,7 +62,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         assert ob_type in ['states', 'pixels']
 
-        ik_mjcf = mjcf.from_path(UR5E_XML, escape_separators=True)
+        ik_mjcf = mjcf.from_path((_DESC_DIR / 'universal_robots_ur5e' / 'ur5e.xml'), escape_separators=True)
         xml_str = mjcf_utils.to_string(ik_mjcf)
         assets = mjcf_utils.get_assets(ik_mjcf)
         ik_model = mujoco.MjModel.from_xml_string(xml_str, assets)
@@ -129,7 +119,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
     def build_mjcf_model(self):
         # Scene
-        arena_mjcf = mjcf.from_path(ARENA_XML.as_posix())
+        arena_mjcf = mjcf.from_path((_DESC_DIR / 'floor_wall.xml').as_posix())
         arena_mjcf.model = 'ur5e_arena'
 
         arena_mjcf.statistic.center = (0.3, 0, 0.15)
@@ -141,14 +131,14 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         arena_mjcf.visual.map.zfar = 10.0
 
         # UR5e
-        ur5e_mjcf = mjcf.from_path(UR5E_XML, escape_separators=True)
+        ur5e_mjcf = mjcf.from_path((_DESC_DIR / 'universal_robots_ur5e' / 'ur5e.xml'), escape_separators=True)
         ur5e_mjcf.model = 'ur5e'
 
         for light in ur5e_mjcf.find_all('light'):
             light.remove()
 
         # Attach the robotiq gripper to the ur5e flange
-        gripper_mjcf = mjcf.from_path(ROBOTIQ_XML, escape_separators=True)
+        gripper_mjcf = mjcf.from_path((_DESC_DIR / 'robotiq_2f85' / '2f85.xml'), escape_separators=True)
         gripper_mjcf.model = 'robotiq'
         mjcf_utils.attach(ur5e_mjcf, gripper_mjcf, 'attachment_site')
 
@@ -158,7 +148,13 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self.add_objects(arena_mjcf)
 
         # Add cameras
-        for camera_name, camera_kwargs in _CAMERAS.items():
+        cameras = {
+            'front': {
+                'pos': (0.905, 0.000, 0.762),
+                'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
+            },
+        }
+        for camera_name, camera_kwargs in cameras.items():
             arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
         # Cache joint and actuator elements

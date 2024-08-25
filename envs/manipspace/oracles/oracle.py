@@ -2,7 +2,7 @@ import numpy as np
 
 
 class Oracle:
-    def __init__(self, env, min_norm=0.3):
+    def __init__(self, env, min_norm=0.4):
         self._env = env
         self._min_norm = min_norm
         self._debug = False

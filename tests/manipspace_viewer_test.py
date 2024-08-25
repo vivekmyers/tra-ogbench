@@ -18,9 +18,9 @@ SPEED_UP = 3.0
 def main():
     use_oracle = True
     use_viewer = os.environ.get('USE_VIEWER', 'False') == 'True'
-    env_type = 'cube_quadruple'
+    # env_type = 'cube_quadruple'
     # env_type = 'puzzle_4x6'
-    # env_type = 'scene'
+    env_type = 'scene'
     mode = 'data_collection'
     # mode = 'evaluation'
     min_norm = 0.4
