@@ -56,6 +56,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._ob_type = ob_type
+        self._depth = True
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
         self._visualize_info = visualize_info
@@ -180,17 +181,17 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             arena_mjcf.find('material', 'ur5e/robotiq/metal').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/silicone').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba[3] = 0.1
-            arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = _COLORS['purple']
+            # arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = _COLORS['purple']
             arena_mjcf.find('material', 'ur5e/robotiq/black').rgba[3] = 0.1
-            arena_mjcf.find('material', 'ur5e/robotiq/pad_gray').rgba = _COLORS['purple']
+            # arena_mjcf.find('material', 'ur5e/robotiq/pad_gray').rgba = _COLORS['purple']
             arena_mjcf.find('material', 'ur5e/robotiq/pad_gray').rgba[3] = 0.5
             arena_mjcf.find('material', 'ur5e/black').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/jointgray').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/linkgray').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/lightblue').rgba[3] = 0.1
-            grid = arena_mjcf.find('texture', 'grid')
-            grid.builtin = 'gradient'
-            grid.mark = 'edge'
+            # grid = arena_mjcf.find('texture', 'grid')
+            # grid.builtin = 'gradient'
+            # grid.mark = 'edge'
 
         mjcf_utils.add_bounding_box_site(
             arena_mjcf.worldbody,
@@ -389,10 +390,17 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         return ob_info
 
+    def get_pixel_observation(self):
+        frame = self.render()
+        if self._depth:
+            depth_frame = self.render(depth=True)[..., None]
+            depth_frame = (np.clip(depth_frame / 1.5, 0.0, 1.0) * 255).astype(np.uint8)
+            frame = np.concatenate([frame, depth_frame], axis=2)
+        return frame
+
     def compute_observation(self):
         if self._ob_type == 'pixels':
-            frame = self.render()
-            return frame
+            return self.get_pixel_observation()
         else:
             xyz_center = np.array([0.425, 0.0, 0.0])
             xyz_scaler = 10
