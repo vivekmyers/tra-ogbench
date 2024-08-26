@@ -56,7 +56,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._ob_type = ob_type
-        self._depth = True
+        self._depth = False
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
         self._visualize_info = visualize_info
@@ -179,9 +179,9 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             arena_mjcf.find('material', 'ur5e/robotiq/metal').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/silicone').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba[3] = 0.1
-            # arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = _COLORS['purple']
+            arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = _COLORS['purple']
             arena_mjcf.find('material', 'ur5e/robotiq/black').rgba[3] = 0.1
-            # arena_mjcf.find('material', 'ur5e/robotiq/pad_gray').rgba = _COLORS['purple']
+            arena_mjcf.find('material', 'ur5e/robotiq/pad_gray').rgba = _COLORS['purple']
             arena_mjcf.find('material', 'ur5e/robotiq/pad_gray').rgba[3] = 0.5
             arena_mjcf.find('material', 'ur5e/black').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/jointgray').rgba[3] = 0.1
