@@ -176,8 +176,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         if self._ob_type == 'pixels':
             # Adjust colors
-            # arena_mjcf.find('material', 'ur5e/robotiq/black').rgba = np.array([1.0, 1.0, 1.0, 1.0])
-            # arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba = np.array([1.0, 1.0, 1.0, 1.0])
             arena_mjcf.find('material', 'ur5e/robotiq/metal').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/silicone').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba[3] = 0.1
@@ -189,9 +187,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             arena_mjcf.find('material', 'ur5e/jointgray').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/linkgray').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/lightblue').rgba[3] = 0.1
-            # grid = arena_mjcf.find('texture', 'grid')
-            # grid.builtin = 'gradient'
-            # grid.mark = 'edge'
 
         mjcf_utils.add_bounding_box_site(
             arena_mjcf.worldbody,
@@ -281,11 +276,9 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         return super().reset(*args, **kwargs)
 
-    def initialize_arm(self, arm_sampling_bounds=None):
+    def initialize_arm(self):
         # Sample initial effector position and orientation
-        if arm_sampling_bounds is None:
-            arm_sampling_bounds = self._arm_sampling_bounds
-        eff_pos = self.np_random.uniform(*arm_sampling_bounds)
+        eff_pos = self.np_random.uniform(*self._arm_sampling_bounds)
         cur_ori = _EFFECTOR_DOWN_ROTATION
         yaw = self.np_random.uniform(-np.pi, np.pi)
         rotz = lie.SO3.from_z_radians(yaw)

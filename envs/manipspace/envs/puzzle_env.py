@@ -34,8 +34,6 @@ class PuzzleEnv(ManipSpaceEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
-        # TODO: Remove this later
-        self._goal_arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.23], [0.3, 0.2, 0.25]])
 
         self._target_task = 'button'
         self._target_button = 0
@@ -499,15 +497,10 @@ class PuzzleEnv(ManipSpaceEnv):
             # First set the current scene to the goal state to get the goal observation
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
-            # self.initialize_arm(arm_sampling_bounds=self._goal_arm_sampling_bounds)
             self.initialize_arm()
             self._cur_button_states = goal_button_states.copy()
             self._apply_button_states()
             mujoco.mj_forward(self._model, self._data)
-            # TODO: Remove this
-            # for _ in range(5):
-            #     action = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
-            #     self.step(action)
             for _ in range(5):
                 action = self.action_space.sample()
                 action[-1] = 1  # Close gripper
