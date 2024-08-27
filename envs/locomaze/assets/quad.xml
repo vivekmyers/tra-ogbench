@@ -10,7 +10,7 @@
     </default>
     <asset>
         <texture type="skybox" builtin="gradient" width="100" height="100" rgb1="1 1 1" rgb2="0 0 0" />
-        <texture name="grid" type="2d" builtin="checker" rgb1=".08 .16 .24" rgb2=".16 .24 .32" width="300" height="300" mark="edge" markrgb=".16 .24 .32" />
+        <texture name="grid" type="2d" builtin="checker" rgb1=".08 .11 .16" rgb2=".15 .18 .25" width="300" height="300" />
         <texture name="ball" builtin="checker" mark="cross" width="151" height="151" rgb1="0.1 0.1 0.1" rgb2="0.9 0.9 0.9" markrgb="1 1 1" />
         <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" />
         <material name="self" rgba=".7 .5 .3 1" />

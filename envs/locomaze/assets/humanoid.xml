@@ -1,7 +1,6 @@
 <mujoco model="humanoid">
     <asset>
-        <texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="300" height="300" mark="edge" markrgb=".2 .3 .4" />
-        <texture name="skybox" type="skybox" builtin="gradient" rgb1=".4 .6 .8" rgb2="0 0 0" width="800" height="800" mark="random" markrgb="1 1 1" />
+        <texture name="grid" type="2d" builtin="checker" rgb1=".08 .11 .16" rgb2=".15 .18 .25" width="300" height="300" />
         <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" />
         <material name="self" rgba=".7 .5 .3 1" />
         <material name="self_default" rgba=".7 .5 .3 1" />

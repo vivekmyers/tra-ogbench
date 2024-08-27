@@ -98,6 +98,14 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             _, maze_xml_file = tempfile.mkstemp(text=True, suffix='.xml')
             tree.write(maze_xml_file)
 
+            # TODO: Remove this
+            ################## FOR DEBUGGING ###################
+            import sys
+
+            if sys.platform == 'darwin':
+                tree.write('/Users/seohongpark/Downloads/ogcrl_mj/loco_cur.xml')
+            ################## FOR DEBUGGING ###################
+
             super().__init__(xml_file=maze_xml_file, *args, **kwargs)
 
             self.task_infos = None
@@ -232,6 +240,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):
+            render_goal = False
             if options is not None:
                 if 'task_idx' in options:
                     self.cur_task_idx = options['task_idx']
@@ -241,6 +250,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     self.cur_task_info = options['task_info']
                 else:
                     raise ValueError('`options` must contain either `task_idx` or `task_info`')
+
+                if 'render_goal' in options:
+                    render_goal = options['render_goal']
             else:
                 # Randomly sample task
                 self.cur_task_idx = np.random.randint(self.num_tasks)
@@ -253,14 +265,19 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super().reset(*args, **kwargs)
             for _ in range(5):
                 super().step(self.action_space.sample())
+            self.set_goal(goal_xy=goal_xy)
             self.set_xy(goal_xy)
             goal_ob = self.get_ob()
+            if render_goal:
+                goal_frame = self.render()
 
             ob, info = super().reset(*args, **kwargs)
+            self.set_goal(goal_xy=goal_xy)
             self.set_xy(init_xy)
             ob = self.get_ob()
-            self.set_goal(goal_xy=goal_xy)
             info['goal'] = goal_ob
+            if render_goal:
+                info['goal_frame'] = goal_frame
 
             return ob, info
 
@@ -394,6 +411,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.num_tasks = len(self.task_infos)
 
         def reset(self, options=None, *args, **kwargs):
+            render_goal = False
             if options is not None:
                 if 'task_idx' in options:
                     self.cur_task_idx = options['task_idx']
@@ -403,6 +421,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     self.cur_task_info = options['task_info']
                 else:
                     raise ValueError('`options` must contain either `task_idx` or `task_info`')
+
+                if 'render_goal' in options:
+                    render_goal = options['render_goal']
             else:
                 # Randomly sample task
                 self.cur_task_idx = np.random.randint(self.num_tasks)
@@ -416,15 +437,19 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super(MazeEnv, self).reset(*args, **kwargs)
             for _ in range(5):
                 super(MazeEnv, self).step(self.action_space.sample())
-            self.set_xy(goal_xy)
+            self.set_goal(goal_xy=goal_xy)
             self.set_agent_ball_xy(goal_xy, goal_xy)
             goal_ob = self.get_ob()
+            if render_goal:
+                goal_frame = self.render()
 
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
+            self.set_goal(goal_xy=goal_xy)
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
             ob = self.get_ob()
-            self.set_goal(goal_xy=goal_xy)
             info['goal'] = goal_ob
+            if render_goal:
+                info['goal_frame'] = goal_frame
 
             return ob, info
 

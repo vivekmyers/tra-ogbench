@@ -210,7 +210,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         import sys
 
         if sys.platform == 'darwin':
-            with open('/Users/seohongpark/Downloads/manip/manip_cur.xml', 'w') as file:
+            with open('/Users/seohongpark/Downloads/ogcrl_mj/manip_cur.xml', 'w') as file:
                 file.write(mjcf_utils.to_string(arena_mjcf))
         ################## FOR DEBUGGING ###################
 
