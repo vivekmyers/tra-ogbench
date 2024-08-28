@@ -87,6 +87,9 @@ def main(_):
         next_observations=env.observation_space.sample(),
         log_probs=zeros,
     )
+    if config.discrete:
+        # Fill with the maximum action
+        example_transition['actions'] = np.full_like(example_transition['actions'], env.single_action_space.n - 1)
 
     replay_buffer = ReplayBuffer.create(example_transition, size=FLAGS.train_interval)
 
@@ -123,11 +126,16 @@ def main(_):
     first_time = time.time()
     last_time = time.time()
     update_info = None
+    ################################## Only for Crafter ##################################
+    total_achievements = np.zeros((0, 22), dtype=np.int32)
+    ################################## Only for Crafter ##################################
     for i in tqdm.tqdm(range(1, FLAGS.train_steps + 1), smoothing=0.1, dynamic_ncols=True):
         expl_rng, key = jax.random.split(expl_rng)
         actions, log_probs = agent.sample_actions(observations=obs, seed=key, info=True)
+        if not agent.config['discrete']:
+            actions = np.clip(actions, -1.0, 1.0)
 
-        next_obs, rewards, terminateds, truncateds, infos = env.step(np.clip(actions, -1.0, 1.0))
+        next_obs, rewards, terminateds, truncateds, infos = env.step(actions)
 
         replay_buffer.add_transition(
             dict(
@@ -144,6 +152,16 @@ def main(_):
         if terminateds[0] or truncateds[0]:
             info = {k: v[0] for k, v in infos.items() if not k.startswith('_')}
             expl_metrics = {f'exploration/{k}': v for k, v in flatten(info).items()}
+
+        ################################## Only for Crafter ##################################
+        for j in range(FLAGS.num_envs):
+            if terminateds[j] or truncateds[j]:
+                cur_achievements = np.minimum(np.array(list(infos['final_info'][j]['achievements'].values())), 1)
+                total_achievements = np.concatenate([total_achievements, cur_achievements[None, :]], axis=0)
+        success_rate = 100 * np.mean(total_achievements, axis=0)
+        score = np.exp(np.mean(np.log(1 + success_rate))) - 1
+        expl_metrics['exploration/score'] = score if not np.isnan(score) else 0.0
+        ################################## Only for Crafter ##################################
 
         if i % FLAGS.train_interval == 0:
             traj_batch = replay_buffer.get_subset(slice(0, FLAGS.train_interval))

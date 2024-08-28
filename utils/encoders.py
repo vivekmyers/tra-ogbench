@@ -1,11 +1,10 @@
 import functools
-from typing import Any, Sequence
+from typing import Sequence
 
 import flax.linen as nn
-import jax
 import jax.numpy as jnp
 
-from utils.networks import MLP, default_init
+from utils.networks import MLP
 
 
 class ResnetStack(nn.Module):
@@ -62,6 +61,7 @@ class ImpalaEncoder(nn.Module):
     num_blocks: int = 2
     dropout_rate: float = None
     mlp_hidden_dims: Sequence[int] = (512,)
+    layer_norm: bool = False
 
     def setup(self):
         stack_sizes = self.stack_sizes
@@ -87,9 +87,11 @@ class ImpalaEncoder(nn.Module):
                 conv_out = self.dropout(conv_out, deterministic=not train)
 
         conv_out = nn.relu(conv_out)
+        if self.layer_norm:
+            conv_out = nn.LayerNorm()(conv_out)
         out = conv_out.reshape((*x.shape[:-3], -1))
 
-        out = MLP(self.mlp_hidden_dims, activate_final=True)(out)
+        out = MLP(self.mlp_hidden_dims, activate_final=True, layer_norm=self.layer_norm)(out)
 
         return out
 
@@ -100,19 +102,20 @@ class GCEncoder(nn.Module):
     concat_encoder: nn.Module = None
 
     @nn.compact
-    def __call__(self, observations, goals, goal_encoded=False):
+    def __call__(self, observations, goals=None, goal_encoded=False):
         reps = []
         if self.state_encoder is not None:
             reps.append(self.state_encoder(observations))
-        if goal_encoded:
-            # goals are either concat representations or goal representations
-            assert self.goal_encoder is None or self.concat_encoder is None
-            reps.append(goals)
-        else:
-            if self.goal_encoder is not None:
-                reps.append(self.goal_encoder(goals))
-            if self.concat_encoder is not None:
-                reps.append(self.concat_encoder(jnp.concatenate([observations, goals], axis=-1)))
+        if goals is not None:
+            if goal_encoded:
+                # goals are either concat representations or goal representations
+                assert self.goal_encoder is None or self.concat_encoder is None
+                reps.append(goals)
+            else:
+                if self.goal_encoder is not None:
+                    reps.append(self.goal_encoder(goals))
+                if self.concat_encoder is not None:
+                    reps.append(self.concat_encoder(jnp.concatenate([observations, goals], axis=-1)))
         reps = jnp.concatenate(reps, axis=-1)
         return reps
 
@@ -121,4 +124,5 @@ encoder_modules = {
     'impala': ImpalaEncoder,
     'impala_small': functools.partial(ImpalaEncoder, num_blocks=1),
     'impala_debug': functools.partial(ImpalaEncoder, num_blocks=1, stack_sizes=(4, 4)),
+    'impala_large': functools.partial(ImpalaEncoder, stack_sizes=(64, 128, 128), mlp_hidden_dims=(1024,)),
 }

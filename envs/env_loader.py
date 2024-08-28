@@ -5,7 +5,7 @@ import time
 
 import gymnasium
 import numpy as np
-from gymnasium.spaces import Box
+from gymnasium.spaces import Box, Discrete
 
 from utils.dataset import Dataset
 
@@ -214,6 +214,12 @@ def make_online_env(env_name):
             else:
                 env = GymXYWrapper(env, resample_interval=100 if 'Ant' in env_name else 200)
 
+        env = EpisodeMonitor(env)
+    elif 'Crafter' in env_name:
+        from envs.crafter.env import Env
+        from gymnasium.wrappers import EnvCompatibility
+        env = Env()
+        env = EnvCompatibility(env)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')

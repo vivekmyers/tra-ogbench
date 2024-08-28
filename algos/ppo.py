@@ -7,7 +7,8 @@ import jax.numpy as jnp
 import ml_collections
 import optax
 
-from utils.networks import GCActor, GCValue, RunningMeanStd
+from utils.encoders import encoder_modules, GCEncoder
+from utils.networks import GCActor, GCValue, RunningMeanStd, GCDiscreteActor
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -74,10 +75,13 @@ class PPOAgent(flax.struct.PyTreeNode):
 
         approx_kl = ((ratio - 1) - log_ratio).mean()
         clip_frac = (jnp.abs(ratio - 1.0) > self.config['clip_ratio']).mean()
-        if self.config['tanh_squash']:
-            action_std = dist._distribution.stddev()
+        if self.config['discrete']:
+            action_std = jnp.zeros_like(ratio)
         else:
-            action_std = dist.stddev().mean()
+            if self.config['tanh_squash']:
+                action_std = dist._distribution.stddev()
+            else:
+                action_std = dist.stddev().mean()
 
         return total_loss, {
             'total_loss': total_loss,
@@ -105,7 +109,7 @@ class PPOAgent(flax.struct.PyTreeNode):
         for k, v in actor_info.items():
             info[f'actor/{k}'] = v
 
-        loss = value_loss + actor_loss
+        loss = 0.5 * value_loss + actor_loss
         return loss, info
 
     @jax.jit
@@ -121,9 +125,9 @@ class PPOAgent(flax.struct.PyTreeNode):
 
     @jax.jit
     def train(self, traj_batch):
-        assert len(traj_batch['observations'].shape) == 3  # (num_steps, num_envs, ob_dim)
-
+        # traj_batch: dict of (num_steps, num_envs, ob_dim)
         if self.config['normalize_ob']:
+            assert not self.config['discrete']
             ob_dim = traj_batch['observations'].shape[-1]
             self = self.replace(rms_ob=self.rms_ob.update(traj_batch['observations'].reshape(-1, ob_dim)))
             traj_batch['observations'] = self.rms_ob.normalize(traj_batch['observations'])
@@ -184,23 +188,42 @@ class PPOAgent(flax.struct.PyTreeNode):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
 
-        action_dim = ex_actions.shape[-1]
+        if config['discrete']:
+            action_dim = ex_actions[0] + 1
+        else:
+            action_dim = ex_actions.shape[-1]
+
+        if config['encoder'] is not None:
+            encoder_module = encoder_modules[config['encoder']]
+            encoder_def = GCEncoder(state_encoder=encoder_module(layer_norm=config['layer_norm']))
+        else:
+            encoder_def = None
 
         value_def = GCValue(
             hidden_dims=config['value_hidden_dims'],
             layer_norm=config['layer_norm'],
             ensemble=False,
+            gc_encoder=encoder_def,
         )
 
-        actor_def = GCActor(
-            hidden_dims=config['actor_hidden_dims'],
-            action_dim=action_dim,
-            log_std_min=-5,
-            tanh_squash=config['tanh_squash'],
-            state_dependent_std=config['state_dependent_std'],
-            const_std=False,
-            final_fc_init_scale=config['actor_fc_scale'],
-        )
+        if config['discrete']:
+            actor_def = GCDiscreteActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                final_fc_init_scale=config['actor_fc_scale'],
+                gc_encoder=encoder_def,
+            )
+        else:
+            actor_def = GCActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                log_std_min=-5,
+                tanh_squash=config['tanh_squash'],
+                state_dependent_std=config['state_dependent_std'],
+                const_std=False,
+                final_fc_init_scale=config['actor_fc_scale'],
+                gc_encoder=encoder_def,
+            )
 
         network_info = dict(
             value=(value_def, (ex_observations, None)),
@@ -244,6 +267,8 @@ def get_config():
             clip_ratio=0.2,
             normalize_ob=True,
             normalize_reward=True,
+            discrete=False,
+            encoder=ml_collections.config_dict.placeholder(str),
         )
     )
     return config

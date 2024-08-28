@@ -151,6 +151,40 @@ class GCActor(nn.Module):
         return distribution
 
 
+class GCDiscreteActor(nn.Module):
+    hidden_dims: Sequence[int]
+    action_dim: int
+    final_fc_init_scale: float = 1e-2
+    gc_encoder: nn.Module = None
+
+    def setup(self):
+        self.actor_net = MLP(self.hidden_dims, activate_final=True)
+
+        self.logit_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
+
+    def __call__(
+            self,
+            observations,
+            goals=None,
+            goal_encoded=False,
+            temperature=1.0,
+    ):
+        if self.gc_encoder is not None:
+            inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
+        else:
+            inputs = [observations]
+            if goals is not None:
+                inputs.append(goals)
+            inputs = jnp.concatenate(inputs, axis=-1)
+        outputs = self.actor_net(inputs)
+
+        logits = self.logit_net(outputs)
+
+        distribution = distrax.Categorical(logits=logits / jnp.maximum(1e-6, temperature))
+
+        return distribution
+
+
 class GCValue(nn.Module):
     hidden_dims: Sequence[int]
     layer_norm: bool = True
