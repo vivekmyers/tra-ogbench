@@ -215,11 +215,9 @@ def make_online_env(env_name):
                 env = GymXYWrapper(env, resample_interval=100 if 'Ant' in env_name else 200)
 
         env = EpisodeMonitor(env)
-    elif 'Crafter' in env_name:
-        from envs.crafter.env import Env
-        from gymnasium.wrappers import EnvCompatibility
-        env = Env()
-        env = EnvCompatibility(env)
+    elif 'crafter' in env_name:
+        import envs.crafter  # noqa
+        env = gymnasium.make(env_name)
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
