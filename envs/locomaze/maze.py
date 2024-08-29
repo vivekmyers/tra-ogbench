@@ -274,7 +274,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # Get goal observation
             super().reset(*args, **kwargs)
-            for _ in range(5):
+            num_random_actions = 5 if loco_env_type == 'quad' else 40
+            for _ in range(num_random_actions):
                 super().step(self.action_space.sample())
             self.set_goal(goal_xy=goal_xy)
             self.set_xy(goal_xy)

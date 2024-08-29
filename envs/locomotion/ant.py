@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from gymnasium import utils
 from gymnasium.envs.mujoco import MujocoEnv
@@ -9,6 +11,7 @@ DEFAULT_CAMERA_CONFIG = {
 
 
 class AntEnv(MujocoEnv, utils.EzPickle):
+    xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'ant.xml')
     metadata = {
         'render_modes': [
             'human',
@@ -20,7 +23,7 @@ class AntEnv(MujocoEnv, utils.EzPickle):
 
     def __init__(
         self,
-        xml_file='ant.xml',
+        xml_file=None,
         ctrl_cost_weight=0.5,
         use_contact_forces=False,
         contact_cost_weight=5e-4,
@@ -32,6 +35,8 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         exclude_current_positions_from_observation=True,
         **kwargs,
     ):
+        if xml_file is None:
+            xml_file = self.xml_file
         utils.EzPickle.__init__(
             self,
             xml_file,

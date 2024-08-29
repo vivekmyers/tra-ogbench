@@ -214,8 +214,7 @@ def make_online_env(env_name):
             apply_xy_wrapper = False
 
         if 'Ant' in env_name:
-            xml_file = os.path.join(os.path.dirname(__file__), 'locomotion/assets/ant.xml')
-            env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200, xml_file=xml_file)
+            env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200)
         elif 'HumanoidCustom' in env_name:
             env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200, camera_id=0)
         else:
