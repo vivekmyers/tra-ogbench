@@ -189,7 +189,7 @@ class PPOAgent(flax.struct.PyTreeNode):
         rng, init_rng = jax.random.split(rng, 2)
 
         if config['discrete']:
-            action_dim = ex_actions[0] + 1
+            action_dim = ex_actions.max() + 1
         else:
             action_dim = ex_actions.shape[-1]
 

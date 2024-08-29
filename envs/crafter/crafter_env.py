@@ -10,34 +10,79 @@ class CrafterEnv(gymnasium.Env):
         'render_fps': 15,
     }
 
-    @property
-    def observation_space(self):
-        return Box(0, 255, tuple(self.env._size) + (3,), np.uint8)
-
-    @property
-    def action_space(self):
-        return Discrete(len(constants.actions))
-
-    @property
-    def action_names(self):
-        return constants.actions
-
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        mode='evaluation',  # ['evaluation', 'data_collection', 'online']
+        *args,
+        **kwargs,
+    ):
         self.env = Env(*args, **kwargs)
+        self.observation_space = Box(0, 255, tuple(self.env._size) + (3,), np.uint8)
+        if mode == 'online':
+            self.action_space = Discrete(len(constants.actions))
+        else:
+            self.action_space = Discrete(len(constants.actions) + 1)
+
+        self._mode = mode
+        self._internal_done = False
+        self._num_last_steps = 3
+        self._cur_last_count = 0
 
     def reset(self, *, seed=None, options=None):
         ob = self.env.reset()
         info = dict()
+        self._internal_done = False
+        self._cur_last_count = 0
         return ob, info
 
     def step(self, action):
-        ob, reward, done, info = self.env.step(action)
+        if action == len(constants.actions):
+            # Finalizing action
+            ob = self._goal_render(self.env._player.inventory)
+            reward = 0.0
+            done = True
+            info = dict()
+        else:
+            ob, reward, done, info = self.env.step(action)
 
-        terminated = self.env._player.health <= 0
-        truncated = self.env._length and self.env._step >= self.env._length
-        assert done == (terminated or truncated)
+        if done:
+            self._internal_done = True
 
-        return ob, reward, terminated, truncated, info
+        if self._internal_done:
+            ob = self._goal_render(self.env._player.inventory)
+            self._cur_last_count += 1
+            if self._cur_last_count >= self._num_last_steps:
+                done = True
+            else:
+                done = False
+
+            return ob, 0.0, done, done, info
+        else:
+            return ob, reward, done, done, info
+
+    def _goal_render(self, inventory):
+        size = self.env._size
+        unit = size // self.env._view
+        canvas = np.zeros(tuple(size) + (3,), np.uint8)
+        local_view = self.env._local_view(self.env._player, unit)
+        local_view = np.zeros_like(local_view)
+
+        unit = np.array(unit)
+        item_canvas = np.zeros(tuple(self.env._item_view._grid * unit) + (3,), np.uint8)
+        for index, (item, amount) in enumerate(inventory.items()):
+            if item in ['health', 'food', 'drink', 'energy']:
+                continue
+            if amount < 1:
+                continue
+            self.env._item_view._item(item_canvas, index, item, unit)
+        item_view = item_canvas
+
+        view = np.concatenate([local_view, item_view], 1)
+        border = (size - (size // self.env._view) * self.env._view) // 2
+        (x, y), (w, h) = border, view.shape[:2]
+        canvas[x: x + w, y: y + h] = view
+
+        return canvas.transpose((1, 0, 2))
 
     def render(self):
         return self.env.render()

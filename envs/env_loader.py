@@ -217,7 +217,7 @@ def make_online_env(env_name):
         env = EpisodeMonitor(env)
     elif 'crafter' in env_name:
         import envs.crafter  # noqa
-        env = gymnasium.make(env_name)
+        env = gymnasium.make(env_name, mode='online')
         env = EpisodeMonitor(env)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
