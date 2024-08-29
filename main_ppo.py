@@ -87,13 +87,13 @@ def main(_):
         next_observations=env.observation_space.sample(),
         log_probs=zeros,
     )
-    if config.discrete:
+    if config['discrete']:
         # Fill with the maximum action
         example_transition['actions'] = np.full_like(example_transition['actions'], env.single_action_space.n - 1)
 
     replay_buffer = ReplayBuffer.create(example_transition, size=FLAGS.train_interval)
 
-    agent_class = algos[config.agent_name]
+    agent_class = algos[config['agent_name']]
     agent = agent_class.create(
         FLAGS.seed,
         example_transition['observations'],

@@ -70,7 +70,7 @@ def main(_):
         json.dump(flag_dict, f)
 
     config = FLAGS.agent
-    agent_class = algos[config.agent_name]
+    agent_class = algos[config['agent_name']]
 
     env, train_dataset, val_dataset = make_env_and_dataset(FLAGS.env_name, FLAGS.dataset_path)
     if config['frame_stack'] is not None:
@@ -88,6 +88,9 @@ def main(_):
         val_dataset = dataset_class(Dataset.create(**val_dataset), config)
 
     example_batch = train_dataset.sample(1)
+    if config['discrete']:
+        # Fill with the maximum action
+        example_batch['actions'] = np.full_like(example_batch['actions'], env.action_space.n - 1)
 
     agent = agent_class.create(
         FLAGS.seed,

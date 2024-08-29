@@ -9,7 +9,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import GCActor, GCValue
+from utils.networks import GCActor, GCValue, GCDiscreteActor
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -99,7 +99,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
                 'adv': adv.mean(),
                 'bc_log_prob': log_prob.mean(),
                 'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-                'std': jnp.mean(dist.scale_diag),
+                'std': jnp.mean(dist.scale_diag) if not self.config['discrete'] else 0.0,
             }
         elif self.config['actor_loss'] == 'ddpgbc':
             assert self.config['use_q']
@@ -178,18 +178,17 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
         return self.replace(network=new_network, rng=new_rng), info
 
-    @partial(jax.jit, static_argnames=('discrete',))
+    @jax.jit
     def sample_actions(
         self,
         observations,
         goals=None,
         seed=None,
         temperature=1.0,
-        discrete=False,
     ):
         dist = self.network.select('actor')(observations, goals, temperature=temperature)
         actions = dist.sample(seed=seed)
-        if not discrete:
+        if not self.config['discrete']:
             actions = jnp.clip(actions, -1, 1)
         return actions
 
@@ -205,7 +204,10 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         rng, init_rng = jax.random.split(rng, 2)
 
         ex_goals = ex_observations
-        action_dim = ex_actions.shape[-1]
+        if config['discrete']:
+            action_dim = ex_actions.max() + 1
+        else:
+            action_dim = ex_actions.shape[-1]
 
         encoders = dict()
         if config['encoder'] is not None:
@@ -237,13 +239,20 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             )
             critic_def = None
 
-        actor_def = GCActor(
-            hidden_dims=config['actor_hidden_dims'],
-            action_dim=action_dim,
-            state_dependent_std=False,
-            const_std=config['const_std'],
-            gc_encoder=encoders.get('actor'),
-        )
+        if config['discrete']:
+            actor_def = GCDiscreteActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                gc_encoder=encoders.get('actor'),
+            )
+        else:
+            actor_def = GCActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                state_dependent_std=False,
+                const_std=config['const_std'],
+                gc_encoder=encoders.get('actor'),
+            )
 
         network_info = dict(
             value=(value_def, (ex_observations, ex_goals)),
@@ -287,6 +296,7 @@ def get_config():
             alpha=3.0,  # AWR temperature or DDPG+BC coefficient
             use_q=True,  # True for GCIQL, False for GCIVL
             const_std=True,
+            discrete=False,
             encoder=ml_collections.config_dict.placeholder(str),
             dataset_class='GCDataset',
             value_p_curgoal=0.2,

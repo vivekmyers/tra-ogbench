@@ -110,7 +110,7 @@ def truncate_dataset(dataset, ratio, return_both=False):
         return trunc_dataset
 
 
-def get_dataset(dataset_path, ob_dtype=np.float32):
+def get_dataset(dataset_path, ob_dtype=np.float32, action_dtype=np.float32):
     train_path = dataset_path
     val_path = dataset_path.replace('.npz', '-val.npz')
     train_dataset = dict()
@@ -119,7 +119,12 @@ def get_dataset(dataset_path, ob_dtype=np.float32):
         file = np.load(path)
 
         for k in ['observations', 'actions', 'terminals']:
-            dtype = ob_dtype if 'observation' in k else np.float32
+            if k == 'observations':
+                dtype = ob_dtype
+            elif k == 'actions':
+                dtype = action_dtype
+            else:
+                dtype = np.float32
             dataset[k] = file[k][...].astype(dtype)
 
         # Since the dataset doesn't contain next_observations, we need to invalidate the last state of each trajectory
@@ -175,6 +180,11 @@ def make_env_and_dataset(env_name, dataset_path=None):
         train_dataset, val_dataset = get_dataset(
             dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
         )
+    elif 'crafter' in env_name:
+        import envs.crafter  # noqa
+
+        env = gymnasium.make(env_name)
+        train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8, action_dtype=np.int32)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
 

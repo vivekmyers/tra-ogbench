@@ -112,19 +112,17 @@ class SACAgent(flax.struct.PyTreeNode):
 
         return self.replace(network=new_network, rng=new_rng), info
 
-    @partial(jax.jit, static_argnames=('discrete',))
+    @jax.jit
     def sample_actions(
         self,
         observations,
         goals=None,
         seed=None,
         temperature=1.0,
-        discrete=False,
     ):
         dist = self.network.select('actor')(observations, goals, temperature=temperature)
         actions = dist.sample(seed=seed)
-        if not discrete:
-            actions = jnp.clip(actions, -1, 1)
+        actions = jnp.clip(actions, -1, 1)
         return actions
 
     @classmethod

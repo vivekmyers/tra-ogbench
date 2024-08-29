@@ -97,6 +97,8 @@ def main(_):
     for k, v in dataset.items():
         if 'observations' in k and v[0].dtype == np.uint8:
             dtype = np.uint8
+        elif 'actions' in k and v[0].dtype == np.int32:
+            dtype = np.int32
         elif k == 'terminals':
             dtype = bool
         else:
