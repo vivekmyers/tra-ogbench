@@ -1,5 +1,3 @@
-import copy
-from functools import partial
 from typing import Any
 
 import flax
@@ -10,7 +8,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import MLP, GCActor, GCValue, Identity, LengthNormalize
+from utils.networks import MLP, GCActor, GCValue, Identity, LengthNormalize, GCDiscreteActor
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -74,7 +72,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
             'adv': adv.mean(),
             'bc_log_prob': log_prob.mean(),
             'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-            'std': jnp.mean(dist.scale_diag),
+            'std': jnp.mean(dist.scale_diag) if not self.config['discrete'] else 0.0,
         }
 
     def high_actor_loss(self, batch, grad_params):
@@ -142,14 +140,13 @@ class HIQLAgent(flax.struct.PyTreeNode):
 
         return self.replace(network=new_network, rng=new_rng), info
 
-    @partial(jax.jit, static_argnames=('discrete',))
+    @jax.jit
     def sample_actions(
         self,
         observations,
         goals=None,
         seed=None,
         temperature=1.0,
-        discrete=False,
     ):
         high_seed, low_seed = jax.random.split(seed)
 
@@ -160,7 +157,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
         low_dist = self.network.select('low_actor')(observations, goal_reps, goal_encoded=True, temperature=temperature)
         actions = low_dist.sample(seed=low_seed)
 
-        if not discrete:
+        if not self.config['discrete']:
             actions = jnp.clip(actions, -1, 1)
         return actions
 
@@ -176,7 +173,10 @@ class HIQLAgent(flax.struct.PyTreeNode):
         rng, init_rng = jax.random.split(rng, 2)
 
         ex_goals = ex_observations
-        action_dim = ex_actions.shape[-1]
+        if config['discrete']:
+            action_dim = ex_actions.max() + 1
+        else:
+            action_dim = ex_actions.shape[-1]
 
         if config['encoder'] is not None:
             encoder_module = encoder_modules[config['encoder']]
@@ -217,13 +217,20 @@ class HIQLAgent(flax.struct.PyTreeNode):
             gc_encoder=target_value_encoder_def,
         )
 
-        low_actor_def = GCActor(
-            hidden_dims=config['actor_hidden_dims'],
-            action_dim=action_dim,
-            state_dependent_std=False,
-            const_std=config['const_std'],
-            gc_encoder=low_actor_encoder_def,
-        )
+        if config['discrete']:
+            low_actor_def = GCDiscreteActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                gc_encoder=low_actor_encoder_def,
+            )
+        else:
+            low_actor_def = GCActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                state_dependent_std=False,
+                const_std=config['const_std'],
+                gc_encoder=low_actor_encoder_def,
+            )
         high_actor_def = GCActor(
             hidden_dims=config['actor_hidden_dims'],
             action_dim=config['rep_dim'],
@@ -271,6 +278,7 @@ def get_config():
             rep_dim=10,
             low_actor_rep_grad=False,  # Whether the gradient flows from the low actor to the goal representation
             const_std=True,
+            discrete=False,
             encoder=ml_collections.config_dict.placeholder(str),
             dataset_class='HGCDataset',
             value_p_curgoal=0.2,
