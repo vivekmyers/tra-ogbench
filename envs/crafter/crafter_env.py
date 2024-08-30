@@ -115,7 +115,7 @@ class CrafterEnv(gymnasium.Env):
                     goal_inventory[item] = 1
                 else:
                     goal_inventory[item] = 0
-            goal_ob = self._goal_render(goal_inventory)
+            goal_ob = self.goal_render(goal_inventory)
             self.cur_goal_items = self.cur_task_info['goal_items']
             info['goal'] = goal_ob
             if render_goal:
@@ -130,7 +130,7 @@ class CrafterEnv(gymnasium.Env):
         else:
             if action == len(constants.actions):
                 # Finalizing action
-                ob = self._goal_render(self.env._player.inventory)
+                ob = self.goal_render(self.env._player.inventory)
                 reward = 0.0
                 done = True
                 info = dict()
@@ -142,7 +142,7 @@ class CrafterEnv(gymnasium.Env):
 
             if self._mode == 'data_collection':
                 if self._internal_done:
-                    ob = self._goal_render(self.env._player.inventory)
+                    ob = self.goal_render(self.env._player.inventory)
                     self._cur_last_count += 1
                     if self._cur_last_count >= self._num_last_steps:
                         done = True
@@ -173,7 +173,7 @@ class CrafterEnv(gymnasium.Env):
 
                 return ob, reward, done, done, info
 
-    def _goal_render(self, inventory):
+    def goal_render(self, inventory):
         size = self.env._size
         unit = size // self.env._view
         canvas = np.zeros(tuple(size) + (3,), np.uint8)
