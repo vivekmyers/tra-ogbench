@@ -219,6 +219,14 @@ class GCValue(nn.Module):
         return v
 
 
+class GCDiscreteValue(GCValue):
+    action_dim: int = None
+
+    def __call__(self, observations, goals=None, actions=None, info=False):
+        actions = jnp.eye(self.action_dim)[actions]
+        return super().__call__(observations, goals, actions, info)
+
+
 class GCBilinearValue(nn.Module):
     hidden_dims: Sequence[int]
     latent_dim: int

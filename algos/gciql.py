@@ -9,7 +9,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import GCActor, GCValue, GCDiscreteActor
+from utils.networks import GCActor, GCValue, GCDiscreteActor, GCDiscreteValue
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -224,12 +224,21 @@ class GCIQLAgent(flax.struct.PyTreeNode):
                 ensemble=False,
                 gc_encoder=encoders.get('value'),
             )
-            critic_def = GCValue(
-                hidden_dims=config['value_hidden_dims'],
-                layer_norm=config['layer_norm'],
-                ensemble=True,
-                gc_encoder=encoders.get('critic'),
-            )
+            if config['discrete']:
+                critic_def = GCDiscreteValue(
+                    hidden_dims=config['value_hidden_dims'],
+                    layer_norm=config['layer_norm'],
+                    ensemble=True,
+                    gc_encoder=encoders.get('critic'),
+                    action_dim=action_dim,
+                )
+            else:
+                critic_def = GCValue(
+                    hidden_dims=config['value_hidden_dims'],
+                    layer_norm=config['layer_norm'],
+                    ensemble=True,
+                    gc_encoder=encoders.get('critic'),
+                )
         else:
             value_def = GCValue(
                 hidden_dims=config['value_hidden_dims'],
