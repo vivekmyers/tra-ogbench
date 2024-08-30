@@ -18,10 +18,7 @@ class CrafterEnv(gymnasium.Env):
     ):
         self.env = Env(*args, **kwargs)
         self.observation_space = Box(0, 255, tuple(self.env._size) + (3,), np.uint8)
-        if mode == 'online':
-            self.action_space = Discrete(len(constants.actions))
-        else:
-            self.action_space = Discrete(len(constants.actions) + 1)
+        self.action_space = Discrete(len(constants.actions))
 
         self._mode = mode
         self._internal_done = False
@@ -128,14 +125,7 @@ class CrafterEnv(gymnasium.Env):
             ob, reward, done, info = self.env.step(action)
             return ob, reward, done, done, info
         else:
-            if action == len(constants.actions):
-                # Finalizing action
-                ob = self.goal_render(self.env._player.inventory)
-                reward = 0.0
-                done = True
-                info = dict()
-            else:
-                ob, reward, done, info = self.env.step(action)
+            ob, reward, done, info = self.env.step(action)
 
             if done:
                 self._internal_done = True

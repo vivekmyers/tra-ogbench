@@ -21,7 +21,6 @@ flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
 flags.DEFINE_string('restore_path', None, 'Expert agent restore path')
 flags.DEFINE_integer('restore_epoch', None, 'Expert agent restore epoch')
 flags.DEFINE_string('save_path', None, 'Save path')
-flags.DEFINE_float('p_final_action', 0.05, 'Finalizing action probability')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
 flags.DEFINE_integer('add_demos', 0, 'Whether to add human demonstrations')
 
@@ -44,7 +43,7 @@ def add_demo_to_dataset(env, dataset, demo_file):
     num_last_steps = env.unwrapped._num_last_steps
     for j in range(num_last_steps - 1):
         dataset['observations'].append(env.unwrapped.goal_render(inventory))
-        dataset['actions'].append(np.random.randint(18))
+        dataset['actions'].append(np.random.randint(17))
         dataset['terminals'].append(False if j < num_last_steps - 2 else True)
         step += 1
 
@@ -116,10 +115,7 @@ def main(_):
             step = 0
 
             while not done:
-                if np.random.rand() < FLAGS.p_final_action:
-                    action = action_dim
-                else:
-                    action = actor_fn(ob, temperature=1)
+                action = actor_fn(ob, temperature=1)
                 next_ob, reward, terminated, truncated, info = env.step(action)
                 done = terminated or truncated
 
