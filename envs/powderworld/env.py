@@ -17,6 +17,7 @@ class PowderworldEnv(gymnasium.Env):
         use_jit=True,
         world_size=32,
         grid_size=8,
+        num_elems=5,
         mode='evaluation',  # 'evaluation' or 'data_collection'
     ):
         self.pw = PWSim(device=device, use_jit=use_jit)
@@ -26,7 +27,13 @@ class PowderworldEnv(gymnasium.Env):
         self._grid_size = grid_size
         self._brush_size = self._world_size // self._grid_size
         self._mode = mode
-        self._elem_names = ['sand', 'water', 'fire', 'plant', 'stone']
+        self._num_elems = num_elems
+        if num_elems == 2:
+            self._elem_names = ['plant', 'stone']
+        elif num_elems == 5:
+            self._elem_names = ['sand', 'water', 'fire', 'plant', 'stone']
+        else:
+            raise NotImplementedError
         self._elems = [pw_element_names.index(elem_name) for elem_name in self._elem_names]
 
         self.observation_space = Box(low=0, high=255, shape=(self._world_size, self._world_size, 3), dtype=np.uint8)
@@ -51,73 +58,143 @@ class PowderworldEnv(gymnasium.Env):
         return self.render()
 
     def set_tasks(self):
-        # Task 1
-        action_seq = []
-        for i in range(1, 6):
-            action_seq.append(('plant', 1, i))
-        for i in range(1, 6):
-            action_seq.append(('plant', i, 6))
-        for i in range(6, 1, -1):
-            action_seq.append(('plant', 6, i))
-        for i in range(6, 1, -1):
-            action_seq.append(('plant', i, 1))
-        goal = self.compute_goal(action_seq)
-        self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, goal=goal))
+        if self._num_elems == 2:
+            # Task 1
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('plant', x, y))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, goal=goal))
 
-        # Task 2
-        action_seq = []
-        for y in reversed(range(8)):
-            for x in range(8):
-                action_seq.append(('water', x, y))
-        for _ in range(16):
-            action_seq.extend([
-                ('plant', 3, 3),
-                ('plant', 3, 4),
-                ('plant', 4, 4),
-                ('plant', 4, 3),
-            ])
-        goal = self.compute_goal(action_seq)
-        self.task_infos.append(dict(task_name='task2_water_plant', action_seq=action_seq, goal=goal))
+            # Task 2
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('plant', x, y))
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('stone', x, y))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task2_stone', action_seq=action_seq, goal=goal))
 
-        # Task 3
-        action_seq = []
-        for i in range(8):
-            action_seq.append(('stone', i, 7))
-        for i in range(6, -1, -1):
-            action_seq.append(('stone', 0, i))
-        for i in range(6, -1, -1):
-            action_seq.append(('stone', 7, i))
-        for i in range(1, 7):
-            action_seq.append(('stone', i, 0))
-        for _ in range(32):
-            action_seq.extend([
-                ('sand', 3, 1),
-                ('sand', 4, 1),
-            ])
-        goal = self.compute_goal(action_seq)
-        self.task_infos.append(dict(task_name='task3_stone_sand', action_seq=action_seq, goal=goal))
+            # Task 3
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('plant', x, y))
+            for i in range(1, 6):
+                action_seq.append(('stone', 1, i))
+            for i in range(1, 6):
+                action_seq.append(('stone', i, 6))
+            for i in range(6, 1, -1):
+                action_seq.append(('stone', 6, i))
+            for i in range(6, 1, -1):
+                action_seq.append(('stone', i, 1))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task3_plant_stone', action_seq=action_seq, goal=goal))
 
-        # Task 4
-        action_seq = []
-        for y in reversed(range(8)):
-            for x in range(8):
-                action_seq.append(('sand', x, y))
-        for _ in range(4):
-            for x in range(8):
-                action_seq.append(('water', x, 7))
-        goal = self.compute_goal(action_seq)
-        self.task_infos.append(dict(task_name='task4_sand_water', action_seq=action_seq, goal=goal))
+            # Task 4
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('plant', x, y))
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('stone', x, y))
+            for sx, sy in [(0, 0), (0, 5), (5, 0), (5, 5)]:
+                for i in range(0, 2):
+                    action_seq.append(('plant', sx, sy + i))
+                for i in range(0, 2):
+                    action_seq.append(('plant', sx + i, sy + 2))
+                for i in range(2, 0, -1):
+                    action_seq.append(('plant', sx + 2, sy + i))
+                for i in range(2, 0, -1):
+                    action_seq.append(('plant', sx + i, sy))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task4_stone_plant', action_seq=action_seq, goal=goal))
 
-        # Task 5
-        action_seq = []
-        for y in reversed(range(8)):
-            for x in range(8):
-                action_seq.append(('plant', x, y))
-        for _ in range(4):
-            for x in range(8):
-                action_seq.append(('fire', x, 0))
-        goal = self.compute_goal(action_seq)
-        self.task_infos.append(dict(task_name='task5_plant_fire', action_seq=action_seq, goal=goal))
+            # Task 5
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('plant', x, y))
+            for y in reversed(range(8)):
+                for x in range(8):
+                    if (x + y) % 2 == 0:
+                        action_seq.append(('stone', x, y))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task5_mosaic', action_seq=action_seq, goal=goal))
+        elif self._num_elems == 5:
+            # Task 1
+            action_seq = []
+            for i in range(1, 6):
+                action_seq.append(('plant', 1, i))
+            for i in range(1, 6):
+                action_seq.append(('plant', i, 6))
+            for i in range(6, 1, -1):
+                action_seq.append(('plant', 6, i))
+            for i in range(6, 1, -1):
+                action_seq.append(('plant', i, 1))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, goal=goal))
+
+            # Task 2
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('water', x, y))
+            for _ in range(16):
+                action_seq.extend([
+                    ('plant', 3, 3),
+                    ('plant', 3, 4),
+                    ('plant', 4, 4),
+                    ('plant', 4, 3),
+                ])
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task2_water_plant', action_seq=action_seq, goal=goal))
+
+            # Task 3
+            action_seq = []
+            for i in range(8):
+                action_seq.append(('stone', i, 7))
+            for i in range(6, -1, -1):
+                action_seq.append(('stone', 0, i))
+            for i in range(6, -1, -1):
+                action_seq.append(('stone', 7, i))
+            for i in range(1, 7):
+                action_seq.append(('stone', i, 0))
+            for _ in range(32):
+                action_seq.extend([
+                    ('sand', 3, 1),
+                    ('sand', 4, 1),
+                ])
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task3_stone_sand', action_seq=action_seq, goal=goal))
+
+            # Task 4
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('sand', x, y))
+            for _ in range(4):
+                for x in range(8):
+                    action_seq.append(('water', x, 7))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task4_sand_water', action_seq=action_seq, goal=goal))
+
+            # Task 5
+            action_seq = []
+            for y in reversed(range(8)):
+                for x in range(8):
+                    action_seq.append(('plant', x, y))
+            for _ in range(4):
+                for x in range(8):
+                    action_seq.append(('fire', x, 0))
+            goal = self.compute_goal(action_seq)
+            self.task_infos.append(dict(task_name='task5_plant_fire', action_seq=action_seq, goal=goal))
+        else:
+            raise NotImplementedError
 
     def reset(self, *, seed=None, options=None):
         if self._mode == 'evaluation':

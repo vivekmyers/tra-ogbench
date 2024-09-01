@@ -7,7 +7,7 @@ class Behavior:
         self._done = False
         self._step = 0
 
-        self._size = self._env._grid_size
+        self._size = self._env.unwrapped._grid_size
         self._elem_name = None
         self._sequence = None
 
@@ -32,7 +32,7 @@ class FillBehavior(Behavior):
     def reset(self, ob, info):
         self._done = False
         self._step = 0
-        self._elem_name = np.random.choice(self._env._elem_names)
+        self._elem_name = np.random.choice(self._env.unwrapped._elem_names)
 
         flip_x = np.random.randint(2)
         flip_y = np.random.randint(2)
@@ -56,7 +56,7 @@ class LineBehavior(Behavior):
     def reset(self, ob, info):
         self._done = False
         self._step = 0
-        self._elem_name = np.random.choice(self._env._elem_names)
+        self._elem_name = np.random.choice(self._env.unwrapped._elem_names)
 
         target_idx = np.random.randint(self._size)
         flip_dir = np.random.randint(2)
@@ -77,7 +77,7 @@ class SquareBehavior(Behavior):
     def reset(self, ob, info):
         self._done = False
         self._step = 0
-        self._elem_name = np.random.choice(self._env._elem_names)
+        self._elem_name = np.random.choice(self._env.unwrapped._elem_names)
 
         length = np.random.randint(1, self._size)
         x1 = np.random.randint(self._size - length)
