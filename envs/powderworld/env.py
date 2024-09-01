@@ -267,7 +267,8 @@ class PowderworldEnv(gymnasium.Env):
             for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
                 ob_shifts.append(np.roll(ob, (dy, dx), axis=(0, 1)))
             ob_shifts = np.stack(ob_shifts, axis=0)
-            error = (ob_shifts != goal).all(axis=3).any(axis=0)
+            match = (ob_shifts == goal).all(axis=3).any(axis=0)
+            error = ~match
 
             success = error.sum() < 64
             if success:
