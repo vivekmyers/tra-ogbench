@@ -185,6 +185,11 @@ def make_env_and_dataset(env_name, dataset_path=None):
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8, action_dtype=np.int32)
+    elif 'powderworld' in env_name:
+        import envs.powderworld  # noqa
+
+        env = gymnasium.make(env_name)
+        train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8, action_dtype=np.int32)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
 
