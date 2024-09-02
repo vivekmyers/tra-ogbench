@@ -219,41 +219,12 @@ class GCValue(nn.Module):
         return v
 
 
-class GCDiscreteCritic(nn.Module):
-    action_dim: int
-    hidden_dims: Sequence[int]
-    layer_norm: bool = True
-    ensemble: bool = True
-    value_exp: bool = False
-    gc_encoder: nn.Module = None
-
-    def setup(self):
-        mlp_module = MLP
-        if self.ensemble:
-            mlp_module = ensemblize(mlp_module, 2)
-        value_net = mlp_module((*self.hidden_dims, self.action_dim), activate_final=False, layer_norm=self.layer_norm)
-
-        self.critic_net = value_net
+class GCDiscreteCritic(GCValue):
+    action_dim: int = None
 
     def __call__(self, observations, goals=None, actions=None, info=False):
-        if self.gc_encoder is not None:
-            inputs = [self.gc_encoder(observations, goals)]
-        else:
-            inputs = [observations]
-            if goals is not None:
-                inputs.append(goals)
-        inputs = jnp.concatenate(inputs, axis=-1)
-
-        q = self.critic_net(inputs)
-
-        if self.value_exp:
-            q = jnp.exp(q)
-
-        if actions is not None:
-            actions = jnp.eye(self.action_dim)[actions]
-            q = jnp.sum(q * actions, axis=-1)
-
-        return q
+        actions = jnp.eye(self.action_dim)[actions]
+        return super().__call__(observations, goals, actions, info)
 
 
 class GCBilinearValue(nn.Module):
