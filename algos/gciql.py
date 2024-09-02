@@ -8,7 +8,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import GCActor, GCValue, GCDiscreteActor, GCDiscreteValue
+from utils.networks import GCActor, GCValue, GCDiscreteActor, GCDiscreteCritic
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -185,11 +185,17 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         seed=None,
         temperature=1.0,
     ):
-        dist = self.network.select('actor')(observations, goals, temperature=temperature)
-        actions = dist.sample(seed=seed)
-        if not self.config['discrete']:
-            actions = jnp.clip(actions, -1, 1)
-        return actions
+        if self.config['qmax_actor']:
+            q1, q2 = self.network.select('critic')(observations, goals)
+            q = jnp.minimum(q1, q2)
+            actions = jnp.argmax(q, axis=-1)
+            return actions
+        else:
+            dist = self.network.select('actor')(observations, goals, temperature=temperature)
+            actions = dist.sample(seed=seed)
+            if not self.config['discrete']:
+                actions = jnp.clip(actions, -1, 1)
+            return actions
 
     @classmethod
     def create(
@@ -224,7 +230,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
                 gc_encoder=encoders.get('value'),
             )
             if config['discrete']:
-                critic_def = GCDiscreteValue(
+                critic_def = GCDiscreteCritic(
                     hidden_dims=config['value_hidden_dims'],
                     layer_norm=config['layer_norm'],
                     ensemble=True,
@@ -305,6 +311,7 @@ def get_config():
             use_q=True,  # True for GCIQL, False for GCIVL
             const_std=True,
             discrete=False,
+            qmax_actor=False,  # Use argmax_a Q(s, a) as actor (only for discrete actions)
             encoder=ml_collections.config_dict.placeholder(str),
             dataset_class='GCDataset',
             value_p_curgoal=0.2,
