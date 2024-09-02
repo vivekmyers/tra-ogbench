@@ -4,9 +4,9 @@ import gymnasium
 import numpy as np
 from absl import app, flags
 from tqdm import trange
-from envs.powderworld.behaviors import FillBehavior, SquareBehavior, LineBehavior
 
 import envs.powderworld  # noqa
+from envs.powderworld.behaviors import FillBehavior, LineBehavior, SquareBehavior
 
 FLAGS = flags.FLAGS
 

@@ -59,9 +59,9 @@ def evaluate(
         while not done:
             action = actor_fn(observations=observation, goals=goal, temperature=eval_temperature)
             action = np.array(action)
-            if eval_gaussian is not None:
-                action = np.random.normal(action, eval_gaussian)
             if not config.get('discrete'):
+                if eval_gaussian is not None:
+                    action = np.random.normal(action, eval_gaussian)
                 action = np.clip(action, -1, 1)
 
             next_observation, reward, terminated, truncated, info = env.step(action)

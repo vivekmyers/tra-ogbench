@@ -8,7 +8,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import MLP, GCActor, GCValue, Identity, LengthNormalize, GCDiscreteActor
+from utils.networks import MLP, GCActor, GCDiscreteActor, GCValue, Identity, LengthNormalize
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -67,13 +67,20 @@ class HIQLAgent(flax.struct.PyTreeNode):
 
         actor_loss = -(exp_a * log_prob).mean()
 
-        return actor_loss, {
+        actor_info = {
             'actor_loss': actor_loss,
             'adv': adv.mean(),
             'bc_log_prob': log_prob.mean(),
-            'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-            'std': jnp.mean(dist.scale_diag) if not self.config['discrete'] else 0.0,
         }
+        if not self.config['discrete']:
+            actor_info.update(
+                {
+                    'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
+                    'std': jnp.mean(dist.scale_diag),
+                }
+            )
+
+        return actor_loss, actor_info
 
     def high_actor_loss(self, batch, grad_params):
         v1, v2 = self.network.select('value')(batch['observations'], batch['high_actor_goals'])

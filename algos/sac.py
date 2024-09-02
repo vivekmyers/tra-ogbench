@@ -1,5 +1,4 @@
 import copy
-from functools import partial
 from typing import Any
 
 import flax

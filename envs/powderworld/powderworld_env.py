@@ -2,7 +2,7 @@ import gymnasium
 import numpy as np
 from gymnasium.spaces import Box, Discrete
 
-from envs.powderworld.sim import PWSim, PWRenderer, interp, pw_element_names
+from envs.powderworld.sim import PWRenderer, PWSim, interp, pw_element_names
 
 
 class PowderworldEnv(gymnasium.Env):

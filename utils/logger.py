@@ -3,8 +3,8 @@ import tempfile
 import absl.flags as flags
 import ml_collections
 import numpy as np
-from PIL import Image, ImageEnhance
 import wandb
+from PIL import Image, ImageEnhance
 
 
 def get_flag_dict():

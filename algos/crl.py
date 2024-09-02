@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Any
 
 import flax
@@ -8,7 +7,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import GCActor, GCBilinearValue
+from utils.networks import GCActor, GCBilinearValue, GCDiscreteActor, GCDiscreteBilinearCritic
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -60,9 +59,13 @@ class CRLAgent(flax.struct.PyTreeNode):
 
     def actor_loss(self, batch, grad_params, rng=None):
         if self.config['actor_log_q']:
-            value_transform = lambda x: jnp.log(jnp.maximum(x, 1e-6))
+
+            def value_transform(x):
+                return jnp.log(jnp.maximum(x, 1e-6))
         else:
-            value_transform = lambda x: x
+
+            def value_transform(x):
+                return x
 
         if self.config['actor_loss'] == 'awr':
             if self.config['use_q']:
@@ -89,15 +92,22 @@ class CRLAgent(flax.struct.PyTreeNode):
 
             actor_loss = -(exp_a * log_prob).mean()
 
-            return actor_loss, {
+            actor_info = {
                 'actor_loss': actor_loss,
                 'adv': adv.mean(),
                 'bc_log_prob': log_prob.mean(),
-                'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-                'std': jnp.mean(dist.scale_diag),
             }
+            if not self.config['discrete']:
+                actor_info.update(
+                    {
+                        'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
+                        'std': jnp.mean(dist.scale_diag),
+                    }
+                )
+
+            return actor_loss, actor_info
         elif self.config['actor_loss'] == 'ddpgbc':
-            assert self.config['use_q']
+            assert self.config['use_q'] and not self.config['discrete']
 
             dist = self.network.select('actor')(batch['observations'], batch['actor_goals'], params=grad_params)
             if self.config['const_std']:
@@ -167,18 +177,17 @@ class CRLAgent(flax.struct.PyTreeNode):
 
         return self.replace(network=new_network, rng=new_rng), info
 
-    @partial(jax.jit, static_argnames=('discrete',))
+    @jax.jit
     def sample_actions(
         self,
         observations,
         goals=None,
         seed=None,
         temperature=1.0,
-        discrete=False,
     ):
         dist = self.network.select('actor')(observations, goals, temperature=temperature)
         actions = dist.sample(seed=seed)
-        if not discrete:
+        if not self.config['discrete']:
             actions = jnp.clip(actions, -1, 1)
         return actions
 
@@ -194,7 +203,10 @@ class CRLAgent(flax.struct.PyTreeNode):
         rng, init_rng = jax.random.split(rng, 2)
 
         ex_goals = ex_observations
-        action_dim = ex_actions.shape[-1]
+        if config['discrete']:
+            action_dim = ex_actions.max() + 1
+        else:
+            action_dim = ex_actions.shape[-1]
 
         encoders = dict()
         if config['encoder'] is not None:
@@ -216,15 +228,27 @@ class CRLAgent(flax.struct.PyTreeNode):
                 state_encoder=encoders.get('value_state'),
                 goal_encoder=encoders.get('value_goal'),
             )
-            critic_def = GCBilinearValue(
-                hidden_dims=config['value_hidden_dims'],
-                latent_dim=config['latent_dim'],
-                layer_norm=config['layer_norm'],
-                ensemble=True,
-                value_exp=True,
-                state_encoder=encoders.get('critic_state'),
-                goal_encoder=encoders.get('critic_goal'),
-            )
+            if config['discrete']:
+                critic_def = GCDiscreteBilinearCritic(
+                    hidden_dims=config['value_hidden_dims'],
+                    latent_dim=config['latent_dim'],
+                    layer_norm=config['layer_norm'],
+                    ensemble=True,
+                    value_exp=True,
+                    state_encoder=encoders.get('critic_state'),
+                    goal_encoder=encoders.get('critic_goal'),
+                    action_dim=action_dim,
+                )
+            else:
+                critic_def = GCBilinearValue(
+                    hidden_dims=config['value_hidden_dims'],
+                    latent_dim=config['latent_dim'],
+                    layer_norm=config['layer_norm'],
+                    ensemble=True,
+                    value_exp=True,
+                    state_encoder=encoders.get('critic_state'),
+                    goal_encoder=encoders.get('critic_goal'),
+                )
         else:
             value_def = GCBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
@@ -237,13 +261,20 @@ class CRLAgent(flax.struct.PyTreeNode):
             )
             critic_def = None
 
-        actor_def = GCActor(
-            hidden_dims=config['actor_hidden_dims'],
-            action_dim=action_dim,
-            state_dependent_std=False,
-            const_std=config['const_std'],
-            gc_encoder=encoders.get('actor'),
-        )
+        if config['discrete']:
+            actor_def = GCDiscreteActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                gc_encoder=encoders.get('actor'),
+            )
+        else:
+            actor_def = GCActor(
+                hidden_dims=config['actor_hidden_dims'],
+                action_dim=action_dim,
+                state_dependent_std=False,
+                const_std=config['const_std'],
+                gc_encoder=encoders.get('actor'),
+            )
 
         network_info = dict(
             value=(value_def, (ex_observations, ex_goals)),
@@ -280,6 +311,7 @@ def get_config():
             use_q=True,  # Whether to fit Q or V with contrastive RL
             actor_log_q=True,  # Whether to use log Q in actor loss
             const_std=True,
+            discrete=False,
             encoder=ml_collections.config_dict.placeholder(str),
             dataset_class='GCDataset',
             value_p_curgoal=0.0,

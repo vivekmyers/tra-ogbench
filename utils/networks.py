@@ -163,11 +163,11 @@ class GCDiscreteActor(nn.Module):
         self.logit_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
 
     def __call__(
-            self,
-            observations,
-            goals=None,
-            goal_encoded=False,
-            temperature=1.0,
+        self,
+        observations,
+        goals=None,
+        goal_encoded=False,
+        temperature=1.0,
     ):
         if self.gc_encoder is not None:
             inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
@@ -267,3 +267,11 @@ class GCBilinearValue(nn.Module):
             return v, phi, psi
         else:
             return v
+
+
+class GCDiscreteBilinearCritic(GCBilinearValue):
+    action_dim: int = None
+
+    def __call__(self, observations, goals=None, actions=None, info=False):
+        actions = jnp.eye(self.action_dim)[actions]
+        return super().__call__(observations, goals, actions, info)

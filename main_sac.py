@@ -92,7 +92,7 @@ def main(_):
 
     replay_buffer = ReplayBuffer.create(example_transition, size=int(1e6))
 
-    agent_class = algos[config.agent_name]
+    agent_class = algos[config['agent_name']]
     agent = agent_class.create(
         FLAGS.seed,
         example_transition['observations'],
@@ -157,7 +157,7 @@ def main(_):
 
         if i % FLAGS.train_interval == 0:
             for _ in range(FLAGS.num_epochs):
-                batch = replay_buffer.sample(config.batch_size)
+                batch = replay_buffer.sample(config['batch_size'])
                 agent, update_info = agent.update(batch)
 
         if i % FLAGS.log_interval == 0 and update_info is not None:

@@ -7,8 +7,8 @@ import jax.numpy as jnp
 import ml_collections
 import optax
 
-from utils.encoders import encoder_modules, GCEncoder
-from utils.networks import GCActor, GCValue, RunningMeanStd, GCDiscreteActor
+from utils.encoders import GCEncoder, encoder_modules
+from utils.networks import GCActor, GCDiscreteActor, GCValue, RunningMeanStd
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -127,7 +127,6 @@ class PPOAgent(flax.struct.PyTreeNode):
     def train(self, traj_batch):
         # traj_batch: dict of (num_steps, num_envs, ob_dim)
         if self.config['normalize_ob']:
-            assert not self.config['discrete']
             ob_dim = traj_batch['observations'].shape[-1]
             self = self.replace(rms_ob=self.rms_ob.update(traj_batch['observations'].reshape(-1, ob_dim)))
             traj_batch['observations'] = self.rms_ob.normalize(traj_batch['observations'])

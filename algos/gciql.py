@@ -8,7 +8,7 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import GCActor, GCValue, GCDiscreteActor, GCDiscreteCritic
+from utils.networks import GCActor, GCDiscreteActor, GCDiscreteCritic, GCValue
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -93,15 +93,22 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
             actor_loss = -(exp_a * log_prob).mean()
 
-            return actor_loss, {
+            actor_info = {
                 'actor_loss': actor_loss,
                 'adv': adv.mean(),
                 'bc_log_prob': log_prob.mean(),
-                'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
-                'std': jnp.mean(dist.scale_diag) if not self.config['discrete'] else 0.0,
             }
+            if not self.config['discrete']:
+                actor_info.update(
+                    {
+                        'mse': jnp.mean((dist.mode() - batch['actions']) ** 2),
+                        'std': jnp.mean(dist.scale_diag),
+                    }
+                )
+
+            return actor_loss, actor_info
         elif self.config['actor_loss'] == 'ddpgbc':
-            assert self.config['use_q']
+            assert self.config['use_q'] and not self.config['discrete']
 
             dist = self.network.select('actor')(batch['observations'], batch['actor_goals'], params=grad_params)
             if self.config['const_std']:

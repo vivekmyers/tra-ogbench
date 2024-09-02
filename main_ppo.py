@@ -126,9 +126,6 @@ def main(_):
     first_time = time.time()
     last_time = time.time()
     update_info = None
-    ################################## Only for Crafter ##################################
-    total_achievements = np.zeros((0, 22), dtype=np.int32)
-    ################################## Only for Crafter ##################################
     for i in tqdm.tqdm(range(1, FLAGS.train_steps + 1), smoothing=0.1, dynamic_ncols=True):
         expl_rng, key = jax.random.split(expl_rng)
         actions, log_probs = agent.sample_actions(observations=obs, seed=key, info=True)
@@ -152,16 +149,6 @@ def main(_):
         if terminateds[0] or truncateds[0]:
             info = {k: v[0] for k, v in infos.items() if not k.startswith('_')}
             expl_metrics = {f'exploration/{k}': v for k, v in flatten(info).items()}
-
-        ################################## Only for Crafter ##################################
-        for j in range(FLAGS.num_envs):
-            if terminateds[j] or truncateds[j]:
-                cur_achievements = np.minimum(np.array(list(infos['final_info'][j]['achievements'].values())), 1)
-                total_achievements = np.concatenate([total_achievements, cur_achievements[None, :]], axis=0)
-        success_rate = 100 * np.mean(total_achievements, axis=0)
-        score = np.exp(np.mean(np.log(1 + success_rate))) - 1
-        expl_metrics['exploration/score'] = score if not np.isnan(score) else 0.0
-        ################################## Only for Crafter ##################################
 
         if i % FLAGS.train_interval == 0:
             traj_batch = replay_buffer.get_subset(slice(0, FLAGS.train_interval))
