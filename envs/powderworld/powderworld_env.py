@@ -3,6 +3,7 @@ import numpy as np
 from gymnasium.spaces import Box, Discrete
 
 from envs.powderworld.sim import PWRenderer, PWSim, interp, pw_element_names
+from PIL import Image
 
 
 class PowderworldEnv(gymnasium.Env):
@@ -20,6 +21,8 @@ class PowderworldEnv(gymnasium.Env):
         brush_size=4,
         num_elems=5,
         mode='evaluation',  # 'evaluation' or 'data_collection'
+        render_width=192,  # Only used for rendering, not for observations
+        render_height=192,  # Only used for rendering, not for observations
     ):
         self.pw = PWSim(device=device, use_jit=use_jit)
         self.pwr = PWRenderer(device)
@@ -28,6 +31,8 @@ class PowderworldEnv(gymnasium.Env):
         self._grid_size = grid_size
         self._brush_size = brush_size
         self._mode = mode
+        self._render_width = render_width
+        self._render_height = render_height
         self._num_elems = num_elems
         if num_elems == 2:
             self._elem_names = ['plant', 'stone']
@@ -400,8 +405,12 @@ class PowderworldEnv(gymnasium.Env):
 
     def render(self):
         ob = self._get_ob()
-        world_frame, action_frame = np.split(ob, 2, axis=2)
-        return world_frame
+        frame = ob[..., :3]
+        frame = Image.fromarray(frame)
+        frame = frame.resize((self._render_width, self._render_height), Image.NEAREST)
+        frame = np.array(frame)
+
+        return frame
 
     def _get_ob(self):
         world_frame = self.pwr.render(self._world).copy()
