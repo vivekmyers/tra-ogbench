@@ -7,7 +7,8 @@ class Behavior:
         self._done = False
         self._step = 0
 
-        self._size = self._env.unwrapped._grid_size
+        self._size = self._env.unwrapped._world_size // self._env.unwrapped._brush_size
+        assert self._env.unwrapped._brush_size == self._env.unwrapped._grid_size
         self._elem_name = None
         self._sequence = None
 

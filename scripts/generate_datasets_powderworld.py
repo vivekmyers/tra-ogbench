@@ -41,6 +41,7 @@ def main(_):
         SquareBehavior(env=env),
     ]
     probs = np.array([1, 3, 3])
+    # probs = np.array([1])
     probs = probs / probs.sum()
 
     for ep_idx in trange(num_train_episodes + num_val_episodes):
@@ -51,12 +52,14 @@ def main(_):
         done = False
         step = 0
 
+        action_step = 0
         while not done:
-            if np.random.rand() < FLAGS.p_random_action:
-                action = env.action_space.sample()
-            else:
-                semantic_action = agent.select_action(ob, info)
-                action = env.unwrapped.get_action_from_semantics(*semantic_action)
+            if action_step == 0:
+                if np.random.rand() < FLAGS.p_random_action:
+                    semantic_action = env.unwrapped.sample_semantic_action()
+                else:
+                    semantic_action = agent.select_action(ob, info)
+            action = env.unwrapped.semantic_action_to_action(*semantic_action)
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
@@ -70,6 +73,7 @@ def main(_):
 
             ob = next_ob
             step += 1
+            action_step = (action_step + 1) % 3
 
         total_steps += step
         if ep_idx < num_train_episodes:
