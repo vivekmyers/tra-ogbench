@@ -61,13 +61,13 @@ class PowderworldEnv(gymnasium.Env):
 
     def set_tasks(self):
         def add_square(action_seq, elem_name, x, y, size):
-            for i in range(0, size - 1):
-                action_seq.append((elem_name, x, y + i))
-            for i in range(0, size - 1):
+            for i in range(0, size):
                 action_seq.append((elem_name, x + i, y + size - 1))
-            for i in range(size - 1, 0, -1):
+            for i in range(size - 2, -1, -1):
+                action_seq.append((elem_name, x, y + i))
+            for i in range(size - 2, -1, -1):
                 action_seq.append((elem_name, x + size - 1, y + i))
-            for i in range(size - 1, 0, -1):
+            for i in range(1, size - 1):
                 action_seq.append((elem_name, x + i, y))
 
         if self._num_elems == 2:
@@ -122,7 +122,10 @@ class PowderworldEnv(gymnasium.Env):
             # Task 1
             action_seq = []
             add_square(action_seq, 'plant', 1, 1, 6)
-            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, tol=32))
+            add_square(action_seq, 'sand', 0, 0, 8)
+            add_square(action_seq, 'stone', 2, 2, 4)
+            add_square(action_seq, 'water', 3, 3, 2)
+            self.task_infos.append(dict(task_name='task1_square', action_seq=action_seq, tol=64))
 
             # Task 2
             action_seq = []
@@ -134,14 +137,7 @@ class PowderworldEnv(gymnasium.Env):
 
             # Task 3
             action_seq = []
-            for i in range(8):
-                action_seq.append(('stone', i, 7))
-            for i in range(6, -1, -1):
-                action_seq.append(('stone', 0, i))
-            for i in range(6, -1, -1):
-                action_seq.append(('stone', 7, i))
-            for i in range(1, 7):
-                action_seq.append(('stone', i, 0))
+            add_square(action_seq, 'stone', 0, 0, 8)
             for _ in range(32):
                 action_seq.extend(
                     [
@@ -153,13 +149,22 @@ class PowderworldEnv(gymnasium.Env):
 
             # Task 4
             action_seq = []
-            for y in reversed(range(8)):
-                for x in range(8):
-                    action_seq.append(('sand', x, y))
+            for x in range(0, 8):
+                action_seq.append(('plant', x, 6))
+            for x in range(0, 8):
+                action_seq.append(('plant', x, 7))
+            for y in range(7, -1, -1):
+                action_seq.append(('stone', 0, y))
+            for y in range(7, -1, -1):
+                action_seq.append(('stone', 7, y))
+            for x in range(1, 7):
+                action_seq.append(('stone', x, 3))
+            add_square(action_seq, 'water', 2, 0, 3)
+            add_square(action_seq, 'water', 3, 0, 3)
             for _ in range(4):
-                for x in range(8):
-                    action_seq.append(('water', x, 7))
-            self.task_infos.append(dict(task_name='task4_sand_water', action_seq=action_seq, tol=128))
+                action_seq.append(('fire', 3, 7))
+                action_seq.append(('fire', 4, 7))
+            self.task_infos.append(dict(task_name='task4_stone_bridge', action_seq=action_seq, tol=96))
 
             # Task 5
             action_seq = []
