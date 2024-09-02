@@ -16,7 +16,6 @@ flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
 flags.DEFINE_string('save_path', None, 'Save path')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
 flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
-flags.DEFINE_integer('num_elems', 5, 'Number of elements')
 flags.DEFINE_float('p_random_action', 0.05, 'Random action probability')
 
 
@@ -24,7 +23,6 @@ def main(_):
     env = gymnasium.make(
         FLAGS.env_name,
         mode='data_collection',
-        num_elems=FLAGS.num_elems,
         max_episode_steps=FLAGS.max_episode_steps,
     )
     env.reset()

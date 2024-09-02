@@ -13,3 +13,10 @@ register(
     max_episode_steps=500,
     kwargs=dict(num_elems=5),
 )
+
+register(
+    id='powderworld-8-v0',
+    entry_point='envs.powderworld.powderworld_env:PowderworldEnv',
+    max_episode_steps=500,
+    kwargs=dict(num_elems=8),
+)

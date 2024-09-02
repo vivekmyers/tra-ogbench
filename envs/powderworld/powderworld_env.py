@@ -33,6 +33,8 @@ class PowderworldEnv(gymnasium.Env):
             self._elem_names = ['plant', 'stone']
         elif num_elems == 5:
             self._elem_names = ['sand', 'water', 'fire', 'plant', 'stone']
+        elif num_elems == 8:
+            self._elem_names = ['sand', 'water', 'fire', 'plant', 'stone', 'gas', 'wood', 'ice']
         else:
             raise NotImplementedError
         self._elems = [pw_element_names.index(elem_name) for elem_name in self._elem_names]
@@ -40,7 +42,6 @@ class PowderworldEnv(gymnasium.Env):
 
         self.observation_space = Box(low=0, high=255, shape=(self._world_size, self._world_size, 6), dtype=np.uint8)
         self._xy_action_size = (world_size - brush_size) // grid_size + 1
-        assert len(self._elems) <= self._xy_action_size
         self.action_space = Discrete(max(len(self._elems), self._xy_action_size))
 
         self._world = None
@@ -56,26 +57,26 @@ class PowderworldEnv(gymnasium.Env):
             self.cur_task_info = None
             self.set_tasks()
             self.num_tasks = len(self.task_infos)
-            self.cur_goal_ob = None
-
-    def compute_goal(self, action_seq):
-        assert self._mode == 'evaluation'
-        self._mode = 'internal'
-        self.reset()
-        for semantic_action in action_seq:
-            for _ in range(3):
-                self.step(self.semantic_action_to_action(*semantic_action))
-        self._mode = 'evaluation'
-        return self._get_ob()
+            self.cur_goal_world = None
 
     def set_tasks(self):
+        def add_square(action_seq, elem_name, x, y, size):
+            for i in range(0, size - 1):
+                action_seq.append((elem_name, x, y + i))
+            for i in range(0, size - 1):
+                action_seq.append((elem_name, x + i, y + size - 1))
+            for i in range(size - 1, 0, -1):
+                action_seq.append((elem_name, x + size - 1, y + i))
+            for i in range(size - 1, 0, -1):
+                action_seq.append((elem_name, x + i, y))
+
         if self._num_elems == 2:
             # Task 1
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
                     action_seq.append(('plant', x, y))
-            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq))
+            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, tol=32))
 
             # Task 2
             action_seq = []
@@ -85,22 +86,15 @@ class PowderworldEnv(gymnasium.Env):
             for y in reversed(range(8)):
                 for x in range(8):
                     action_seq.append(('stone', x, y))
-            self.task_infos.append(dict(task_name='task2_stone', action_seq=action_seq))
+            self.task_infos.append(dict(task_name='task2_stone', action_seq=action_seq, tol=32))
 
             # Task 3
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
                     action_seq.append(('plant', x, y))
-            for i in range(1, 6):
-                action_seq.append(('stone', 1, i))
-            for i in range(1, 6):
-                action_seq.append(('stone', i, 6))
-            for i in range(6, 1, -1):
-                action_seq.append(('stone', 6, i))
-            for i in range(6, 1, -1):
-                action_seq.append(('stone', i, 1))
-            self.task_infos.append(dict(task_name='task3_plant_stone', action_seq=action_seq))
+            add_square(action_seq, 'stone', 1, 1, 6)
+            self.task_infos.append(dict(task_name='task3_plant_stone', action_seq=action_seq, tol=32))
 
             # Task 4
             action_seq = []
@@ -111,15 +105,8 @@ class PowderworldEnv(gymnasium.Env):
                 for x in range(8):
                     action_seq.append(('stone', x, y))
             for sx, sy in [(0, 0), (0, 5), (5, 0), (5, 5)]:
-                for i in range(0, 2):
-                    action_seq.append(('plant', sx, sy + i))
-                for i in range(0, 2):
-                    action_seq.append(('plant', sx + i, sy + 2))
-                for i in range(2, 0, -1):
-                    action_seq.append(('plant', sx + 2, sy + i))
-                for i in range(2, 0, -1):
-                    action_seq.append(('plant', sx + i, sy))
-            self.task_infos.append(dict(task_name='task4_stone_plant', action_seq=action_seq))
+                add_square(action_seq, 'plant', sx, sy, 3)
+            self.task_infos.append(dict(task_name='task4_stone_plant', action_seq=action_seq, tol=32))
 
             # Task 5
             action_seq = []
@@ -130,35 +117,20 @@ class PowderworldEnv(gymnasium.Env):
                 for x in range(8):
                     if (x + y) % 2 == 0:
                         action_seq.append(('stone', x, y))
-            self.task_infos.append(dict(task_name='task5_mosaic', action_seq=action_seq))
+            self.task_infos.append(dict(task_name='task5_mosaic', action_seq=action_seq, tol=32))
         elif self._num_elems == 5:
             # Task 1
             action_seq = []
-            for i in range(1, 6):
-                action_seq.append(('plant', 1, i))
-            for i in range(1, 6):
-                action_seq.append(('plant', i, 6))
-            for i in range(6, 1, -1):
-                action_seq.append(('plant', 6, i))
-            for i in range(6, 1, -1):
-                action_seq.append(('plant', i, 1))
-            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq))
+            add_square(action_seq, 'plant', 1, 1, 6)
+            self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, tol=32))
 
             # Task 2
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
                     action_seq.append(('water', x, y))
-            for _ in range(16):
-                action_seq.extend(
-                    [
-                        ('plant', 3, 3),
-                        ('plant', 3, 4),
-                        ('plant', 4, 4),
-                        ('plant', 4, 3),
-                    ]
-                )
-            self.task_infos.append(dict(task_name='task2_water_plant', action_seq=action_seq))
+            add_square(action_seq, 'plant', 0, 0, 8)
+            self.task_infos.append(dict(task_name='task2_water_plant', action_seq=action_seq, tol=96))
 
             # Task 3
             action_seq = []
@@ -177,7 +149,7 @@ class PowderworldEnv(gymnasium.Env):
                         ('sand', 4, 1),
                     ]
                 )
-            self.task_infos.append(dict(task_name='task3_stone_sand', action_seq=action_seq))
+            self.task_infos.append(dict(task_name='task3_stone_sand', action_seq=action_seq, tol=64))
 
             # Task 4
             action_seq = []
@@ -187,17 +159,20 @@ class PowderworldEnv(gymnasium.Env):
             for _ in range(4):
                 for x in range(8):
                     action_seq.append(('water', x, 7))
-            self.task_infos.append(dict(task_name='task4_sand_water', action_seq=action_seq))
+            self.task_infos.append(dict(task_name='task4_sand_water', action_seq=action_seq, tol=128))
 
             # Task 5
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
                     action_seq.append(('plant', x, y))
-            for _ in range(4):
+            for y in [4, 7]:
+                for x in range(8):
+                    action_seq.append(('water', x, y))
+            for _ in range(2):
                 for x in range(8):
                     action_seq.append(('fire', x, 0))
-            self.task_infos.append(dict(task_name='task5_plant_fire', action_seq=action_seq))
+            self.task_infos.append(dict(task_name='task5_plant_water_fire', action_seq=action_seq, tol=96))
         else:
             raise NotImplementedError
 
@@ -235,8 +210,14 @@ class PowderworldEnv(gymnasium.Env):
 
         if self._mode == 'evaluation':
             # First get a goal observation
-            goal = self.compute_goal(self.cur_task_info['action_seq'])
-            self.cur_goal_ob = goal
+            self._mode = 'internal'
+            self.reset()
+            for semantic_action in self.cur_task_info['action_seq']:
+                for _ in range(3):
+                    self.step(self.semantic_action_to_action(*semantic_action))
+            self._mode = 'evaluation'
+            goal = self._get_ob()
+            self.cur_goal_world = self._world[0, 0].numpy().copy()
             if render_goal:
                 goal_frame = self.render()
 
@@ -302,15 +283,15 @@ class PowderworldEnv(gymnasium.Env):
         info = dict()
 
         if self._mode == 'evaluation':
-            goal = self.cur_goal_ob[..., :3]
-            ob_shifts = []
+            cur_world = self._world[0, 0].numpy().copy()
+            world_shifts = []
             for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
-                ob_shifts.append(np.roll(ob[..., :3], (dy, dx), axis=(0, 1)))
-            ob_shifts = np.stack(ob_shifts, axis=0)
-            match = (ob_shifts == goal).all(axis=3).any(axis=0)
+                world_shifts.append(np.roll(cur_world, (dy, dx), axis=(0, 1)))
+            world_shifts = np.stack(world_shifts, axis=0)
+            match = (self.cur_goal_world == world_shifts).any(axis=0)
             error = ~match
 
-            success = error.sum() < 64
+            success = error.sum() < self.cur_task_info['tol']
             if success:
                 done = True
                 info['success'] = 1.0
