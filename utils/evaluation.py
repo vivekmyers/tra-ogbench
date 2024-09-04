@@ -41,7 +41,7 @@ def evaluate(
     eval_temperature=0,
     eval_gaussian=None,
 ):
-    actor_fn = supply_rng(agent.sample_actions, rng=agent.rng)
+    actor_fn = supply_rng(agent.sample_actions, rng=jax.random.PRNGKey(np.random.randint(0, 2 ** 32)))
     trajs = []
     stats = defaultdict(list)
 
