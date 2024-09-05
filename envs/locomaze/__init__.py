@@ -74,23 +74,23 @@ register(
 )
 
 register(
-    id='quadteleport-large-v0',
+    id='quadmaze-teleport-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
         loco_env_type='quad',
-        maze_env_type='teleport',
-        maze_type='large_variant',
+        maze_env_type='maze',
+        maze_type='teleport',
     ),
 )
 register(
-    id='visual-quadteleport-large-v0',
+    id='visual-quadmaze-teleport-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
         loco_env_type='quad',
-        maze_env_type='teleport',
-        maze_type='large_variant',
+        maze_env_type='maze',
+        maze_type='teleport',
         **visual_dict,
     ),
 )

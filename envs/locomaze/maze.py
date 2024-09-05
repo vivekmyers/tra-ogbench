@@ -34,6 +34,11 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self._ob_type = ob_type
             assert ob_type in ['states', 'pixels']
 
+            self._offset_x = 4
+            self._offset_y = 4
+            self._noise = 1
+
+            self._teleport_info = None
             if self._maze_type == 'arena':
                 maze_map = [
                     [1, 1, 1, 1, 1, 1, 1, 1],
@@ -68,18 +73,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ]
-            elif self._maze_type == 'large_variant':
-                maze_map = [
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                    [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
-                    [1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1],
-                    [1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1],
-                    [1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1],
-                    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-                    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1],
-                    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
-                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-                ]
             elif self._maze_type == 'giant':
                 maze_map = [
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -95,14 +88,33 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1],
                     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                 ]
+            elif self._maze_type == 'teleport':
+                maze_map = [
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                    [1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1],
+                    [1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 1],
+                    [1, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1],
+                    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+                    [1, 0, 1, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+                    [1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1],
+                    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                ]
+                self._teleport_info = dict(
+                    teleport_in_ijs=[(4, 6), (5, 1)],
+                    teleport_out_ijs=[(1, 7), (6, 1), (6, 10)],
+                    teleport_radius=1,
+                )
+                self._teleport_info['teleport_in_xys'] = [
+                    self.ij_to_xy(ij) for ij in self._teleport_info['teleport_in_ijs']
+                ]
+                self._teleport_info['teleport_out_xys'] = [
+                    self.ij_to_xy(ij) for ij in self._teleport_info['teleport_out_ijs']
+                ]
             else:
                 raise ValueError(f'Unknown maze type: {self._maze_type}')
 
             self.maze_map = np.array(maze_map)
-
-            self._offset_x = 4
-            self._offset_y = 4
-            self._noise = 1
 
             xml_file = self.xml_file
             tree = ET.parse(xml_file)
@@ -158,6 +170,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def update_tree(self, tree):
             worldbody = tree.find('.//worldbody')
 
+            # Add walls
             for i in range(self.maze_map.shape[0]):
                 for j in range(self.maze_map.shape[1]):
                     struct = self.maze_map[i, j]
@@ -173,11 +186,39 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                             conaffinity='1',
                             material='wall',
                         )
+            # Adjust floor size
             center_x, center_y = 2 * (self.maze_map.shape[1] - 3), 2 * (self.maze_map.shape[0] - 3)
             size_x, size_y = 2 * self.maze_map.shape[1], 2 * self.maze_map.shape[0]
             floor = tree.find('.//geom[@name="floor"]')
             floor.set('pos', f'{center_x} {center_y} 0')
             floor.set('size', f'{size_x} {size_y} 0.2')
+
+            if self._teleport_info is not None:
+                # Add teleports
+                for i, (x, y) in enumerate(self._teleport_info['teleport_in_xys']):
+                    ET.SubElement(
+                        worldbody,
+                        'geom',
+                        name=f'teleport_in_{i}',
+                        type='cylinder',
+                        size=f'{self._teleport_info["teleport_radius"]} .05',
+                        pos=f'{x} {y} .05',
+                        material='teleport_in',
+                        contype='0',
+                        conaffinity='0',
+                    )
+                for i, (x, y) in enumerate(self._teleport_info['teleport_out_xys']):
+                    ET.SubElement(
+                        worldbody,
+                        'geom',
+                        name=f'teleport_out_{i}',
+                        type='cylinder',
+                        size=f'{self._teleport_info["teleport_radius"]} .05',
+                        pos=f'{x} {y} .05',
+                        material='teleport_out',
+                        contype='0',
+                        conaffinity='0',
+                    )
 
             if self._ob_type == 'pixels':
                 # Remove torso light
@@ -234,6 +275,14 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     [(9, 1), (7, 1)],
                     [(1, 1), (10, 14)],
                     [(3, 13), (10, 10)],
+                ]
+            elif self._maze_type == 'teleport':
+                tasks = [
+                    [(1, 10), (7, 1)],
+                    [(1, 1), (7, 10)],
+                    [(5, 6), (7, 10)],
+                    [(7, 1), (7, 10)],
+                    [(5, 6), (7, 1)],
                 ]
             else:
                 raise ValueError(f'Unknown maze type: {self._maze_type}')
@@ -295,6 +344,17 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
         def step(self, action):
             ob, reward, terminated, truncated, info = super().step(action)
+
+            if self._teleport_info is not None:
+                # Check teleports
+                for x, y in self._teleport_info['teleport_in_xys']:
+                    if np.linalg.norm(self.get_xy() - np.array([x, y])) <= self._teleport_info['teleport_radius'] * 1.5:
+                        # Randomly teleport to one of the outbound teleports
+                        teleport_out_xy = self._teleport_info['teleport_out_xys'][
+                            np.random.randint(len(self._teleport_info['teleport_out_xys']))
+                        ]
+                        self.set_xy(np.array(teleport_out_xy))
+                        break
 
             if np.linalg.norm(self.get_xy() - self.cur_goal_xy) <= 0.5:
                 if self._terminate_at_goal:
@@ -374,93 +434,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             random_x = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
             random_y = np.random.uniform(low=-self._noise, high=self._noise) * self._maze_unit / 4
             return xy[0] + random_x, xy[1] + random_y
-
-    class TeleportEnv(MazeEnv):
-        def __init__(self, *args, **kwargs):
-            assert kwargs.get('maze_type') == 'large_variant'
-
-            self._teleport_in_ijs = [(4, 6), (5, 1)]
-            self._teleport_out_ijs = [(1, 7), (6, 1), (6, 10)]
-            self._teleport_radius = 1
-
-            super().__init__(*args, **kwargs)
-
-        def update_tree(self, tree):
-            super().update_tree(tree)
-
-            worldbody = tree.find('.//worldbody')
-            for k, (i, j) in enumerate(self._teleport_in_ijs):
-                x, y = self.ij_to_xy((i, j))
-                ET.SubElement(
-                    worldbody,
-                    'geom',
-                    name=f'teleport_in_{k}',
-                    type='cylinder',
-                    size=f'{self._teleport_radius} .05',
-                    pos=f'{x} {y} .05',
-                    material='teleport_in',
-                    contype='0',
-                    conaffinity='0',
-                )
-            for k, (i, j) in enumerate(self._teleport_out_ijs):
-                x, y = self.ij_to_xy((i, j))
-                ET.SubElement(
-                    worldbody,
-                    'geom',
-                    name=f'teleport_out_{k}',
-                    type='cylinder',
-                    size=f'{self._teleport_radius} .05',
-                    pos=f'{x} {y} .05',
-                    material='teleport_out',
-                    contype='0',
-                    conaffinity='0',
-                )
-
-        def set_tasks(self):
-            if self._maze_type == 'large_variant':
-                tasks = [
-                    [(1, 10), (7, 1)],
-                    [(1, 1), (7, 10)],
-                    [(5, 6), (7, 10)],
-                    [(7, 1), (7, 10)],
-                    [(5, 6), (7, 1)],
-                ]
-            else:
-                raise ValueError(f'Unknown maze type: {self._maze_type}')
-
-            self.task_infos = []
-            for i, task in enumerate(tasks):
-                self.task_infos.append(
-                    dict(
-                        task_name=f'task{i + 1}',
-                        init_ij=task[0],
-                        init_xy=self.ij_to_xy(task[0]),
-                        goal_ij=task[1],
-                        goal_xy=self.ij_to_xy(task[1]),
-                    )
-                )
-
-        def step(self, action):
-            ob, reward, terminated, truncated, info = super(MazeEnv, self).step(action)
-
-            for (i, j) in self._teleport_in_ijs:
-                x, y = self.ij_to_xy((i, j))
-                if np.linalg.norm(self.get_xy() - np.array([x, y])) <= self._teleport_radius * 1.5:
-                    teleport_out_ij = self._teleport_out_ijs[np.random.randint(len(self._teleport_out_ijs))]
-                    teleport_out_xy = self.ij_to_xy(teleport_out_ij)
-                    self.set_xy(np.array(teleport_out_xy))
-                    break
-
-            if np.linalg.norm(self.get_xy() - self.cur_goal_xy) <= 0.5:
-                if self._terminate_at_goal:
-                    terminated = True
-                info['success'] = 1.0
-                reward = 1.0
-            else:
-                info['success'] = 0.0
-                reward = 0.0
-
-            return ob, reward, terminated, truncated, info
 
     class BallEnv(MazeEnv):
         def update_tree(self, tree):
@@ -580,8 +553,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
     if maze_env_type == 'maze':
         return MazeEnv(*args, **kwargs)
-    elif maze_env_type == 'teleport':
-        return TeleportEnv(*args, **kwargs)
     elif maze_env_type == 'ball':
         return BallEnv(*args, **kwargs)
     else:
