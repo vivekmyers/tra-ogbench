@@ -12,12 +12,16 @@
         <texture type="skybox" builtin="gradient" width="100" height="100" rgb1="1 1 1" rgb2="0 0 0" />
         <texture name="grid" type="2d" builtin="checker" rgb1=".08 .11 .16" rgb2=".15 .18 .25" width="300" height="300" />
         <texture name="ball" builtin="checker" mark="cross" width="151" height="151" rgb1="0.1 0.1 0.1" rgb2="0.9 0.9 0.9" markrgb="1 1 1" />
+        <texture name="teleport_in" type="2d" builtin="gradient" rgb1=".1 .1 .1" rgb2="0.35 0.55 0.91" width="300" height="300" />
+        <texture name="teleport_out" type="2d" builtin="gradient" rgb1=".9 .9 .9" rgb2="0.35 0.55 0.91" width="300" height="300" />
         <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" />
         <material name="self" rgba=".7 .5 .3 1" />
         <material name="self_white" rgba=".8 .8 .8 1" />
         <material name="wall" rgba=".6 .6 .6 1" />
         <material name="ball" texture="ball" />
-        <material name="target" rgba=".6 .3 .3 1" />
+        <material name="target" rgba="0.96 0.26 0.33 1" />
+        <material name="teleport_in" texture="teleport_in"/>
+        <material name="teleport_out" texture="teleport_out"/>
     </asset>
 
     <worldbody>
