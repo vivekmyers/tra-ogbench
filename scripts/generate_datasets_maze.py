@@ -127,7 +127,7 @@ def main(_):
                         if bfs_map[ni][nj] == adj_steps:
                             adj_cells.append((ni, nj))
 
-            goal_ij = adj_cells[np.random.randint(len(adj_cells))]
+            goal_ij = adj_cells[np.random.randint(len(adj_cells))] if len(adj_cells) > 0 else init_ij
             ob, _ = env.reset(options=dict(task_info=dict(init_ij=init_ij, goal_ij=goal_ij)))
         else:
             ob, _ = env.reset()
