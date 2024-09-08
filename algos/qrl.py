@@ -137,13 +137,15 @@ class QRLAgent(flax.struct.PyTreeNode):
             dynamics_loss, dynamics_info = self.dynamics_loss(batch, grad_params)
             for k, v in dynamics_info.items():
                 info[f'dynamics/{k}'] = v
+        else:
+            dynamics_loss = 0.0
 
         rng, actor_rng = jax.random.split(rng)
         actor_loss, actor_info = self.actor_loss(batch, grad_params, actor_rng)
         for k, v in actor_info.items():
             info[f'actor/{k}'] = v
 
-        loss = value_loss + actor_loss
+        loss = value_loss + dynamics_loss + actor_loss
         return loss, info
 
     @jax.jit
