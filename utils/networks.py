@@ -3,6 +3,7 @@ from typing import Any, Optional, Sequence
 import distrax
 import flax
 import flax.linen as nn
+import jax
 import jax.numpy as jnp
 
 
@@ -275,3 +276,42 @@ class GCDiscreteBilinearCritic(GCBilinearValue):
     def __call__(self, observations, goals=None, actions=None, info=False):
         actions = jnp.eye(self.action_dim)[actions]
         return super().__call__(observations, goals, actions, info)
+
+
+class GCMRNValue(nn.Module):
+    hidden_dims: Sequence[int]
+    latent_dim: int
+    layer_norm: bool = True
+    ensemble: bool = True
+    value_exp: bool = False
+    encoder: nn.Module = None
+
+    def setup(self) -> None:
+        mlp_module = MLP
+        if self.ensemble:
+            mlp_module = ensemblize(mlp_module, 2)
+
+        self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
+
+    def __call__(self, observations, goals, info=False):
+        if self.encoder is not None:
+            observations = self.encoder(observations)
+            goals = self.encoder(goals)
+
+        phi_s = self.phi(observations)
+        phi_g = self.phi(goals)
+        sym_s = phi_s[..., : self.latent_dim // 2]
+        sym_g = phi_g[..., : self.latent_dim // 2]
+        asym_s = phi_s[..., self.latent_dim // 2 :]
+        asym_g = phi_g[..., self.latent_dim // 2 :]
+        squared_dist = ((sym_s - sym_g) ** 2).sum(axis=-1)
+        quasi = jax.nn.relu((asym_s - asym_g).max(axis=-1))
+        v = jnp.sqrt(jnp.maximum(squared_dist, 1e-12)) + quasi
+
+        if self.value_exp:
+            v = jnp.exp(v)
+
+        if info:
+            return v, phi_s, phi_g
+        else:
+            return v
