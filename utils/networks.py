@@ -52,6 +52,14 @@ class LengthNormalize(nn.Module):
         return x / jnp.linalg.norm(x, axis=-1, keepdims=True) * jnp.sqrt(x.shape[-1])
 
 
+class Param(nn.Module):
+    init_value: float = 0.0
+
+    @nn.compact
+    def __call__(self):
+        return self.param('value', init_fn=lambda key: jnp.full((), self.init_value))
+
+
 class LogParam(nn.Module):
     init_value: float = 1.0
 
@@ -282,24 +290,23 @@ class GCMRNValue(nn.Module):
     hidden_dims: Sequence[int]
     latent_dim: int
     layer_norm: bool = True
-    ensemble: bool = True
     value_exp: bool = False
     encoder: nn.Module = None
 
     def setup(self) -> None:
-        mlp_module = MLP
-        if self.ensemble:
-            mlp_module = ensemblize(mlp_module, 2)
+        self.phi = MLP((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
 
-        self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
+    def __call__(self, observations, goals, is_phi=False, info=False):
+        if is_phi:
+            phi_s = observations
+            phi_g = goals
+        else:
+            if self.encoder is not None:
+                observations = self.encoder(observations)
+                goals = self.encoder(goals)
+            phi_s = self.phi(observations)
+            phi_g = self.phi(goals)
 
-    def __call__(self, observations, goals, info=False):
-        if self.encoder is not None:
-            observations = self.encoder(observations)
-            goals = self.encoder(goals)
-
-        phi_s = self.phi(observations)
-        phi_g = self.phi(goals)
         sym_s = phi_s[..., : self.latent_dim // 2]
         sym_g = phi_g[..., : self.latent_dim // 2]
         asym_s = phi_s[..., self.latent_dim // 2 :]
@@ -307,6 +314,55 @@ class GCMRNValue(nn.Module):
         squared_dist = ((sym_s - sym_g) ** 2).sum(axis=-1)
         quasi = jax.nn.relu((asym_s - asym_g).max(axis=-1))
         v = jnp.sqrt(jnp.maximum(squared_dist, 1e-12)) + quasi
+
+        if self.value_exp:
+            v = jnp.exp(v)
+
+        if info:
+            return v, phi_s, phi_g
+        else:
+            return v
+
+
+class GCIQEValue(nn.Module):
+    hidden_dims: Sequence[int]
+    latent_dim: int
+    num_intervals: int
+    layer_norm: bool = True
+    value_exp: bool = False
+    encoder: nn.Module = None
+
+    def setup(self) -> None:
+        self.phi = MLP((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
+        self.alpha = Param()
+
+    def __call__(self, observations, goals, is_phi=False, info=False):
+        alpha = jax.nn.sigmoid(self.alpha())
+        if is_phi:
+            phi_s = observations
+            phi_g = goals
+        else:
+            if self.encoder is not None:
+                observations = self.encoder(observations)
+                goals = self.encoder(goals)
+            phi_s = self.phi(observations)
+            phi_g = self.phi(goals)
+
+        # TODO: Refactor
+        phi_p_s = jnp.reshape(phi_s, (*phi_s.shape[:-1], -1, self.num_intervals))
+        phi_p_g = jnp.reshape(phi_g, (*phi_g.shape[:-1], -1, self.num_intervals))
+        valid = phi_p_s < phi_p_g
+        phi_sg = jnp.concatenate(jnp.broadcast_arrays(phi_p_s, phi_p_g), axis=-1)
+        ixy = phi_sg.argsort(axis=-1)
+        sxy = jnp.take_along_axis(phi_sg, ixy, axis=-1)
+        neg_inc_copies = jnp.take_along_axis(valid, ixy % self.num_intervals, axis=-1) * jnp.where(
+            ixy < self.num_intervals, -1, 1
+        )
+        neg_inp_copies = jnp.cumsum(neg_inc_copies, axis=-1)
+        neg_f = (neg_inp_copies < 0) * (-1.0)
+        neg_incf = jnp.concatenate([neg_f[..., :1], neg_f[..., 1:] - neg_f[..., :-1]], axis=-1)
+        components = (sxy * neg_incf).sum(-1)
+        v = alpha * components.mean(axis=-1) + (1 - alpha) * components.max(axis=-1)
 
         if self.value_exp:
             v = jnp.exp(v)
