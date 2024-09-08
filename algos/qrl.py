@@ -102,7 +102,7 @@ class QRLAgent(flax.struct.PyTreeNode):
             pred_next_ob_reps = ob_reps + self.network.select('dynamics')(
                 jnp.concatenate([ob_reps, q_actions], axis=-1)
             )
-            q = self.network.select('value')(pred_next_ob_reps, goal_reps, is_phi=True)
+            q = -self.network.select('value')(pred_next_ob_reps, goal_reps, is_phi=True)
 
             q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-6)
             log_prob = dist.log_prob(batch['actions'])
@@ -208,7 +208,7 @@ class QRLAgent(flax.struct.PyTreeNode):
             value_def = GCIQEValue(
                 hidden_dims=config['value_hidden_dims'],
                 latent_dim=config['latent_dim'],
-                num_intervals=8,
+                dim_per_component=8,
                 layer_norm=config['layer_norm'],
                 encoder=encoders.get('value'),
             )
@@ -222,7 +222,6 @@ class QRLAgent(flax.struct.PyTreeNode):
             )
 
         if config['discrete']:
-            raise NotImplementedError
             actor_def = GCDiscreteActor(
                 hidden_dims=config['actor_hidden_dims'],
                 action_dim=action_dim,
@@ -267,7 +266,7 @@ def get_config():
             batch_size=1024,
             actor_hidden_dims=(512, 512, 512),
             value_hidden_dims=(512, 512, 512),
-            quasimetric_type='mrn',  # ['mrn', 'iqe']
+            quasimetric_type='iqe',  # ['mrn', 'iqe']
             latent_dim=512,
             layer_norm=True,
             discount=0.99,

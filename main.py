@@ -143,9 +143,10 @@ def main(_):
             renders = []
             eval_metrics = {}
             overall_metrics = defaultdict(list)
-            num_tasks = FLAGS.eval_tasks if FLAGS.eval_tasks is not None else len(env.task_infos)
+            task_infos = env.unwrapped.task_infos if hasattr(env.unwrapped, 'task_infos') else env.task_infos
+            num_tasks = FLAGS.eval_tasks if FLAGS.eval_tasks is not None else len(task_infos)
             for task_idx in tqdm.trange(num_tasks):
-                task_name = env.task_infos[task_idx]['task_name']
+                task_name = task_infos[task_idx]['task_name']
                 eval_info, trajs, cur_renders = evaluate(
                     agent=eval_agent,
                     env=env,
