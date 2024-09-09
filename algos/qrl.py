@@ -269,7 +269,7 @@ def get_config():
             quasimetric_type='mrn',  # ['mrn', 'iqe']
             latent_dim=512,
             layer_norm=True,
-            discount=0.99,
+            discount=0.99,  # Unused in QRL; for compatibility with GCDataset
             eps=0.05,  # Margin for dual lambda loss
             actor_loss='ddpgbc',  # ['awr', 'ddpgbc']
             alpha=3.0,  # AWR temperature or DDPG+BC coefficient
@@ -285,7 +285,7 @@ def get_config():
             actor_p_trajgoal=1.0,
             actor_p_randomgoal=0.0,
             actor_geom_sample=False,
-            gc_negative=False,  # True for (-1, 0) rewards, False for (0, 1) rewards; unused in QRL
+            gc_negative=False,  # Unused in QRL; for compatibility with GCDataset
             p_aug=0.0,
             frame_stack=ml_collections.config_dict.placeholder(int),
         )
