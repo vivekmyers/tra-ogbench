@@ -266,7 +266,7 @@ def get_config():
             batch_size=1024,
             actor_hidden_dims=(512, 512, 512),
             value_hidden_dims=(512, 512, 512),
-            quasimetric_type='iqe',  # ['mrn', 'iqe']
+            quasimetric_type='mrn',  # ['mrn', 'iqe']
             latent_dim=512,
             layer_norm=True,
             discount=0.99,
