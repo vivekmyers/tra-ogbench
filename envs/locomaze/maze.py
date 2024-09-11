@@ -5,11 +5,14 @@ import numpy as np
 from gymnasium.spaces import Box
 
 from envs.locomaze.humanoid import HumanoidEnv
+from envs.locomaze.point import PointEnv
 from envs.locomaze.quad import QuadEnv
 
 
 def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
-    if loco_env_type == 'quad':
+    if loco_env_type == 'point':
+        loco_env_class = PointEnv
+    elif loco_env_type == 'quad':
         loco_env_class = QuadEnv
     elif loco_env_type == 'humanoid':
         loco_env_class = HumanoidEnv
@@ -323,7 +326,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # Get goal observation
             super().reset(*args, **kwargs)
-            num_random_actions = 5 if loco_env_type == 'quad' else 40
+            num_random_actions = 40 if loco_env_type == 'humanoid' else 5
             for _ in range(num_random_actions):
                 super().step(self.action_space.sample())
             self.set_goal(goal_xy=goal_xy)

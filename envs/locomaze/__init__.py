@@ -8,6 +8,46 @@ visual_dict = dict(
     camera_name='back',
 )
 
+register(
+    id='pointmaze-medium-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='point',
+        maze_env_type='maze',
+        maze_type='medium',
+    ),
+)
+register(
+    id='pointmaze-large-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='point',
+        maze_env_type='maze',
+        maze_type='large',
+    ),
+)
+register(
+    id='pointmaze-giant-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=2000,
+    kwargs=dict(
+        loco_env_type='point',
+        maze_env_type='maze',
+        maze_type='giant',
+    ),
+)
+register(
+    id='pointmaze-teleport-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=1000,
+    kwargs=dict(
+        loco_env_type='point',
+        maze_env_type='maze',
+        maze_type='teleport',
+    ),
+)
 
 register(
     id='quadmaze-medium-v0',

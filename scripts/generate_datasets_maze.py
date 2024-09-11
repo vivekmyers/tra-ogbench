@@ -34,29 +34,46 @@ def main(_):
     )
     ob_dim = env.observation_space.shape[0]
 
-    restore_path = FLAGS.restore_path
-    candidates = glob.glob(restore_path)
-    assert len(candidates) == 1
-    restore_path = candidates[0]
+    if 'point' in FLAGS.env_name:
 
-    with open(restore_path + '/flags.json', 'r') as f:
-        agent_config = json.load(f)['agent']
+        def actor_fn(ob, temperature):
+            """Oracle agent for the PointMaze environment."""
 
-    agent = SACAgent.create(
-        FLAGS.seed,
-        np.zeros(ob_dim),
-        env.action_space.sample(),
-        agent_config,
-    )
+            # Find the symmetry-aware target direction
+            cur_dir = ob[0]
+            target_dir = np.arctan2(ob[-1], ob[-2])
+            symmetries = np.array([i * 2 * np.pi + target_dir for i in range(-1, 2)])
+            target_dir = symmetries[np.argmin(np.abs(cur_dir - symmetries))]
 
-    if FLAGS.restore_epoch is None:
-        param_path = restore_path + '/params.pkl'
+            # Always go forward, but turn towards the target direction
+            action_x = 0.8
+            action_dir = np.clip((target_dir - cur_dir) / np.pi, -1.0, 1.0)
+
+            return np.array([action_x, action_dir])
     else:
-        param_path = restore_path + f'/params_{FLAGS.restore_epoch}.pkl'
-    with open(param_path, 'rb') as f:
-        load_dict = pickle.load(f)
-    agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
-    actor_fn = supply_rng(agent.sample_actions, rng=agent.rng)
+        restore_path = FLAGS.restore_path
+        candidates = glob.glob(restore_path)
+        assert len(candidates) == 1
+        restore_path = candidates[0]
+
+        with open(restore_path + '/flags.json', 'r') as f:
+            agent_config = json.load(f)['agent']
+
+        agent = SACAgent.create(
+            FLAGS.seed,
+            np.zeros(ob_dim),
+            env.action_space.sample(),
+            agent_config,
+        )
+
+        if FLAGS.restore_epoch is None:
+            param_path = restore_path + '/params.pkl'
+        else:
+            param_path = restore_path + f'/params_{FLAGS.restore_epoch}.pkl'
+        with open(param_path, 'rb') as f:
+            load_dict = pickle.load(f)
+        agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
+        actor_fn = supply_rng(agent.sample_actions, rng=agent.rng)
 
     all_cells = []
     vertex_cells = []
