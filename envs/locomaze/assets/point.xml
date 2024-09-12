@@ -24,15 +24,13 @@
         <geom name="floor" pos="0 0 0" size="100 100 .2" type="plane" conaffinity="1" condim="3" material="grid"/>
         <body name="torso" pos="0 0 0">
             <geom name="pointbody" type="sphere" size="0.7" pos="0 0 0.7"/>
-            <geom name="pointarrow" type="cylinder" size="0.1 0.5" fromto="0.6 0 0.7 1.2 0 0.7" />
             <joint name="ballx" type="slide" axis="1 0 0" pos="0 0 0"/>
             <joint name="bally" type="slide" axis="0 1 0" pos="0 0 0"/>
-            <joint name="rot" type="hinge" axis="0 0 1" pos="0 0 0" limited="false"/>
             <light name="torso_light" pos="0 0 8" mode="trackcom" />
         </body>
     </worldbody>
     <actuator>
-        <motor joint="ballx" ctrlrange="-1 1" ctrllimited="true" gear="1.0"/>
-        <motor joint="rot" ctrlrange="-1 1" ctrllimited="true" gear="1.0"/>
+        <motor joint="ballx" ctrlrange="-1 1" ctrllimited="true"/>
+        <motor joint="bally" ctrlrange="-1 1" ctrllimited="true"/>
     </actuator>
 </mujoco>

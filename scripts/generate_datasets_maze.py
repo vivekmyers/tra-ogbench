@@ -37,19 +37,7 @@ def main(_):
     if 'point' in FLAGS.env_name:
 
         def actor_fn(ob, temperature):
-            """Oracle agent for the PointMaze environment."""
-
-            # Find the symmetry-aware target direction
-            cur_dir = ob[0]
-            target_dir = np.arctan2(ob[-1], ob[-2])
-            symmetries = np.array([i * 2 * np.pi + target_dir for i in range(-1, 2)])
-            target_dir = symmetries[np.argmin(np.abs(cur_dir - symmetries))]
-
-            # Always go forward, but turn towards the target direction
-            action_x = 0.8
-            action_dir = np.clip((target_dir - cur_dir) / np.pi, -1.0, 1.0)
-
-            return np.array([action_x, action_dir])
+            return ob[-2:]
     else:
         restore_path = FLAGS.restore_path
         candidates = glob.glob(restore_path)

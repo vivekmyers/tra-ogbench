@@ -47,20 +47,10 @@ class PointEnv(MujocoEnv, utils.EzPickle):
         prev_qpos = self.data.qpos.copy()
         prev_qvel = self.data.qvel.copy()
 
-        action = action.copy()
-        action[0] = 0.2 * action[0]
+        action = 0.2 * action
 
-        qpos = self.data.qpos.flat.copy()
-        qvel = self.data.qvel.flat.copy()
-
-        qpos[2] += action[1]
-        ori = qpos[2]
-        dx = np.cos(ori) * action[0]
-        dy = np.sin(ori) * action[0]
-        qpos[0] += dx
-        qpos[1] += dy
-
-        self.set_state(qpos, qvel)
+        self.data.qpos[:] = self.data.qpos + action
+        self.data.qvel[:] = np.array([0.0, 0.0])
 
         mujoco.mj_step(self.model, self.data, nstep=self.frame_skip)
 
@@ -87,28 +77,21 @@ class PointEnv(MujocoEnv, utils.EzPickle):
         )
 
     def get_ob(self):
-        return np.concatenate(
-            [
-                self.data.qpos.flat[:3],
-                self.data.qvel.flat[:3],
-            ]
-        )
+        return self.data.qpos.flat.copy()
 
     def reset_model(self):
         qpos = self.init_qpos + self.np_random.uniform(size=self.model.nq, low=-0.1, high=0.1)
         qvel = self.init_qvel + self.np_random.standard_normal(self.model.nv) * 0.1
 
-        qpos[3:] = self.init_qpos[3:]
-        qvel[3:] = 0.0
         self.set_state(qpos, qvel)
 
         return self.get_ob()
 
     def get_xy(self):
-        return self.data.qpos[:2].copy()
+        return self.data.qpos.copy()
 
     def set_xy(self, xy):
         qpos = self.data.qpos.copy()
         qvel = self.data.qvel.copy()
-        qpos[:2] = xy
+        qpos[:] = xy
         self.set_state(qpos, qvel)

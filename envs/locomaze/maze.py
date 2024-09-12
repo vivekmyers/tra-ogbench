@@ -40,6 +40,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self._offset_x = 4
             self._offset_y = 4
             self._noise = 1
+            self._goal_tol = 1.0 if loco_env_type == 'point' else 0.5
 
             self._teleport_info = None
             if self._maze_type == 'arena':
@@ -359,7 +360,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                         self.set_xy(np.array(teleport_out_xy))
                         break
 
-            if np.linalg.norm(self.get_xy() - self.cur_goal_xy) <= 0.5:
+            if np.linalg.norm(self.get_xy() - self.cur_goal_xy) <= self._goal_tol:
                 if self._terminate_at_goal:
                     terminated = True
                 info['success'] = 1.0
@@ -530,7 +531,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def step(self, action):
             ob, reward, terminated, truncated, info = super(MazeEnv, self).step(action)
 
-            if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= 0.5:
+            if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= self._goal_tol:
                 if self._terminate_at_goal:
                     terminated = True
                 info['success'] = 1.0
