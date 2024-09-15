@@ -26,8 +26,8 @@ def get_dataset(
 
     if filter_terminals:
         # drop terminal transitions
-        non_last_idxs, _ = np.nonzero(~dataset['terminals'])
-        last_idxs, _ = np.nonzero(dataset['terminals'])
+        non_last_idxs = np.nonzero(~dataset['terminals'])[0]
+        last_idxs = np.nonzero(dataset['terminals'])[0]
         penult_idxs = last_idxs - 1
         for k, v in dataset.items():
             if k == 'terminals':

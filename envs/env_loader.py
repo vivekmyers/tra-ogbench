@@ -94,7 +94,7 @@ def truncate_dataset(dataset, ratio, return_both=False):
             traj_idxs.append(np.arange(traj_start, i + 1))
             traj_start = i + 1
     np.random.seed(0)
-    traj_idxs = np.random.permutation(traj_idxs)
+    np.random.shuffle(traj_idxs)
     new_idxs = []
     num_states = 0
     for idxs in traj_idxs:
@@ -151,13 +151,15 @@ def make_env_and_dataset(env_name, dataset_path=None):
         dataset = d4rl_utils.get_dataset(env, env_name)
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'kitchen' in env_name:
-        # HACK: Monkey patching to make it compatible with Python 3.10.
+        from envs.d4rl.wrappers import KitchenGoalWrapper
         from envs.d4rl import d4rl_utils
 
+        # HACK: Monkey patching to make it compatible with Python 3.10.
         if not hasattr(collections, 'Mapping'):
             collections.Mapping = collections.abc.Mapping
 
         env = d4rl_utils.make_env(env_name)
+        env = KitchenGoalWrapper(env)
         dataset = d4rl_utils.get_dataset(env, env_name, filter_terminals=True)
         dataset = dataset.copy(
             {
