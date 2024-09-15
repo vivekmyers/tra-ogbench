@@ -5,7 +5,7 @@ import time
 
 import gymnasium
 import numpy as np
-from gymnasium.spaces import Box, Discrete
+from gymnasium.spaces import Box
 
 from utils.dataset import Dataset
 
@@ -142,8 +142,8 @@ def get_dataset(dataset_path, ob_dtype=np.float32, action_dtype=np.float32):
 def make_env_and_dataset(env_name, dataset_path=None):
     setup_egl()
 
-    if 'antmaze' in env_name:
-        from envs.antmaze.wrappers import AntMazeGoalWrapper
+    if 'antmaze' in env_name and ('diverse' in env_name or 'play' in env_name):
+        from envs.d4rl.wrappers import AntMazeGoalWrapper
         from envs.d4rl import d4rl_utils
 
         env = d4rl_utils.make_env(env_name)
@@ -166,7 +166,7 @@ def make_env_and_dataset(env_name, dataset_path=None):
             }
         )
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
-    elif 'pointmaze' in env_name or 'quadmaze' in env_name or 'quadball' in env_name or 'humanoidmaze' in env_name:
+    elif 'pointmaze' in env_name or 'antmaze' in env_name or 'antsoccer' in env_name or 'humanoidmaze' in env_name:
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name)

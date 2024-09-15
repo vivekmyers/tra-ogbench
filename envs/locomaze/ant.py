@@ -6,8 +6,8 @@ from gymnasium.envs.mujoco import MujocoEnv
 from gymnasium.spaces import Box
 
 
-class QuadEnv(MujocoEnv, utils.EzPickle):
-    xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'quad.xml')
+class AntEnv(MujocoEnv, utils.EzPickle):
+    xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'ant.xml')
     metadata = {
         'render_modes': ['human', 'rgb_array', 'depth_array'],
         'render_fps': 10,

@@ -16,8 +16,8 @@ from utils.evaluation import supply_rng
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('seed', 0, 'Random seed')
-flags.DEFINE_string('env_name', 'quadball-arena-v0', 'Environment name')
-flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
+flags.DEFINE_string('env_name', 'antsoccer-arena-v0', 'Environment name')
+flags.DEFINE_string('dataset_type', 'navigate', 'Dataset type')
 flags.DEFINE_string('loco_restore_path', None, 'Locomotion agent restore path')
 flags.DEFINE_integer('loco_restore_epoch', None, 'Locomotion agent restore epoch')
 flags.DEFINE_string('ball_restore_path', None, 'Ball agent restore path')
@@ -29,6 +29,8 @@ flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 
 
 def load_agent(restore_path, restore_epoch, ob_dim, action_dim):
+    assert FLAGS.dataset_type in ['navigate', 'stitch']
+
     candidates = glob.glob(restore_path)
     assert len(candidates) == 1
     restore_path = candidates[0]
@@ -105,7 +107,7 @@ def main(_):
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
     for ep_idx in trange(num_train_episodes + num_val_episodes):
-        if FLAGS.dataset_type == 'play':
+        if FLAGS.dataset_type == 'navigate':
             agent_init_idx, ball_init_idx, goal_idx = np.random.choice(len(all_cells), 3, replace=False)
             agent_init_ij = all_cells[agent_init_idx]
             ball_init_ij = all_cells[ball_init_idx]
@@ -136,7 +138,7 @@ def main(_):
             agent_xy, ball_xy = np.array(agent_xy), np.array(ball_xy)
             goal_xy = np.array(env.unwrapped.cur_goal_xy)
 
-            if FLAGS.dataset_type == 'play':
+            if FLAGS.dataset_type == 'navigate':
                 if virtual_agent_goal_xy is None:
                     if np.linalg.norm(agent_xy - ball_xy) > 2:
                         action = get_agent_action(ob, ball_xy)
@@ -158,7 +160,7 @@ def main(_):
             if virtual_agent_goal_xy is not None and np.linalg.norm(virtual_agent_goal_xy - next_ob[:2]) <= 0.5:
                 # Clear the virtual goal
                 virtual_agent_goal_xy = None
-            if FLAGS.dataset_type == 'play':
+            if FLAGS.dataset_type == 'navigate':
                 if success:
                     # Resample a new goal
                     goal_ij = all_cells[np.random.randint(len(all_cells))]

@@ -16,8 +16,8 @@ from utils.evaluation import supply_rng
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('seed', 0, 'Random seed')
-flags.DEFINE_string('env_name', 'quadmaze-large-v0', 'Environment name')
-flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
+flags.DEFINE_string('env_name', 'antmaze-large-v0', 'Environment name')
+flags.DEFINE_string('dataset_type', 'navigate', 'Dataset type')
 flags.DEFINE_string('restore_path', None, 'Expert agent restore path')
 flags.DEFINE_integer('restore_epoch', None, 'Expert agent restore epoch')
 flags.DEFINE_string('save_path', None, 'Save path')
@@ -27,6 +27,8 @@ flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 
 
 def main(_):
+    assert FLAGS.dataset_type in ['path', 'navigate', 'explore', 'random', 'stitch']
+
     env = gymnasium.make(
         FLAGS.env_name,
         terminate_at_goal=False,
@@ -97,7 +99,7 @@ def main(_):
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
     for ep_idx in trange(num_train_episodes + num_val_episodes):
-        if FLAGS.dataset_type in ['path', 'play', 'explore']:
+        if FLAGS.dataset_type in ['path', 'navigate', 'explore']:
             init_ij = all_cells[np.random.randint(len(all_cells))]
             goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
             ob, _ = env.reset(options=dict(task_info=dict(init_ij=init_ij, goal_ij=goal_ij)))
@@ -165,7 +167,7 @@ def main(_):
             done = terminated or truncated
             success = info['success']
 
-            if success and FLAGS.dataset_type == 'play':
+            if success and FLAGS.dataset_type == 'navigate':
                 # Resample a new goal
                 goal_ij = vertex_cells[np.random.randint(len(vertex_cells))]
                 env.unwrapped.set_goal(goal_ij)

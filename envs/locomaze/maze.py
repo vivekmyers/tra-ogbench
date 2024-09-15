@@ -6,14 +6,14 @@ from gymnasium.spaces import Box
 
 from envs.locomaze.humanoid import HumanoidEnv
 from envs.locomaze.point import PointEnv
-from envs.locomaze.quad import QuadEnv
+from envs.locomaze.ant import AntEnv
 
 
 def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
     if loco_env_type == 'point':
         loco_env_class = PointEnv
-    elif loco_env_type == 'quad':
-        loco_env_class = QuadEnv
+    elif loco_env_type == 'ant':
+        loco_env_class = AntEnv
     elif loco_env_type == 'humanoid':
         loco_env_class = HumanoidEnv
     else:
@@ -232,7 +232,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 # Remove texture repeat
                 grid = tree.find('.//material[@name="grid"]')
                 grid.set('texuniform', 'false')
-                if loco_env_type == 'quad':
+                if loco_env_type == 'ant':
                     # Color one leg to break symmetry
                     tree.find('.//geom[@name="aux_1_geom"]').set('material', 'self_white')
                     tree.find('.//geom[@name="left_leg_geom"]').set('material', 'self_white')

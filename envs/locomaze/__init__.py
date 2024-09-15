@@ -50,63 +50,63 @@ register(
 )
 
 register(
-    id='quadmaze-medium-v0',
+    id='antmaze-medium-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='medium',
     ),
 )
 register(
-    id='visual-quadmaze-medium-v0',
+    id='visual-antmaze-medium-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='medium',
         **visual_dict,
     ),
 )
 register(
-    id='quadmaze-large-v0',
+    id='antmaze-large-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='large',
     ),
 )
 register(
-    id='visual-quadmaze-large-v0',
+    id='visual-antmaze-large-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='large',
         **visual_dict,
     ),
 )
 register(
-    id='quadmaze-giant-v0',
+    id='antmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=2000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='giant',
     ),
 )
 register(
-    id='visual-quadmaze-giant-v0',
+    id='visual-antmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=2000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='giant',
         **visual_dict,
@@ -114,21 +114,21 @@ register(
 )
 
 register(
-    id='quadmaze-teleport-v0',
+    id='antmaze-teleport-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='teleport',
     ),
 )
 register(
-    id='visual-quadmaze-teleport-v0',
+    id='visual-antmaze-teleport-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='maze',
         maze_type='teleport',
         **visual_dict,
@@ -136,21 +136,21 @@ register(
 )
 
 register(
-    id=f'quadball-arena-v0',
+    id='antsoccer-arena-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='ball',
         maze_type='arena',
     ),
 )
 register(
-    id='quadball-medium-v0',
+    id='antsoccer-medium-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
     max_episode_steps=1000,
     kwargs=dict(
-        loco_env_type='quad',
+        loco_env_type='ant',
         maze_env_type='ball',
         maze_type='medium',
     ),
