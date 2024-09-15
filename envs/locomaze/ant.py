@@ -18,8 +18,8 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         xml_file=None,
         reset_noise_scale=0.1,
         render_mode='rgb_array',
-        width=192,
-        height=192,
+        width=200,
+        height=200,
         **kwargs,
     ):
         if xml_file is None:

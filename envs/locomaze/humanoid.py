@@ -19,8 +19,8 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         self,
         xml_file=None,
         render_mode='rgb_array',
-        width=192,
-        height=192,
+        width=200,
+        height=200,
         **kwargs,
     ):
         if xml_file is None:
