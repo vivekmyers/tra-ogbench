@@ -94,7 +94,7 @@ register(
 register(
     id='antmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=1500,
+    max_episode_steps=1000,
     kwargs=dict(
         loco_env_type='ant',
         maze_env_type='maze',
@@ -104,7 +104,7 @@ register(
 register(
     id='visual-antmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=1500,
+    max_episode_steps=1000,
     kwargs=dict(
         loco_env_type='ant',
         maze_env_type='maze',
