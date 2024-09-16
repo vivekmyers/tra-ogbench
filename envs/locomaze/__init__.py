@@ -31,7 +31,7 @@ register(
 register(
     id='pointmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=2000,
+    max_episode_steps=1000,
     kwargs=dict(
         loco_env_type='point',
         maze_env_type='maze',
@@ -94,7 +94,7 @@ register(
 register(
     id='antmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=2000,
+    max_episode_steps=1500,
     kwargs=dict(
         loco_env_type='ant',
         maze_env_type='maze',
@@ -104,7 +104,7 @@ register(
 register(
     id='visual-antmaze-giant-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
-    max_episode_steps=2000,
+    max_episode_steps=1500,
     kwargs=dict(
         loco_env_type='ant',
         maze_env_type='maze',
@@ -112,7 +112,6 @@ register(
         **visual_dict,
     ),
 )
-
 register(
     id='antmaze-teleport-v0',
     entry_point='envs.locomaze.maze:make_maze_env',
@@ -195,6 +194,48 @@ register(
         loco_env_type='humanoid',
         maze_env_type='maze',
         maze_type='large',
+        **visual_dict,
+    ),
+)
+register(
+    id='humanoidmaze-giant-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=4000,
+    kwargs=dict(
+        loco_env_type='humanoid',
+        maze_env_type='maze',
+        maze_type='giant',
+    ),
+)
+register(
+    id='visual-humanoidmaze-giant-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=4000,
+    kwargs=dict(
+        loco_env_type='humanoid',
+        maze_env_type='maze',
+        maze_type='giant',
+        **visual_dict,
+    ),
+)
+register(
+    id='humanoidmaze-teleport-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=2000,
+    kwargs=dict(
+        loco_env_type='humanoid',
+        maze_env_type='maze',
+        maze_type='teleport',
+    ),
+)
+register(
+    id='visual-humanoidmaze-teleport-v0',
+    entry_point='envs.locomaze.maze:make_maze_env',
+    max_episode_steps=2000,
+    kwargs=dict(
+        loco_env_type='humanoid',
+        maze_env_type='maze',
+        maze_type='teleport',
         **visual_dict,
     ),
 )
