@@ -225,6 +225,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     )
 
             if self._ob_type == 'pixels':
+                # Color wall
+                wall = tree.find('.//material[@name="wall"]')
+                wall.set('rgba', '.6 .6 .6 1')
                 # Remove torso light
                 torso_light = tree.find('.//light[@name="torso_light"]')
                 torso_light_parent = tree.find('.//light[@name="torso_light"]/..')

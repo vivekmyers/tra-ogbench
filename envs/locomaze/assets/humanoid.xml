@@ -13,7 +13,7 @@
         <material name="eye" rgba="0 .2 1 1" />
         <material name="target" rgba="0.96 0.26 0.33 1" />
         <material name="site" rgba=".5 .5 .5 .3" />
-        <material name="wall" rgba=".6 .6 .6 1" />
+        <material name="wall" rgba="1 1 1 1" />
     </asset>
 
     <option timestep=".005" />

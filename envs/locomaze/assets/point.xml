@@ -14,7 +14,7 @@
         <material name="grid" texture="grid" texrepeat="1 1" texuniform="true" />
         <material name="self" rgba=".7 .5 .3 1" />
         <material name="geom" texture="texgeom" texuniform="true"/>
-        <material name="wall" rgba=".6 .6 .6 1" />
+        <material name="wall" rgba="1 1 1 1" />
         <material name="target" rgba="0.96 0.26 0.33 1" />
         <material name="teleport_in" texture="teleport_in"/>
         <material name="teleport_out" texture="teleport_out"/>
