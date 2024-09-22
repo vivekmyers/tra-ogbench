@@ -247,7 +247,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     'geom',
                     name='target',
                     type='cylinder',
-                    size='.4 .05',
+                    size='.5 .05',
                     pos='0 0 .05',
                     material='target',
                     contype='0',
