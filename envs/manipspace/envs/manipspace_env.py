@@ -185,7 +185,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         if self._ob_type == 'pixels':
             # Adjust colors
-            del arena_mjcf.find('light', 'global').ambient
             arena_mjcf.find('material', 'ur5e/robotiq/metal').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/silicone').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba[3] = 0.1
