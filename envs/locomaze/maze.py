@@ -447,7 +447,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             super().update_tree(tree)
 
             worldbody = tree.find('.//worldbody')
-            ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 3')
+            ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 0.5')
             ET.SubElement(ball, 'freejoint', name='ball_root')
             ET.SubElement(
                 ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6'
@@ -513,7 +513,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # Get goal observation
             super(MazeEnv, self).reset(*args, **kwargs)
-            for _ in range(5):
+            for _ in range(10):
                 super(MazeEnv, self).step(self.action_space.sample())
             self.set_goal(goal_xy=goal_xy)
             self.set_agent_ball_xy(goal_xy, goal_xy)
