@@ -10,8 +10,6 @@ class CubeEnv(ManipSpaceEnv):
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
-        super().__init__(*args, **kwargs)
-
         if self._env_type == 'cube_single':
             self._num_cubes = 1
         elif self._env_type == 'cube_double':
@@ -23,10 +21,14 @@ class CubeEnv(ManipSpaceEnv):
         else:
             raise ValueError(f'Invalid env_type: {env_type}')
 
+        super().__init__(*args, **kwargs)
+
+        self._default_camera = 'front_low'
         self._cube_colors = np.array([_COLORS['red'], _COLORS['blue'], _COLORS['orange'], _COLORS['green']])
         self._cube_success_colors = np.array(
             [_COLORS['lightred'], _COLORS['lightblue'], _COLORS['lightorange'], _COLORS['lightgreen']]
         )
+
         self._target_task = 'cube'
         self._target_block = 0
 

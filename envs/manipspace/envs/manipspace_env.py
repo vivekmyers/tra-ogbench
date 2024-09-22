@@ -55,6 +55,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._arm_sampling_bounds = np.asarray([[0.25, -0.35, 0.20], [0.6, 0.35, 0.35]])
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
+        self._default_camera = 'front_low'
         self._ob_type = ob_type
         self._depth = False
         self._terminate_at_goal = terminate_at_goal
@@ -155,6 +156,14 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             'front': {
                 'pos': (0.905, 0.000, 0.762),
                 'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
+            },
+            'front_distant': {
+                'pos': (1.139, 0.000, 0.821),
+                'xyaxes': (0.000, 1.000, 0.000, -0.627, 0.000, 0.779),
+            },
+            'front_low': {
+                'pos': (1.287, 0.000, 0.509),
+                'xyaxes': (0.000, 1.000, 0.000, -0.342, 0.000, 0.940),
             },
         }
         for camera_name, camera_kwargs in cameras.items():
@@ -443,6 +452,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         **kwargs,
     ):
         if camera is None:
-            camera = None if self._ob_type == 'states' else 'front'
+            camera = self._default_camera if self._ob_type == 'states' else 'front'
 
         return super().render(camera=camera, *args, **kwargs)

@@ -15,6 +15,7 @@ class SceneEnv(ManipSpaceEnv):
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.35]])
         self._object_sampling_bounds = np.asarray([[0.3, -0.07], [0.45, 0.18]])
         self._target_sampling_bounds = self._object_sampling_bounds
+        self._default_camera = 'front_distant'
         self._drawer_center = np.array([0.33, -0.24, 0.066])
         self._cube_colors = np.array([_COLORS['red'], _COLORS['blue']])
         self._cube_success_colors = np.array([_COLORS['lightred'], _COLORS['lightblue']])

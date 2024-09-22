@@ -28,12 +28,12 @@ class PuzzleEnv(ManipSpaceEnv):
             raise ValueError(f'Unknown env_type: {env_type}')
 
         self._num_buttons = self._num_rows * self._num_cols
-
         self._cur_button_states = np.array([0] * self._num_buttons)
 
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
+        self._default_camera = 'front_distant'
 
         self._target_task = 'button'
         self._target_button = 0
@@ -465,12 +465,8 @@ class PuzzleEnv(ManipSpaceEnv):
             raise NotImplementedError
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                if self._ob_type == 'pixels':
-                    color_zero = _COLORS['red']
-                    color_one = _COLORS['blue']
-                else:
-                    color_zero = _COLORS['black']
-                    color_one = _COLORS['white']
+                color_zero = _COLORS['red']
+                color_one = _COLORS['blue']
                 self._model.geom(gid).rgba = color_zero if self._cur_button_states[i] == 0 else color_one
 
         mujoco.mj_forward(self._model, self._data)

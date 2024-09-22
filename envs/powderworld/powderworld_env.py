@@ -21,8 +21,9 @@ class PowderworldEnv(gymnasium.Env):
         brush_size=4,
         num_elems=5,
         mode='evaluation',  # 'evaluation' or 'data_collection'
-        render_width=192,  # Only used for rendering, not for observations
-        render_height=192,  # Only used for rendering, not for observations
+        render_mode=None,  # Unused; for compatibility with gymnasium
+        width=192,  # Only used for rendering, not for observations
+        height=192,  # Only used for rendering, not for observations
     ):
         self.pw = PWSim(device=device, use_jit=use_jit)
         self.pwr = PWRenderer(device)
@@ -31,8 +32,8 @@ class PowderworldEnv(gymnasium.Env):
         self._grid_size = grid_size
         self._brush_size = brush_size
         self._mode = mode
-        self._render_width = render_width
-        self._render_height = render_height
+        self._render_width = width
+        self._render_height = height
         self._num_elems = num_elems
         if num_elems == 2:
             self._elem_names = ['plant', 'stone']
