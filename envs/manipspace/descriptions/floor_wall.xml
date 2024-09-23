@@ -9,6 +9,8 @@
         <texture name="grid" type="2d" builtin="checker" rgb1=".08 .11 .16" rgb2=".15 .18 .25" mark="cross"
                  markrgb="0.8 0.8 0.8" width="512" height="512"/>
         <material name="grid" texture="grid" texrepeat="1 1" texuniform="true"/>
+        <texture name="skybox" type="skybox" builtin="gradient" rgb1="0.15 0.18 0.25" rgb2="0 0 0" mark="random"
+                 markrgb="1 1 1" width="1024" height="1024" random="0.005"/>
     </asset>
 
     <worldbody>
