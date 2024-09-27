@@ -268,7 +268,7 @@ class CubeEnv(ManipSpaceEnv):
                     ),
                 ),
                 dict(
-                    task_name='task3_pnp_from_stack',
+                    task_name='task3_pnp_from_square',
                     init_xyzs=np.array(
                         [
                             [0.425, -0.02, 0.02],
