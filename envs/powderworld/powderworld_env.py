@@ -15,7 +15,7 @@ class PowderworldEnv(gymnasium.Env):
     def __init__(
         self,
         device='cpu',
-        use_jit=True,
+        use_jit=False,
         world_size=32,
         grid_size=4,
         brush_size=4,
