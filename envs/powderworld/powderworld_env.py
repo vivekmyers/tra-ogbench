@@ -14,8 +14,6 @@ class PowderworldEnv(gymnasium.Env):
 
     def __init__(
         self,
-        device='cpu',
-        use_jit=False,
         world_size=32,
         grid_size=4,
         brush_size=4,
@@ -25,8 +23,8 @@ class PowderworldEnv(gymnasium.Env):
         width=192,  # Only used for rendering, not for observations
         height=192,  # Only used for rendering, not for observations
     ):
-        self.pw = PWSim(device=device, use_jit=use_jit)
-        self.pwr = PWRenderer(device)
+        self.pw = PWSim()
+        self.pwr = PWRenderer()
 
         self._world_size = world_size
         self._grid_size = grid_size
@@ -44,7 +42,7 @@ class PowderworldEnv(gymnasium.Env):
         else:
             raise NotImplementedError
         self._elems = [pw_element_names.index(elem_name) for elem_name in self._elem_names]
-        self._elem_colors = self.pwr.elem_vecs_array.weight.detach().cpu().numpy()[self._elems]
+        self._elem_colors = self.pwr.elem_vecs_array[self._elems].copy()
 
         self.observation_space = Box(low=0, high=255, shape=(self._world_size, self._world_size, 6), dtype=np.uint8)
         self._xy_action_size = (world_size - brush_size) // grid_size + 1
@@ -283,7 +281,7 @@ class PowderworldEnv(gymnasium.Env):
         np_world[:, :, 0] = 1
         np_world[:, :, -1] = 1
 
-        self._world = self.pw.np_to_pw(np_world).clone()
+        self._world = self.pw.np_to_pw(np_world).copy()
         self._action_step = 0
         self._action_elem_id = None
         self._action_x = None
@@ -298,7 +296,7 @@ class PowderworldEnv(gymnasium.Env):
                     self.step(self.semantic_action_to_action(*semantic_action))
             self._mode = 'evaluation'
             goal = self._get_ob()
-            self.cur_goal_world = self._world[0, 0].numpy().copy()
+            self.cur_goal_world = self._world[0, 0].copy()
             if render_goal:
                 goal_frame = self.render()
 
@@ -338,7 +336,7 @@ class PowderworldEnv(gymnasium.Env):
                 self._action_y = np.random.randint(self._xy_action_size)
 
             # Step world
-            self._world = self.pw(self._world)
+            self._world = self.pw.forward(self._world)
 
             np_action_world = np.zeros((1, self._world_size, self._world_size), dtype=np.uint8)
             elem = self._elems[self._action_elem_id]
@@ -364,7 +362,7 @@ class PowderworldEnv(gymnasium.Env):
         info = dict()
 
         if self._mode == 'evaluation':
-            cur_world = self._world[0, 0].numpy().copy()
+            cur_world = self._world[0, 0].copy()
             world_shifts = []
             for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
                 world_shifts.append(np.roll(cur_world, (dy, dx), axis=(0, 1)))
