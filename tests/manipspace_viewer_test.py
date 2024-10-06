@@ -8,6 +8,7 @@ from envs.manipspace.envs.cube_env import CubeEnv
 from envs.manipspace.envs.puzzle_env import PuzzleEnv
 from envs.manipspace.envs.scene_env import SceneEnv
 from envs.manipspace.oracles.button_oracle import ButtonOracle
+from envs.manipspace.oracles.cube_open_loop_oracle import CubeOpenLoopOracle
 from envs.manipspace.oracles.cube_oracle import CubeOracle
 from envs.manipspace.oracles.drawer_oracle import DrawerOracle
 from envs.manipspace.oracles.window_oracle import WindowOracle
@@ -17,19 +18,24 @@ SPEED_UP = 3.0
 
 def main():
     use_oracle = True
+    oracle_type = 'closed_loop'
+    # oracle_type = 'open_loop'
     use_viewer = os.environ.get('USE_VIEWER', 'False') == 'True'
-    # env_type = 'cube_quadruple'
+    env_type = 'cube_quadruple'
     # env_type = 'puzzle_4x6'
-    env_type = 'scene'
+    # env_type = 'scene'
     mode = 'data_collection'
     # mode = 'evaluation'
     min_norm = 0.4
+    action_space_type = 'relative'
+    # action_space_type = 'absolute'
     if 'cube' in env_type:
         env = CubeEnv(
             env_type=env_type,
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
+            action_space_type=action_space_type,
         )
     elif 'puzzle' in env_type:
         env = PuzzleEnv(
@@ -37,6 +43,7 @@ def main():
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
+            action_space_type=action_space_type,
         )
     elif 'scene' in env_type:
         env = SceneEnv(
@@ -44,14 +51,20 @@ def main():
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
+            action_space_type=action_space_type,
         )
 
     ob, info = env.reset(seed=0)
     if use_oracle:
         if 'cube' in env_type:
-            agents = {
-                'cube': CubeOracle(env=env, min_norm=min_norm),
-            }
+            if oracle_type == 'open_loop':
+                agents = {
+                    'cube': CubeOpenLoopOracle(env=env),
+                }
+            else:
+                agents = {
+                    'cube': CubeOracle(env=env, min_norm=min_norm),
+                }
         elif 'puzzle' in env_type:
             agents = {
                 'button': ButtonOracle(env=env, min_norm=min_norm, gripper_always_closed=True),
