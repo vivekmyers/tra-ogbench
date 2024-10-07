@@ -139,6 +139,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         for light in ur5e_mjcf.find_all('light'):
             light.remove()
+            del light
 
         # Attach the robotiq gripper to the ur5e flange
         gripper_mjcf = mjcf.from_path((_DESC_DIR / 'robotiq_2f85' / '2f85.xml'), escape_separators=True)
@@ -166,7 +167,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         if self._ob_type == 'pixels':
             # Adjust colors
-            arena_mjcf.find('light', 'spotlight').remove()
             arena_mjcf.find('material', 'ur5e/robotiq/metal').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/silicone').rgba[3] = 0.1
             arena_mjcf.find('material', 'ur5e/robotiq/gray').rgba[3] = 0.1

@@ -68,7 +68,7 @@ class SceneEnv(ManipSpaceEnv):
                 ),
             ),
             dict(
-                task_name='task3_block_window',
+                task_name='task3_block_drawer_window',
                 init=dict(
                     block_xyzs=np.array([[0.4, -0.05, 0.02]]),
                     button_states=np.array([1, 0]),
@@ -78,7 +78,7 @@ class SceneEnv(ManipSpaceEnv):
                 goal=dict(
                     block_xyzs=np.array([[0.4, 0.15, 0.02]]),
                     button_states=np.array([1, 1]),
-                    drawer_pos=0.0,
+                    drawer_pos=-0.16,
                     window_pos=0.0,
                 ),
             ),
@@ -98,7 +98,7 @@ class SceneEnv(ManipSpaceEnv):
                 ),
             ),
             dict(
-                task_name='task5_block_drawer_window',
+                task_name='task5_rearrange_all',
                 init=dict(
                     block_xyzs=np.array([[0.35, 0.15, 0.02]]),
                     button_states=np.array([0, 0]),
@@ -106,9 +106,9 @@ class SceneEnv(ManipSpaceEnv):
                     window_pos=0.0,
                 ),
                 goal=dict(
-                    block_xyzs=np.array([[0.4, -0.05, 0.02]]),
+                    block_xyzs=np.array([[0.33, -0.36, 0.066]]),
                     button_states=np.array([0, 0]),
-                    drawer_pos=-0.16,
+                    drawer_pos=0.0,
                     window_pos=0.2,
                 ),
             ),
