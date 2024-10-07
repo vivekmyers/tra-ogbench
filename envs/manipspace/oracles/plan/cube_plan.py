@@ -102,18 +102,3 @@ class CubePlanOracle(PlanOracle):
         self._t_max = times[-1]
         self._done = False
         self._plan = self.compute_plan(times, poses, grasps)
-
-    def select_action(self, ob, info):
-        cur_plan_idx = int((info['time'][0] - self._t_init + 1e-7) // self._env_dt)
-        if cur_plan_idx >= len(self._plan) - 1:
-            cur_plan_idx = len(self._plan) - 1
-            self._done = True
-
-        ab_action = self._plan[cur_plan_idx]
-        action = np.zeros(5)
-        action[:3] = ab_action[:3] - info['proprio/effector_pos']
-        action[3] = ab_action[3] - info['proprio/effector_yaw'][0]
-        action[4] = ab_action[4] - info['proprio/gripper_opening'][0]
-        action = self._env.normalize_action(action)
-
-        return action
