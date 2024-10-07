@@ -50,12 +50,12 @@ class CubePlanOracle(PlanOracle):
         times = {}
         times['initial'] = 0.0
         times['pick'] = times['initial'] + self._dt
-        times['pick_start'] = times['pick'] + 1.5 * self._dt
+        times['pick_start'] = times['pick'] + self._dt * 1.5
         times['pick_end'] = times['pick_start'] + self._dt
         times['postpick'] = times['pick_end'] + self._dt
         times['clearance'] = times['postpick'] + self._dt
         times['place'] = times['clearance'] + self._dt
-        times['place_start'] = times['place'] + 1.5 * self._dt
+        times['place_start'] = times['place'] + self._dt * 1.5
         times['place_end'] = times['place_start'] + self._dt
         times['postplace'] = times['place_end'] + self._dt
         times['final'] = times['postplace'] + self._dt

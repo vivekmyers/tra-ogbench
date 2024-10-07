@@ -12,6 +12,8 @@ from envs.manipspace.oracles.markov.drawer_markov import DrawerMarkovOracle
 from envs.manipspace.oracles.markov.window_markov import WindowMarkovOracle
 from envs.manipspace.oracles.plan.button_plan import ButtonPlanOracle
 from envs.manipspace.oracles.plan.cube_plan import CubePlanOracle
+from envs.manipspace.oracles.plan.drawer_plan import DrawerPlanOracle
+from envs.manipspace.oracles.plan.window_plan import WindowPlanOracle
 
 FLAGS = flags.FLAGS
 
@@ -69,7 +71,12 @@ def main(_):
                 'window': WindowMarkovOracle(env=env, min_norm=FLAGS.min_norm),
             }
         else:
-            raise NotImplementedError
+            agents = {
+                'cube': CubePlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
+                'button': ButtonPlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
+                'drawer': DrawerPlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
+                'window': WindowPlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
+            }
 
     dataset = defaultdict(list)
 

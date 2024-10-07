@@ -1,6 +1,5 @@
 import numpy as np
 
-from envs.manipspace import lie
 from envs.manipspace.oracles.plan.plan_oracle import PlanOracle
 
 

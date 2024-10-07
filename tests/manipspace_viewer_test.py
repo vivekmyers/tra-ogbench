@@ -8,11 +8,13 @@ from envs.manipspace.envs.cube_env import CubeEnv
 from envs.manipspace.envs.puzzle_env import PuzzleEnv
 from envs.manipspace.envs.scene_env import SceneEnv
 from envs.manipspace.oracles.markov.button_markov import ButtonMarkovOracle
-from envs.manipspace.oracles.plan.button_plan import ButtonPlanOracle
-from envs.manipspace.oracles.plan.cube_plan import CubePlanOracle
 from envs.manipspace.oracles.markov.cube_markov import CubeMarkovOracle
 from envs.manipspace.oracles.markov.drawer_markov import DrawerMarkovOracle
 from envs.manipspace.oracles.markov.window_markov import WindowMarkovOracle
+from envs.manipspace.oracles.plan.button_plan import ButtonPlanOracle
+from envs.manipspace.oracles.plan.cube_plan import CubePlanOracle
+from envs.manipspace.oracles.plan.drawer_plan import DrawerPlanOracle
+from envs.manipspace.oracles.plan.window_plan import WindowPlanOracle
 
 SPEED_UP = 3.0
 
@@ -22,8 +24,8 @@ def main():
     # oracle_type = 'markov'
     oracle_type = 'plan'
     use_viewer = os.environ.get('USE_VIEWER', 'False') == 'True'
-    # env_type = 'cube_quadruple'
-    env_type = 'puzzle_4x6'
+    env_type = 'cube_quadruple'
+    # env_type = 'puzzle_4x6'
     # env_type = 'scene'
     mode = 'data_collection'
     # mode = 'evaluation'
@@ -71,12 +73,20 @@ def main():
                     'button': ButtonPlanOracle(env=env, gripper_always_closed=False),
                 }
         elif 'scene' in env_type:
-            agents = {
-                'cube': CubeMarkovOracle(env=env, min_norm=min_norm, max_step=100),
-                'button': ButtonMarkovOracle(env=env, min_norm=min_norm),
-                'drawer': DrawerMarkovOracle(env=env, min_norm=min_norm),
-                'window': WindowMarkovOracle(env=env, min_norm=min_norm),
-            }
+            if oracle_type == 'markov':
+                agents = {
+                    'cube': CubeMarkovOracle(env=env, min_norm=min_norm, max_step=100),
+                    'button': ButtonMarkovOracle(env=env, min_norm=min_norm),
+                    'drawer': DrawerMarkovOracle(env=env, min_norm=min_norm),
+                    'window': WindowMarkovOracle(env=env, min_norm=min_norm),
+                }
+            else:
+                agents = {
+                    'cube': CubePlanOracle(env=env),
+                    'button': ButtonPlanOracle(env=env),
+                    'drawer': DrawerPlanOracle(env=env),
+                    'window': WindowPlanOracle(env=env),
+                }
         agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)
 
