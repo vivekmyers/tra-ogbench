@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Oracle:
+class MarkovOracle:
     def __init__(self, env, min_norm=0.4):
         self._env = env
         self._min_norm = min_norm

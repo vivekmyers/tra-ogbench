@@ -1,9 +1,9 @@
 import numpy as np
 
-from envs.manipspace.oracles.oracle import Oracle
+from envs.manipspace.oracles.markov.markov_oracle import MarkovOracle
 
 
-class CubeOracle(Oracle):
+class CubeMarkovOracle(MarkovOracle):
     def __init__(self, max_step=200, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._max_step = max_step

@@ -6,10 +6,10 @@ from absl import app, flags
 from tqdm import trange
 
 import envs.manipspace  # noqa
-from envs.manipspace.oracles.button_oracle import ButtonOracle
-from envs.manipspace.oracles.cube_oracle import CubeOracle
-from envs.manipspace.oracles.drawer_oracle import DrawerOracle
-from envs.manipspace.oracles.window_oracle import WindowOracle
+from envs.manipspace.oracles.markov.button_markov import ButtonMarkovOracle
+from envs.manipspace.oracles.markov.cube_markov import CubeMarkovOracle
+from envs.manipspace.oracles.markov.drawer_markov import DrawerMarkovOracle
+from envs.manipspace.oracles.markov.window_markov import WindowMarkovOracle
 
 FLAGS = flags.FLAGS
 
@@ -35,18 +35,18 @@ def main(_):
     has_button_states = hasattr(env.unwrapped, '_cur_button_states')
     if 'cube' in FLAGS.env_name:
         agents = {
-            'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm),
+            'cube': CubeMarkovOracle(env=env, min_norm=FLAGS.min_norm),
         }
     elif 'puzzle' in FLAGS.env_name:
         agents = {
-            'button': ButtonOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
+            'button': ButtonMarkovOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
         }
     elif 'scene' in FLAGS.env_name:
         agents = {
-            'cube': CubeOracle(env=env, min_norm=FLAGS.min_norm, max_step=100),
-            'button': ButtonOracle(env=env, min_norm=FLAGS.min_norm),
-            'drawer': DrawerOracle(env=env, min_norm=FLAGS.min_norm),
-            'window': WindowOracle(env=env, min_norm=FLAGS.min_norm),
+            'cube': CubeMarkovOracle(env=env, min_norm=FLAGS.min_norm, max_step=100),
+            'button': ButtonMarkovOracle(env=env, min_norm=FLAGS.min_norm),
+            'drawer': DrawerMarkovOracle(env=env, min_norm=FLAGS.min_norm),
+            'window': WindowMarkovOracle(env=env, min_norm=FLAGS.min_norm),
         }
 
     dataset = defaultdict(list)

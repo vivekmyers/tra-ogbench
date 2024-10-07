@@ -38,7 +38,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
     def __init__(
         self,
         ob_type='states',
-        action_space_type='relative',  # 'absolute' or 'relative'
         physics_timestep=0.002,
         control_timestep=0.05,
         terminate_at_goal=True,
@@ -57,7 +56,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._ob_type = ob_type
-        self._action_space_type = action_space_type
         self._depth = False
         self._terminate_at_goal = terminate_at_goal
         self._mode = mode
@@ -72,13 +70,9 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
         self._ik = controllers.DiffIKController(model=ik_model, sites=['attachment_site'])
 
-        if self._action_space_type == 'absolute':
-            self.action_low = np.array([*self._workspace_bounds[0], -np.pi, 0.0])
-            self.action_high = np.array([*self._workspace_bounds[1], np.pi, 1.0])
-        else:
-            action_range = np.array([0.05, 0.05, 0.05, 0.3, 1.0])
-            self.action_low = -action_range
-            self.action_high = action_range
+        action_range = np.array([0.05, 0.05, 0.05, 0.3, 1.0])
+        self.action_low = -action_range
+        self.action_high = action_range
 
         if self._mode == 'evaluation':
             self.task_infos = []
@@ -303,21 +297,16 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         action = self.unnormalize_action(action)
         a_pos, a_ori, a_gripper = action[:3], action[3], action[4]
 
-        if self._action_space_type == 'absolute':
-            target_effector_translation = a_pos
-            target_effector_orientation = lie.SO3.from_z_radians(a_ori) @ _EFFECTOR_DOWN_ROTATION
-            target_gripper_opening = a_gripper
-        else:
-            effector_pos = self._data.site_xpos[self._pinch_site_id].copy()
-            effector_yaw = lie.SO3.from_matrix(
-                self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)
-            ).compute_yaw_radians()
-            gripper_opening = np.array(np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1))
-            target_effector_translation = effector_pos + a_pos
-            target_effector_orientation = (
-                lie.SO3.from_z_radians(a_ori) @ lie.SO3.from_z_radians(effector_yaw) @ _EFFECTOR_DOWN_ROTATION.inverse()
-            )
-            target_gripper_opening = gripper_opening + a_gripper
+        effector_pos = self._data.site_xpos[self._pinch_site_id].copy()
+        effector_yaw = lie.SO3.from_matrix(
+            self._data.site_xmat[self._pinch_site_id].copy().reshape(3, 3)
+        ).compute_yaw_radians()
+        gripper_opening = np.array(np.clip([self._data.qpos[self._gripper_opening_joint_id] / 0.8], 0, 1))
+        target_effector_translation = effector_pos + a_pos
+        target_effector_orientation = (
+            lie.SO3.from_z_radians(a_ori) @ lie.SO3.from_z_radians(effector_yaw) @ _EFFECTOR_DOWN_ROTATION.inverse()
+        )
+        target_gripper_opening = gripper_opening + a_gripper
 
         # Make sure the target pose respects the action limits
         np.clip(

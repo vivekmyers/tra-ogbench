@@ -6,7 +6,7 @@ from absl import app, flags
 from tqdm import trange
 
 import envs.manipspace  # noqa
-from envs.manipspace.oracles.cube_open_loop_oracle import CubeOpenLoopOracle
+from envs.manipspace.oracles.plan.cube_plan import CubePlanOracle
 
 FLAGS = flags.FLAGS
 
@@ -32,7 +32,7 @@ def main(_):
     has_button_states = hasattr(env.unwrapped, '_cur_button_states')
     if 'cube' in FLAGS.env_name:
         agents = {
-            'cube': CubeOpenLoopOracle(
+            'cube': CubePlanOracle(
                 env=env,
                 segment_dt=0.4,
                 noise=FLAGS.noise,
