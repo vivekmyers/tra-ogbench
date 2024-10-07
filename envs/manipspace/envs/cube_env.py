@@ -23,7 +23,6 @@ class CubeEnv(ManipSpaceEnv):
 
         super().__init__(*args, **kwargs)
 
-        self._default_camera = 'front_low'
         self._cube_colors = np.array([_COLORS['red'], _COLORS['blue'], _COLORS['orange'], _COLORS['green']])
         self._cube_success_colors = np.array(
             [_COLORS['lightred'], _COLORS['lightblue'], _COLORS['lightorange'], _COLORS['lightgreen']]
@@ -349,6 +348,20 @@ class CubeEnv(ManipSpaceEnv):
         self._cube_target_geoms_list = []
         for i in range(self._num_cubes):
             self._cube_target_geoms_list.append(arena_mjcf.find('body', f'object_target_{i}').find_all('geom'))
+
+        # Add cameras
+        cameras = {
+            'front': {
+                'pos': (1.287, 0.000, 0.509),
+                'xyaxes': (0.000, 1.000, 0.000, -0.342, 0.000, 0.940),
+            },
+            'front_pixels': {
+                'pos': (1.053, -0.014, 0.639),
+                'xyaxes': (0.000, 1.000, 0.000, -0.628, 0.001, 0.778),
+            },
+        }
+        for camera_name, camera_kwargs in cameras.items():
+            arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
     def post_compilation_objects(self):
         self._cube_geom_ids_list = [

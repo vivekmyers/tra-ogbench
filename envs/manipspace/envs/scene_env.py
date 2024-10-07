@@ -15,7 +15,6 @@ class SceneEnv(ManipSpaceEnv):
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.35]])
         self._object_sampling_bounds = np.asarray([[0.3, -0.07], [0.45, 0.18]])
         self._target_sampling_bounds = self._object_sampling_bounds
-        self._default_camera = 'front_distant'
         self._drawer_center = np.array([0.33, -0.24, 0.066])
         self._cube_colors = np.array([_COLORS['red'], _COLORS['blue']])
         self._cube_success_colors = np.array([_COLORS['lightred'], _COLORS['lightblue']])
@@ -136,6 +135,20 @@ class SceneEnv(ManipSpaceEnv):
         self._button_geoms_list = []
         for i in range(self._num_buttons):
             self._button_geoms_list.append([button_mjcf.find('geom', f'btngeom_{i}')])
+
+        # Add cameras
+        cameras = {
+            'front': {
+                'pos': (1.139, 0.000, 0.821),
+                'xyaxes': (0.000, 1.000, 0.000, -0.627, 0.000, 0.779),
+            },
+            'front_pixels': {
+                'pos': (0.905, 0.000, 0.762),
+                'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
+            },
+        }
+        for camera_name, camera_kwargs in cameras.items():
+            arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
     def post_compilation_objects(self):
         self._cube_geom_ids_list = [

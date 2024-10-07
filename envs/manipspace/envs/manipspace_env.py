@@ -56,7 +56,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self._arm_sampling_bounds = np.asarray([[0.25, -0.35, 0.20], [0.6, 0.35, 0.35]])
         self._object_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
         self._target_sampling_bounds = np.asarray([[0.3, -0.3], [0.55, 0.3]])
-        self._default_camera = 'front_low'
         self._ob_type = ob_type
         self._action_space_type = action_space_type
         self._depth = False
@@ -156,24 +155,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         mjcf_utils.attach(arena_mjcf, ur5e_mjcf)
 
         self.add_objects(arena_mjcf)
-
-        # Add cameras
-        cameras = {
-            'front': {
-                'pos': (0.905, 0.000, 0.762),
-                'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
-            },
-            'front_distant': {
-                'pos': (1.139, 0.000, 0.821),
-                'xyaxes': (0.000, 1.000, 0.000, -0.627, 0.000, 0.779),
-            },
-            'front_low': {
-                'pos': (1.287, 0.000, 0.509),
-                'xyaxes': (0.000, 1.000, 0.000, -0.342, 0.000, 0.940),
-            },
-        }
-        for camera_name, camera_kwargs in cameras.items():
-            arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
         # Cache joint and actuator elements
         self._arm_jnts = mjcf_utils.safe_find_all(
@@ -464,6 +445,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         **kwargs,
     ):
         if camera is None:
-            camera = self._default_camera if self._ob_type == 'states' else 'front'
+            camera = 'front' if self._ob_type == 'states' else 'front_pixels'
 
         return super().render(camera=camera, *args, **kwargs)

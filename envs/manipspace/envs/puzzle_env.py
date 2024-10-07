@@ -33,7 +33,6 @@ class PuzzleEnv(ManipSpaceEnv):
         super().__init__(*args, **kwargs)
 
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
-        self._default_camera = 'front_distant'
 
         self._target_task = 'button'
         self._target_button = 0
@@ -451,6 +450,20 @@ class PuzzleEnv(ManipSpaceEnv):
         self._button_geoms_list = []
         for i in range(self._num_buttons):
             self._button_geoms_list.append([arena_mjcf.find('geom', f'btngeom_{i}')])
+
+        # Add cameras
+        cameras = {
+            'front': {
+                'pos': (1.139, 0.000, 0.821),
+                'xyaxes': (0.000, 1.000, 0.000, -0.627, 0.000, 0.779),
+            },
+            'front_pixels': {
+                'pos': (0.905, 0.000, 0.762),
+                'xyaxes': (0.000, 1.000, 0.000, -0.771, 0.000, 0.637),
+            },
+        }
+        for camera_name, camera_kwargs in cameras.items():
+            arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
     def post_compilation_objects(self):
         self._button_geom_ids_list = [
