@@ -21,16 +21,17 @@ flags.DEFINE_integer('seed', 0, 'Random seed')
 flags.DEFINE_string('env_name', 'cube-single-v0', 'Environment name')
 flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
 flags.DEFINE_string('save_path', None, 'Save path')
-flags.DEFINE_string('oracle_type', 'markov', 'Oracle type')
 flags.DEFINE_float('noise', 0.1, 'Action noise')
 flags.DEFINE_float('noise_smoothing', 0.5, 'Action noise smoothing')
 flags.DEFINE_float('min_norm', 0.4, 'Action min norm')
-flags.DEFINE_float('p_random_action', 0.1, 'Random action probability')
+flags.DEFINE_float('p_random_action', 0, 'Random action probability')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
 flags.DEFINE_integer('max_episode_steps', 1001, 'Number of episodes')
 
 
 def main(_):
+    assert FLAGS.dataset_type in ['play', 'noisy']
+
     env = gymnasium.make(
         FLAGS.env_name,
         terminate_at_goal=False,
@@ -38,9 +39,10 @@ def main(_):
         max_episode_steps=FLAGS.max_episode_steps,
     )
 
+    oracle_type = 'plan' if FLAGS.dataset_type == 'play' else 'markov'
     has_button_states = hasattr(env.unwrapped, '_cur_button_states')
     if 'cube' in FLAGS.env_name:
-        if FLAGS.oracle_type == 'markov':
+        if oracle_type == 'markov':
             agents = {
                 'cube': CubeMarkovOracle(env=env, min_norm=FLAGS.min_norm),
             }
@@ -49,7 +51,7 @@ def main(_):
                 'cube': CubePlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
             }
     elif 'puzzle' in FLAGS.env_name:
-        if FLAGS.oracle_type == 'markov':
+        if oracle_type == 'markov':
             agents = {
                 'button': ButtonMarkovOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
             }
@@ -63,7 +65,7 @@ def main(_):
                 ),
             }
     elif 'scene' in FLAGS.env_name:
-        if FLAGS.oracle_type == 'markov':
+        if oracle_type == 'markov':
             agents = {
                 'cube': CubeMarkovOracle(env=env, min_norm=FLAGS.min_norm, max_step=100),
                 'button': ButtonMarkovOracle(env=env, min_norm=FLAGS.min_norm),
@@ -97,7 +99,7 @@ def main(_):
                 p_stack = np.random.uniform(0.1, 0.5)
         else:
             ob, info = env.reset()
-        if FLAGS.oracle_type == 'markov':
+        if oracle_type == 'markov':
             xi = np.random.uniform(0, FLAGS.noise)
         agent = agents[info['privileged/target_task']]
         agent.reset(ob, info)
@@ -111,7 +113,7 @@ def main(_):
             else:
                 action = agent.select_action(ob, info)
                 action = np.array(action)
-                if FLAGS.oracle_type == 'markov':
+                if oracle_type == 'markov':
                     action = action + np.random.normal(0, [xi, xi, xi, xi * 3, xi * 10], action.shape)
             action = np.clip(action, -1, 1)
             next_ob, reward, terminated, truncated, info = env.step(action)
