@@ -91,7 +91,7 @@ class SceneEnv(ManipSpaceEnv):
                     window_pos=0.0,
                 ),
                 goal=dict(
-                    block_xyzs=np.array([[0.33, -0.356, 0.06598601]]),
+                    block_xyzs=np.array([[0.33, -0.356, 0.065986]]),
                     button_states=np.array([1, 0]),
                     drawer_pos=0.0,
                     window_pos=0.0,
@@ -106,7 +106,7 @@ class SceneEnv(ManipSpaceEnv):
                     window_pos=0.0,
                 ),
                 goal=dict(
-                    block_xyzs=np.array([[0.33, -0.356, 0.06598601]]),
+                    block_xyzs=np.array([[0.33, -0.356, 0.065986]]),
                     button_states=np.array([0, 0]),
                     drawer_pos=0.0,
                     window_pos=0.2,
