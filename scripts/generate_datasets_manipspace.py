@@ -87,18 +87,19 @@ def main(_):
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
     for ep_idx in trange(num_train_episodes + num_val_episodes):
-        if FLAGS.dataset_type in ['play']:
-            ob, info = env.reset()
-            if 'single' in FLAGS.env_name:
-                p_stack = 0.0
-            elif 'double' in FLAGS.env_name:
-                p_stack = np.random.uniform(0.0, 0.25)
-            elif 'triple' in FLAGS.env_name:
-                p_stack = np.random.uniform(0.05, 0.35)
-            else:
-                p_stack = np.random.uniform(0.1, 0.5)
+        ob, info = env.reset()
+
+        if 'single' in FLAGS.env_name:
+            p_stack = 0.0
+        elif 'double' in FLAGS.env_name:
+            p_stack = np.random.uniform(0.0, 0.25)
+        elif 'triple' in FLAGS.env_name:
+            p_stack = np.random.uniform(0.05, 0.35)
+        elif 'quadruple' in FLAGS.env_name:
+            p_stack = np.random.uniform(0.1, 0.5)
         else:
-            ob, info = env.reset()
+            p_stack = 0.5
+
         if oracle_type == 'markov':
             xi = np.random.uniform(0, FLAGS.noise)
         agent = agents[info['privileged/target_task']]
@@ -119,7 +120,7 @@ def main(_):
             next_ob, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
 
-            if agent.done and FLAGS.dataset_type == 'play':
+            if agent.done:
                 agent_ob, agent_info = env.unwrapped.set_new_target(p_stack=p_stack)
                 agent = agents[agent_info['privileged/target_task']]
                 agent.reset(agent_ob, agent_info)
