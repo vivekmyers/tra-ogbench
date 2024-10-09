@@ -87,54 +87,85 @@ def main(_):
     num_train_episodes = FLAGS.num_episodes
     num_val_episodes = FLAGS.num_episodes // 10
     for ep_idx in trange(num_train_episodes + num_val_episodes):
-        ob, info = env.reset()
+        # Have an additional while loop to handle rare cases with undesirable states in the scene environment
+        while True:
+            ob, info = env.reset()
 
-        if 'single' in FLAGS.env_name:
-            p_stack = 0.0
-        elif 'double' in FLAGS.env_name:
-            p_stack = np.random.uniform(0.0, 0.25)
-        elif 'triple' in FLAGS.env_name:
-            p_stack = np.random.uniform(0.05, 0.35)
-        elif 'quadruple' in FLAGS.env_name:
-            p_stack = np.random.uniform(0.1, 0.5)
-        else:
-            p_stack = 0.5
-
-        if oracle_type == 'markov':
-            xi = np.random.uniform(0, FLAGS.noise)
-        agent = agents[info['privileged/target_task']]
-        agent.reset(ob, info)
-
-        done = False
-        step = 0
-
-        while not done:
-            if np.random.rand() < FLAGS.p_random_action:
-                action = env.action_space.sample()
+            if 'single' in FLAGS.env_name:
+                p_stack = 0.0
+            elif 'double' in FLAGS.env_name:
+                p_stack = np.random.uniform(0.0, 0.25)
+            elif 'triple' in FLAGS.env_name:
+                p_stack = np.random.uniform(0.05, 0.35)
+            elif 'quadruple' in FLAGS.env_name:
+                p_stack = np.random.uniform(0.1, 0.5)
             else:
-                action = agent.select_action(ob, info)
-                action = np.array(action)
-                if oracle_type == 'markov':
-                    action = action + np.random.normal(0, [xi, xi, xi, xi * 3, xi * 10], action.shape)
-            action = np.clip(action, -1, 1)
-            next_ob, reward, terminated, truncated, info = env.step(action)
-            done = terminated or truncated
+                p_stack = 0.5
 
-            if agent.done:
-                agent_ob, agent_info = env.unwrapped.set_new_target(p_stack=p_stack)
-                agent = agents[agent_info['privileged/target_task']]
-                agent.reset(agent_ob, agent_info)
+            if oracle_type == 'markov':
+                xi = np.random.uniform(0, FLAGS.noise)
+            agent = agents[info['privileged/target_task']]
+            agent.reset(ob, info)
 
-            dataset['observations'].append(ob)
-            dataset['actions'].append(action)
-            dataset['terminals'].append(done)
-            dataset['qpos'].append(info['prev_qpos'])
-            dataset['qvel'].append(info['prev_qvel'])
-            if has_button_states:
-                dataset['button_states'].append(info['prev_button_states'])
+            done = False
+            step = 0
+            ep_qpos = []
 
-            ob = next_ob
-            step += 1
+            while not done:
+                if np.random.rand() < FLAGS.p_random_action:
+                    action = env.action_space.sample()
+                else:
+                    action = agent.select_action(ob, info)
+                    action = np.array(action)
+                    if oracle_type == 'markov':
+                        action = action + np.random.normal(0, [xi, xi, xi, xi * 3, xi * 10], action.shape)
+                action = np.clip(action, -1, 1)
+                next_ob, reward, terminated, truncated, info = env.step(action)
+                done = terminated or truncated
+
+                if agent.done:
+                    agent_ob, agent_info = env.unwrapped.set_new_target(p_stack=p_stack)
+                    agent = agents[agent_info['privileged/target_task']]
+                    agent.reset(agent_ob, agent_info)
+
+                dataset['observations'].append(ob)
+                dataset['actions'].append(action)
+                dataset['terminals'].append(done)
+                dataset['qpos'].append(info['prev_qpos'])
+                dataset['qvel'].append(info['prev_qvel'])
+                if has_button_states:
+                    dataset['button_states'].append(info['prev_button_states'])
+                ep_qpos.append(info['prev_qpos'])
+
+                ob = next_ob
+                step += 1
+
+            if 'scene' in FLAGS.env_name:
+                # Perform two health checks:
+                # (1) Ensure that the cube is always visible unless it's in the drawer
+                # Otherwise, the test-time goal images may become ambiguous
+                # (2) Ensure that the simulation is stable
+                is_healthy = True
+                ep_qpos = np.array(ep_qpos)
+                min_qpos = np.min(ep_qpos, axis=0)
+                max_qpos = np.max(ep_qpos, axis=0)
+                diff_max = (max_qpos - min_qpos).max()
+                block_xyzs = ep_qpos[:, 14:17]
+                if (block_xyzs[:, 1] >= 0.29).any():
+                    is_healthy = False  # Block goes too far right
+                if ((block_xyzs[:, 1] <= -0.3) & ((block_xyzs[:, 2] < 0.06) | (block_xyzs[:, 2] > 0.08))).any():
+                    is_healthy = False  # Block goes too far left, without being in the drawer
+                if diff_max > 20:
+                    is_healthy = False  # Simulation is unstable
+
+                if is_healthy:
+                    break
+                else:
+                    print('Unhealthy episode, retrying...')
+                    for k in dataset.keys():
+                        dataset[k] = dataset[k][:-step]
+            else:
+                break
 
         total_steps += step
         if ep_idx < num_train_episodes:
