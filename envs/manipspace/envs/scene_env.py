@@ -406,9 +406,8 @@ class SceneEnv(ManipSpaceEnv):
             is_healthy = True
             for i in range(self._num_cubes):
                 obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
-                if not (
-                    np.all(self._workspace_bounds[0] - 1 <= obj_pos)
-                    or not np.all(obj_pos <= self._object_sampling_bounds[1] + 1)
+                if np.any(obj_pos <= self._workspace_bounds[0] - 1 <= obj_pos) or np.any(
+                    obj_pos >= self._workspace_bounds[1] + 1 >= obj_pos
                 ):
                     is_healthy = False
                     break
