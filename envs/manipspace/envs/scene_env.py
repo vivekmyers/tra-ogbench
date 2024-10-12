@@ -399,10 +399,10 @@ class SceneEnv(ManipSpaceEnv):
         super().pre_step()
 
     def post_step(self):
-        # Check health
+        # Check numerical stability.
         if self._mode == 'task':
-            # Very rarely the blocks can go out of bounds due to some numerical instability
-            # We only check this in the task mode because we manually filter out these cases in the data collection mode
+            # Very rarely, the blocks can go out of bounds due to numerical instability.
+            # We only check this in the task mode (we manually filter out these cases in the data collection mode).
             is_healthy = True
             for i in range(self._num_cubes):
                 obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
@@ -420,9 +420,10 @@ class SceneEnv(ManipSpaceEnv):
                     obj_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
                     self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
                     self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
+                    self._data.joint('object_joint_0').qvel[:] = 0.0
                 mujoco.mj_forward(self._model, self._data)
 
-        # Change button states if pressed
+        # Change button states if pressed.
         for i in range(self._num_buttons):
             prev_joint_pos = self._prev_ob_info[f'privileged/button_{i}_pos'][0]
             cur_joint_pos = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()[0]
@@ -430,7 +431,7 @@ class SceneEnv(ManipSpaceEnv):
                 self._cur_button_states[i] = (self._cur_button_states[i] + 1) % self._num_button_states
         self._apply_button_states()
 
-        # Evaluate successes
+        # Evaluate successes.
         cube_successes = []
         for i in range(self._num_cubes):
             obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
