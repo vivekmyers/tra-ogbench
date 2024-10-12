@@ -399,6 +399,32 @@ class SceneEnv(ManipSpaceEnv):
         super().pre_step()
 
     def post_step(self):
+        # Check health
+        if self._mode == 'task':
+            # Very rarely the blocks can go out of bounds due to some numerical instability
+            # We only check this in the task mode because we manually filter out these cases in the data collection mode
+            is_healthy = True
+            for i in range(self._num_cubes):
+                obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
+                if not (
+                    np.all(self._workspace_bounds[0] - 1 <= obj_pos)
+                    or not np.all(obj_pos <= self._object_sampling_bounds[1] + 1)
+                ):
+                    is_healthy = False
+                    break
+
+            if not is_healthy:
+                # Manually reset the cube position
+                print('Numerical instability detected. Resetting cube positions.')
+                for i in range(self._num_cubes):
+                    xy = self.np_random.uniform(*self._object_sampling_bounds)
+                    obj_pos = (*xy, 0.02)
+                    yaw = self.np_random.uniform(0, 2 * np.pi)
+                    obj_ori = lie.SO3.from_z_radians(yaw).wxyz.tolist()
+                    self._data.joint(f'object_joint_{i}').qpos[:3] = obj_pos
+                    self._data.joint(f'object_joint_{i}').qpos[3:] = obj_ori
+                mujoco.mj_forward(self._model, self._data)
+
         # Change button states if pressed
         for i in range(self._num_buttons):
             prev_joint_pos = self._prev_ob_info[f'privileged/button_{i}_pos'][0]
