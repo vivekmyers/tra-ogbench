@@ -507,7 +507,7 @@ class CubeEnv(ManipSpaceEnv):
             self._success = all(cube_successes)
 
         for i in range(self._num_cubes):
-            if self._visualize_info and (self._mode == 'evaluation' or i == self._target_block):
+            if self._visualize_info and (self._mode == 'task' or i == self._target_block):
                 for gid in self._cube_target_geom_ids_list[i]:
                     self._model.geom(gid).rgba[3] = 0.2
             else:

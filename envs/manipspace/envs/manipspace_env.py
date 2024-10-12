@@ -41,7 +41,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         physics_timestep=0.002,
         control_timestep=0.05,
         terminate_at_goal=True,
-        mode='evaluation',  # 'evaluation' or 'data_collection'
+        mode='task',  # 'task' or 'data_collection'
         visualize_info=True,
         **kwargs,
     ):
@@ -74,7 +74,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         self.action_low = -action_range
         self.action_high = action_range
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             self.task_infos = []
             self.cur_task_idx = None
             self.cur_task_info = None
@@ -245,7 +245,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         pass
 
     def reset(self, options=None, *args, **kwargs):
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             if options is not None:
                 if 'task_idx' in options:
                     self.cur_task_idx = options['task_idx']
@@ -410,7 +410,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
 
     def get_reset_info(self):
         reset_info = self.compute_ob_info()
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             reset_info['goal'] = self._cur_goal_ob
             if self._render_goal is not None:
                 reset_info['goal_frame'] = self._cur_goal_frame

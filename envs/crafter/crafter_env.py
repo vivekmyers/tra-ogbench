@@ -12,7 +12,7 @@ class CrafterEnv(gymnasium.Env):
 
     def __init__(
         self,
-        mode='evaluation',  # ['evaluation', 'data_collection', 'online']
+        mode='task',  # ['task', 'data_collection', 'online']
         *args,
         **kwargs,
     ):
@@ -25,7 +25,7 @@ class CrafterEnv(gymnasium.Env):
         self._num_last_steps = 3
         self._cur_last_count = 0
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             self.task_infos = []
             self.cur_task_idx = None
             self.cur_task_info = None
@@ -81,7 +81,7 @@ class CrafterEnv(gymnasium.Env):
         ]
 
     def reset(self, *, seed=None, options=None):
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             render_goal = False
             if options is not None:
                 if 'task_idx' in options:
@@ -105,7 +105,7 @@ class CrafterEnv(gymnasium.Env):
         self._internal_done = False
         self._cur_last_count = 0
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             goal_inventory = dict(self.env._player.inventory)
             for item, amount in goal_inventory.items():
                 if item in self.cur_task_info['goal_items']:
@@ -142,7 +142,7 @@ class CrafterEnv(gymnasium.Env):
                     return ob, 0.0, done, done, info
                 else:
                     return ob, reward, done, done, info
-            elif self._mode == 'evaluation':
+            elif self._mode == 'task':
                 success = True
                 for item, amount in self.env._player.inventory.items():
                     if item in ['health', 'food', 'drink', 'energy']:

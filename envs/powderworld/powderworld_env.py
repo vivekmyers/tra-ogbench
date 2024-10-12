@@ -18,7 +18,7 @@ class PowderworldEnv(gymnasium.Env):
         grid_size=4,
         brush_size=4,
         num_elems=5,
-        mode='evaluation',  # 'evaluation' or 'data_collection'
+        mode='task',  # 'task' or 'data_collection'
         render_mode=None,  # Unused; for compatibility with gymnasium
         width=192,  # Only used for rendering, not for observations
         height=192,  # Only used for rendering, not for observations
@@ -55,7 +55,7 @@ class PowderworldEnv(gymnasium.Env):
         self._action_x = None
         self._action_y = None
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             self.task_infos = []
             self.cur_task_idx = None
             self.cur_task_info = None
@@ -256,7 +256,7 @@ class PowderworldEnv(gymnasium.Env):
             raise NotImplementedError
 
     def reset(self, *, seed=None, options=None):
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             render_goal = False
             if options is not None:
                 if 'task_idx' in options:
@@ -287,14 +287,14 @@ class PowderworldEnv(gymnasium.Env):
         self._action_x = None
         self._action_y = None
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             # First get a goal observation
             self._mode = 'internal'
             self.reset()
             for semantic_action in self.cur_task_info['action_seq']:
                 for _ in range(3):
                     self.step(self.semantic_action_to_action(*semantic_action))
-            self._mode = 'evaluation'
+            self._mode = 'task'
             goal = self._get_ob()
             self.cur_goal_world = self._world[0, 0].copy()
             if render_goal:
@@ -306,12 +306,12 @@ class PowderworldEnv(gymnasium.Env):
             semantic_action = self.sample_semantic_action()
             for _ in range(3):
                 self.step(self.semantic_action_to_action(*semantic_action))
-            self._mode = 'evaluation'
+            self._mode = 'task'
 
         ob = self._get_ob()
         info = dict()
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             info['goal'] = goal
             if render_goal:
                 info['goal_frame'] = goal_frame
@@ -361,7 +361,7 @@ class PowderworldEnv(gymnasium.Env):
         done = False
         info = dict()
 
-        if self._mode == 'evaluation':
+        if self._mode == 'task':
             cur_world = self._world[0, 0].copy()
             world_shifts = []
             for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:

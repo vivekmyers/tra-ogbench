@@ -28,7 +28,7 @@ def main():
     # env_type = 'puzzle_4x6'
     # env_type = 'scene'
     mode = 'data_collection'
-    # mode = 'evaluation'
+    # mode = 'task'
     min_norm = 0.4
     if 'cube' in env_type:
         env = CubeEnv(
