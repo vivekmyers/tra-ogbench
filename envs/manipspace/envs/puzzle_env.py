@@ -39,7 +39,7 @@ class PuzzleEnv(ManipSpaceEnv):
         self._target_button_states = np.array([0] * self._num_buttons)
 
     def set_state(self, qpos, qvel, button_states):
-        self._cur_button_states = button_states
+        self._cur_button_states = button_states.copy()
         self._apply_button_states()
         super().set_state(qpos, qvel)
 

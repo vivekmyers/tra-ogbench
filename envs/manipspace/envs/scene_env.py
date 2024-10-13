@@ -31,7 +31,7 @@ class SceneEnv(ManipSpaceEnv):
         self._target_window_pos = 0.0
 
     def set_state(self, qpos, qvel, button_states):
-        self._cur_button_states = button_states
+        self._cur_button_states = button_states.copy()
         self._apply_button_states()
         super().set_state(qpos, qvel)
 
