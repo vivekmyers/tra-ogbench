@@ -12,6 +12,8 @@ from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
 class SACAgent(flax.struct.PyTreeNode):
+    """Soft actor-critic (SAC) agent."""
+
     rng: Any
     network: Any
     config: Any = nonpytree_field()
@@ -181,20 +183,20 @@ class SACAgent(flax.struct.PyTreeNode):
 def get_config():
     config = ml_collections.ConfigDict(
         dict(
-            agent_name='sac',
-            lr=3e-4,
-            batch_size=1024,
-            actor_hidden_dims=(512, 512, 512),
-            value_hidden_dims=(512, 512, 512),
-            layer_norm=False,
-            discount=0.99,
+            agent_name='sac',  # Agent name
+            lr=3e-4,  # Learning rate
+            batch_size=1024,  # Batch size
+            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions
+            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions
+            layer_norm=False,  # Whether to use layer normalization
+            discount=0.99,  # Discount factor
             tau=0.005,  # Target network update rate
-            target_entropy=ml_collections.config_dict.placeholder(float),
-            target_entropy_multiplier=0.5,
-            tanh_squash=True,
-            state_dependent_std=True,
-            actor_fc_scale=0.01,
-            min_q=True,  # Use min or mean for target critic value
+            target_entropy=ml_collections.config_dict.placeholder(float),  # Target entropy (None for automatic tuning)
+            target_entropy_multiplier=0.5,  # Multiplier to dim(A) for target entropy
+            tanh_squash=True,  # Whether to squash actions with tanh
+            state_dependent_std=True,  # Whether to use state-dependent standard deviations for actor
+            actor_fc_scale=0.01,  # Final layer initialization scale for actor
+            min_q=True,  # Whether to use min Q (True) or mean Q (False)
         )
     )
     return config

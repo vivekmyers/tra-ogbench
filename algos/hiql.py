@@ -13,6 +13,8 @@ from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
 class HIQLAgent(flax.struct.PyTreeNode):
+    """Hierarchical implicit Q-learning (HIQL) agent."""
+
     rng: Any
     network: Any
     config: Any = nonpytree_field()
@@ -61,6 +63,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
             jnp.concatenate([batch['observations'], batch['low_actor_goals']], axis=-1), params=grad_params
         )
         if not self.config['low_actor_rep_grad']:
+            # Stop gradients from flowing to goal representations
             goal_reps = jax.lax.stop_gradient(goal_reps)
         dist = self.network.select('low_actor')(batch['observations'], goal_reps, goal_encoded=True, params=grad_params)
         log_prob = dist.log_prob(batch['actions'])
@@ -185,6 +188,7 @@ class HIQLAgent(flax.struct.PyTreeNode):
         else:
             action_dim = ex_actions.shape[-1]
 
+        # Define (state-dependent) subgoal representation phi([s; g]) that outputs a length-normalized vector.
         if config['encoder'] is not None:
             encoder_module = encoder_modules[config['encoder']]
             goal_rep_seq = [encoder_module()]
@@ -200,17 +204,30 @@ class HIQLAgent(flax.struct.PyTreeNode):
         goal_rep_seq.append(LengthNormalize())
         goal_rep_def = nn.Sequential(goal_rep_seq)
 
+        # Define encoders that handle the inputs to the value and actor networks.
+        # The subgoal representation phi([s; g]) is trained by the parameterized value function V(s, phi([s; g])).
+        # The high-level actor predicts the subgoal representation phi([s; w]) for subgoal w given s and g.
+        # The low-level actor predicts actions given the current state s and the subgoal representation phi([s; w]).
         if config['encoder'] is not None:
+            # Pixel-based environments: Require visual encoders for state inputs.
+            # V(encoder^V(s), phi([s; g]))
             value_encoder_def = GCEncoder(state_encoder=encoder_module(), concat_encoder=goal_rep_def)
             target_value_encoder_def = GCEncoder(state_encoder=encoder_module(), concat_encoder=goal_rep_def)
+            # pi^l(. | encoder^l(s), phi([s; w]))
             low_actor_encoder_def = GCEncoder(state_encoder=encoder_module(), concat_encoder=goal_rep_def)
+            # pi^h(. | encoder^h([s; g]))
             high_actor_encoder_def = GCEncoder(concat_encoder=encoder_module())
         else:
+            # State-based environments
+            # V(s, phi([s; g]))
             value_encoder_def = GCEncoder(state_encoder=Identity(), concat_encoder=goal_rep_def)
             target_value_encoder_def = GCEncoder(state_encoder=Identity(), concat_encoder=goal_rep_def)
+            # pi^l(. | s, phi([s; w]))
             low_actor_encoder_def = GCEncoder(state_encoder=Identity(), concat_encoder=goal_rep_def)
+            # pi^h(. | s, g) (i.e., no encoder)
             high_actor_encoder_def = None
 
+        # Define value and actor networks.
         value_def = GCValue(
             hidden_dims=config['value_hidden_dims'],
             layer_norm=config['layer_norm'],
@@ -270,35 +287,37 @@ class HIQLAgent(flax.struct.PyTreeNode):
 def get_config():
     config = ml_collections.ConfigDict(
         dict(
-            agent_name='hiql',
-            lr=3e-4,
-            batch_size=1024,
-            actor_hidden_dims=(512, 512, 512),
-            value_hidden_dims=(512, 512, 512),
-            layer_norm=True,
-            discount=0.99,
+            # Agent hyperparameters
+            agent_name='hiql',  # Agent name
+            lr=3e-4,  # Learning rate
+            batch_size=1024,  # Batch size
+            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions
+            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions
+            layer_norm=True,  # Whether to use layer normalization
+            discount=0.99,  # Discount factor
             tau=0.005,  # Target network update rate
-            expectile=0.7,
-            low_alpha=1.0,
-            high_alpha=1.0,
-            subgoal_steps=25,
-            rep_dim=10,
-            low_actor_rep_grad=False,  # Whether the gradient flows from the low actor to the goal representation
-            const_std=True,
-            discrete=False,
-            encoder=ml_collections.config_dict.placeholder(str),
-            dataset_class='HGCDataset',
-            value_p_curgoal=0.2,
-            value_p_trajgoal=0.5,
-            value_p_randomgoal=0.3,
-            value_geom_sample=True,
-            actor_p_curgoal=0.0,
-            actor_p_trajgoal=1.0,
-            actor_p_randomgoal=0.0,
-            actor_geom_sample=False,
-            gc_negative=True,  # True for (-1, 0) rewards, False for (0, 1) rewards
-            p_aug=0.0,
-            frame_stack=ml_collections.config_dict.placeholder(int),
+            expectile=0.7,  # IQL expectile
+            low_alpha=1.0,  # Low-level AWR temperature
+            high_alpha=1.0,  # High-level AWR temperature
+            subgoal_steps=25,  # Subgoal steps
+            rep_dim=10,  # Goal representation dimension
+            low_actor_rep_grad=False,  # Whether low-actor gradients flow to goal representation (use True for pixels)
+            const_std=True,  # Whether to use constant standard deviation for the actors
+            discrete=False,  # Whether the action space is discrete
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.)
+            # Dataset hyperparameters
+            dataset_class='HGCDataset',  # Dataset class name
+            value_p_curgoal=0.2,  # Probability of using the current state for value goals
+            value_p_trajgoal=0.5,  # Probability of using future states for value goals
+            value_p_randomgoal=0.3,  # Probability of using random states for value goals
+            value_geom_sample=True,  # Whether to use geometric sampling for future value goals
+            actor_p_curgoal=0.0,  # Probability of using the current state for actor goals
+            actor_p_trajgoal=1.0,  # Probability of using future states for actor goals
+            actor_p_randomgoal=0.0,  # Probability of using random states for actor goals
+            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals
+            gc_negative=True,  # Whether to use '0 if s == g else -1' (True) or '1 if s == g else 0' (False)
+            p_aug=0.0,  # Probability of applying image augmentation
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
         )
     )
     return config

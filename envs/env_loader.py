@@ -139,7 +139,7 @@ def get_dataset(dataset_path, ob_dtype=np.float32, action_dtype=np.float32):
     return Dataset.create(**train_dataset), Dataset.create(**val_dataset)
 
 
-def make_env_and_dataset(env_name, dataset_path=None):
+def make_env_and_dataset(env_name, dataset_path=None, frame_stack=None):
     setup_egl()
 
     if 'antmaze' in env_name and ('diverse' in env_name or 'play' in env_name):
@@ -194,6 +194,9 @@ def make_env_and_dataset(env_name, dataset_path=None):
         train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8, action_dtype=np.int32)
     else:
         raise ValueError(f'Unknown environment: {env_name}')
+
+    if frame_stack is not None:
+        env = FrameStackWrapper(env, frame_stack)
 
     if val_dataset is not None and val_dataset.size == 0:
         val_dataset = None

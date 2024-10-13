@@ -4,7 +4,6 @@ import os
 import pickle
 import random
 import time
-from datetime import datetime
 
 import flax
 import jax
@@ -19,7 +18,7 @@ from envs.env_loader import make_online_env, make_vec_env
 from envs.viz_utils import visualize_trajs
 from utils.dataset import ReplayBuffer
 from utils.evaluation import evaluate, flatten
-from utils.logger import CsvLogger, get_flag_dict, get_wandb_video, setup_wandb
+from utils.logger import CsvLogger, get_flag_dict, get_wandb_video, setup_wandb, get_exp_name
 
 FLAGS = flags.FLAGS
 
@@ -33,35 +32,24 @@ flags.DEFINE_integer('restore_epoch', None, 'Restore epoch')
 
 flags.DEFINE_integer('num_envs', 64, 'Number of environments')
 flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps')
-flags.DEFINE_integer('train_interval', 128, 'Train interval')
-flags.DEFINE_integer('log_interval', 1000, 'Log interval')
+flags.DEFINE_integer('train_interval', 128, 'Training interval')
+flags.DEFINE_integer('log_interval', 5000, 'Logging interval')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
-flags.DEFINE_integer('save_interval', 100000, 'Save interval')
+flags.DEFINE_integer('save_interval', 1000000, 'Saving interval')
 
 flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all)')
 flags.DEFINE_integer('eval_episodes', 50, 'Number of episodes for each task')
-flags.DEFINE_float('eval_temperature', 0, 'Evaluation temperature')
-flags.DEFINE_float('eval_gaussian', None, 'Evaluation Gaussian noise')
-flags.DEFINE_integer('video_episodes', 2, 'Number of video episodes for each task')
-flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for video')
+flags.DEFINE_float('eval_temperature', 0, 'Actor temperature for evaluation')
+flags.DEFINE_float('eval_gaussian', None, 'Action Gaussian noise for evaluation')
+flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each task')
+flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos')
 
 config_flags.DEFINE_config_file('agent', 'algos/ppo.py', lock_config=False)
 
 
-def get_exp_name():
-    exp_name = ''
-    exp_name += f'sd{FLAGS.seed:03d}_'
-    if 'SLURM_JOB_ID' in os.environ:
-        exp_name += f's_{os.environ["SLURM_JOB_ID"]}.'
-    if 'SLURM_PROCID' in os.environ:
-        exp_name += f'{os.environ["SLURM_PROCID"]}.'
-    exp_name += f'{datetime.now().strftime("%Y%m%d_%H%M%S")}'
-
-    return exp_name
-
-
 def main(_):
-    exp_name = get_exp_name()
+    # Set up logger.
+    exp_name = get_exp_name(FLAGS.seed)
     setup_wandb(project='ogcrl', group=FLAGS.run_group, name=exp_name)
 
     FLAGS.save_dir = os.path.join(FLAGS.save_dir, wandb.run.project, FLAGS.run_group, exp_name)
@@ -70,13 +58,10 @@ def main(_):
     with open(os.path.join(FLAGS.save_dir, 'flags.json'), 'w') as f:
         json.dump(flag_dict, f)
 
+    # Set up environments and replay buffer.
     config = FLAGS.agent
-
     env = make_vec_env(FLAGS.env_name, FLAGS.num_envs)
     eval_env = make_online_env(FLAGS.env_name)
-
-    random.seed(FLAGS.seed)
-    np.random.seed(FLAGS.seed)
 
     zeros = np.zeros((FLAGS.num_envs,))
     example_transition = dict(
@@ -88,10 +73,14 @@ def main(_):
         log_probs=zeros,
     )
     if config['discrete']:
-        # Fill with the maximum action
+        # Fill with the maximum action.
         example_transition['actions'] = np.full_like(example_transition['actions'], env.single_action_space.n - 1)
 
     replay_buffer = ReplayBuffer.create(example_transition, size=FLAGS.train_interval)
+
+    # Initialize agent.
+    random.seed(FLAGS.seed)
+    np.random.seed(FLAGS.seed)
 
     agent_class = algos[config['agent_name']]
     agent = agent_class.create(
@@ -101,13 +90,11 @@ def main(_):
         config,
     )
 
+    # Restore agent.
     if FLAGS.restore_path is not None:
         restore_path = FLAGS.restore_path
         candidates = glob.glob(restore_path)
-        if len(candidates) == 0:
-            raise Exception(f'Path does not exist: {restore_path}')
-        if len(candidates) > 1:
-            raise Exception(f'Multiple matching paths exist for: {restore_path}')
+        assert len(candidates) == 1, f'Found {len(candidates)} candidates: {candidates}'
         if FLAGS.restore_epoch is None:
             restore_path = candidates[0] + '/params.pkl'
         else:
@@ -117,6 +104,7 @@ def main(_):
         agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
         print(f'Restored from {restore_path}')
 
+    # Train agent.
     expl_metrics = dict()
     expl_rng = jax.random.PRNGKey(FLAGS.seed)
     obs, _ = env.reset()
@@ -127,6 +115,7 @@ def main(_):
     last_time = time.time()
     update_info = None
     for i in tqdm.tqdm(range(1, FLAGS.train_steps + 1), smoothing=0.1, dynamic_ncols=True):
+        # Sample transitions.
         expl_rng, key = jax.random.split(expl_rng)
         actions, log_probs = agent.sample_actions(observations=obs, seed=key, info=True)
         if not agent.config['discrete']:
@@ -150,11 +139,13 @@ def main(_):
             info = {k: v[0] for k, v in infos.items() if not k.startswith('_')}
             expl_metrics = {f'exploration/{k}': v for k, v in flatten(info).items()}
 
+        # Update agent.
         if i % FLAGS.train_interval == 0:
             traj_batch = replay_buffer.get_subset(slice(0, FLAGS.train_interval))
             agent, update_info = agent.train(traj_batch)
             replay_buffer.clear()
 
+        # Log metrics.
         if i % FLAGS.log_interval == 0 and update_info is not None:
             train_metrics = {f'training/{k}': v for k, v in update_info.items()}
             train_metrics['time/epoch_time'] = (time.time() - last_time) / FLAGS.log_interval
@@ -164,6 +155,7 @@ def main(_):
             wandb.log(train_metrics, step=i)
             train_logger.log(train_metrics, step=i)
 
+        # Evaluate agent.
         if i % FLAGS.eval_interval == 0:
             eval_metrics = {}
             eval_info, trajs, renders = evaluate(
@@ -190,14 +182,15 @@ def main(_):
             wandb.log(eval_metrics, step=i)
             eval_logger.log(eval_metrics, step=i)
 
+        # Save agent.
         if i % FLAGS.save_interval == 0:
             save_dict = dict(
                 agent=flax.serialization.to_state_dict(agent),
             )
 
-            fname = os.path.join(FLAGS.save_dir, f'params_{i}.pkl')
-            print(f'Saving to {fname}')
-            with open(fname, 'wb') as f:
+            save_path = os.path.join(FLAGS.save_dir, f'params_{i}.pkl')
+            print(f'Saving to {save_path}')
+            with open(save_path, 'wb') as f:
                 pickle.dump(save_dict, f)
     train_logger.close()
     eval_logger.close()

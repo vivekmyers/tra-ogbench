@@ -11,10 +11,19 @@ nonpytree_field = functools.partial(flax.struct.field, pytree_node=False)
 
 
 class ModuleDict(nn.Module):
+    """A wrapper for multiple modules.
+
+    This allows sharing parameters between modules and calling them by name.
+    """
     modules: Dict[str, nn.Module]
 
     @nn.compact
     def __call__(self, *args, name=None, **kwargs):
+        """Either call all modules with the provided arguments or call a single module by name.
+
+        For initialization, call with `name=None` and provide the arguments for each module in `kwargs`.
+        For forward pass, call with `name=<module_name>` and provide the arguments for that module.
+        """
         if name is None:
             if kwargs.keys() != self.modules.keys():
                 raise ValueError(

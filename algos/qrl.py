@@ -13,6 +13,13 @@ from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
 class QRLAgent(flax.struct.PyTreeNode):
+    """Quasimetric RL (QRL) agent.
+
+    This implementation supports the following variants:
+    (1) Value parameterizations: IQE (quasimetric_type='iqe', default) and MRN (quasimetric_type='mrn').
+    (2) Actor losses: AWR (actor_loss='awr') and latent dynamics-based DDPG+BC (actor_loss='ddpgbc', default).
+    """
+
     rng: Any
     network: Any
     config: Any = nonpytree_field()
@@ -22,6 +29,7 @@ class QRLAgent(flax.struct.PyTreeNode):
         d_pos = self.network.select('value')(batch['observations'], batch['next_observations'], params=grad_params)
         lam = self.network.select('lam')(params=grad_params)
 
+        # Apply shaping following the original implementation.
         d_neg_loss = (100 * jax.nn.softplus(5 - d_neg / 100)).mean()
         d_pos_loss = (jax.nn.relu(d_pos - 1) ** 2).mean()
 
@@ -49,6 +57,7 @@ class QRLAgent(flax.struct.PyTreeNode):
         _, ob_reps, next_ob_reps = self.network.select('value')(
             batch['observations'], batch['next_observations'], info=True, params=grad_params
         )
+        # Dynamics model predicts the delta of the next observation.
         pred_next_ob_reps = ob_reps + self.network.select('dynamics')(
             jnp.concatenate([ob_reps, batch['actions']], axis=-1), params=grad_params
         )
@@ -63,6 +72,7 @@ class QRLAgent(flax.struct.PyTreeNode):
 
     def actor_loss(self, batch, grad_params, rng=None):
         if self.config['actor_loss'] == 'awr':
+            # Compute AWR loss based on V(s', g) - V(s, g).
             v = -self.network.select('value')(batch['observations'], batch['actor_goals'])
             nv = -self.network.select('value')(batch['next_observations'], batch['actor_goals'])
             adv = nv - v
@@ -90,6 +100,7 @@ class QRLAgent(flax.struct.PyTreeNode):
 
             return actor_loss, actor_info
         elif self.config['actor_loss'] == 'ddpgbc':
+            # Compute DDPG+BC loss based on latent dynamics model.
             assert not self.config['discrete']
 
             dist = self.network.select('actor')(batch['observations'], batch['actor_goals'], params=grad_params)
@@ -104,6 +115,7 @@ class QRLAgent(flax.struct.PyTreeNode):
             )
             q = -self.network.select('value')(pred_next_ob_reps, goal_reps, is_phi=True)
 
+            # Normalize Q values by the absolute mean to make the loss scale invariant.
             q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-6)
             log_prob = dist.log_prob(batch['actions'])
 
@@ -236,7 +248,7 @@ class QRLAgent(flax.struct.PyTreeNode):
                 gc_encoder=encoders.get('actor'),
             )
 
-        lam_def = LogParam()
+        lam_def = LogParam()  # Dual lambda variable
 
         network_info = dict(
             value=(value_def, (ex_observations, ex_goals)),
@@ -261,33 +273,35 @@ class QRLAgent(flax.struct.PyTreeNode):
 def get_config():
     config = ml_collections.ConfigDict(
         dict(
-            agent_name='qrl',
-            lr=3e-4,
-            batch_size=1024,
-            actor_hidden_dims=(512, 512, 512),
-            value_hidden_dims=(512, 512, 512),
-            quasimetric_type='iqe',  # ['mrn', 'iqe']
-            latent_dim=512,
-            layer_norm=True,
-            discount=0.99,  # Unused in QRL; for compatibility with GCDataset
-            eps=0.05,  # Margin for dual lambda loss
-            actor_loss='ddpgbc',  # ['awr', 'ddpgbc']
-            alpha=3.0,  # AWR temperature or DDPG+BC coefficient
-            const_std=True,
-            discrete=False,
-            encoder=ml_collections.config_dict.placeholder(str),
-            dataset_class='GCDataset',
-            value_p_curgoal=0.0,
-            value_p_trajgoal=0.0,
-            value_p_randomgoal=1.0,
-            value_geom_sample=True,
-            actor_p_curgoal=0.0,
-            actor_p_trajgoal=1.0,
-            actor_p_randomgoal=0.0,
-            actor_geom_sample=False,
-            gc_negative=False,  # Unused in QRL; for compatibility with GCDataset
-            p_aug=0.0,
-            frame_stack=ml_collections.config_dict.placeholder(int),
+            # Agent hyperparameters
+            agent_name='qrl',  # Agent name
+            lr=3e-4,  # Learning rate
+            batch_size=1024,  # Batch size
+            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions
+            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions
+            quasimetric_type='iqe',  # Quasimetric parameterization type ('iqe' or 'mrn')
+            latent_dim=512,  # Latent dimension for the quasimetric value function
+            layer_norm=True,  # Whether to use layer normalization
+            discount=0.99,  # Discount factor (unused by default; can be used for sampling future goals in GCDataset)
+            eps=0.05,  # Margin for the dual lambda loss
+            actor_loss='ddpgbc',  # Actor loss type ('awr' or 'ddpgbc')
+            alpha=3.0,  # Temperature in AWR or BC coefficient in DDPG+BC
+            const_std=True,  # Whether to use constant standard deviation for the actor
+            discrete=False,  # Whether the action space is discrete
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.)
+            # Dataset hyperparameters
+            dataset_class='GCDataset',  # Dataset class name
+            value_p_curgoal=0.0,  # Probability of using the current state for value goals
+            value_p_trajgoal=0.0,  # Probability of using future states for value goals
+            value_p_randomgoal=1.0,  # Probability of using random states for value goals
+            value_geom_sample=True,  # Whether to use geometric sampling for future value goals
+            actor_p_curgoal=0.0,  # Probability of using the current state for actor goals
+            actor_p_trajgoal=1.0,  # Probability of using future states for actor goals
+            actor_p_randomgoal=0.0,  # Probability of using random states for actor goals
+            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals
+            gc_negative=False,  # Unused (defined for compatibility with GCDataset)
+            p_aug=0.0,  # Probability of applying image augmentation
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
         )
     )
     return config

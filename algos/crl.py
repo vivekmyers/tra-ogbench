@@ -12,6 +12,13 @@ from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
 class CRLAgent(flax.struct.PyTreeNode):
+    """Contrastive RL (CRL) agent.
+
+    This implementation supports the following variants:
+    (1) Value losses: Standard CRL (use_q=True, default) and value-only CRL (use_q=False).
+    (2) Actor losses: AWR (actor_loss='awr') and DDPG+BC (actor_loss='ddpgbc', default).
+    """
+
     rng: Any
     network: Any
     config: Any = nonpytree_field()
@@ -31,7 +38,7 @@ class CRLAgent(flax.struct.PyTreeNode):
             phi = phi[None, ...]
             psi = psi[None, ...]
         logits = jnp.einsum('eik,ejk->ije', phi, psi) / jnp.sqrt(phi.shape[-1])
-        # logits.shape = (B, B, e) with 1 term for positive pair and (B - 1) terms for negative pairs in each row
+        # logits.shape is (B, B, e) with one term for positive pair and (B - 1) terms for negative pairs in each row.
         I = jnp.eye(batch_size)
         contrastive_loss = jax.vmap(
             lambda _logits: optax.sigmoid_binary_cross_entropy(logits=_logits, labels=I),
@@ -58,6 +65,7 @@ class CRLAgent(flax.struct.PyTreeNode):
         }
 
     def actor_loss(self, batch, grad_params, rng=None):
+        # Maximize log Q if actor_log_q is True (which is default).
         if self.config['actor_log_q']:
 
             def value_transform(x):
@@ -68,7 +76,9 @@ class CRLAgent(flax.struct.PyTreeNode):
                 return x
 
         if self.config['actor_loss'] == 'awr':
+            # AWR loss
             if self.config['use_q']:
+                # Standard CRL: Compute Q(s, a, g) - V(s, g).
                 v = value_transform(self.network.select('value')(batch['observations'], batch['actor_goals']))
                 q1, q2 = value_transform(
                     self.network.select('critic')(batch['observations'], batch['actor_goals'], batch['actions'])
@@ -76,6 +86,7 @@ class CRLAgent(flax.struct.PyTreeNode):
                 q = jnp.minimum(q1, q2)
                 adv = q - v
             else:
+                # Value-only CRL: Compute V(s', g) - V(s, g).
                 v1, v2 = value_transform(self.network.select('value')(batch['observations'], batch['actor_goals']))
                 nv1, nv2 = value_transform(
                     self.network.select('value')(batch['next_observations'], batch['actor_goals'])
@@ -107,6 +118,7 @@ class CRLAgent(flax.struct.PyTreeNode):
 
             return actor_loss, actor_info
         elif self.config['actor_loss'] == 'ddpgbc':
+            # DDPG+BC loss
             assert self.config['use_q'] and not self.config['discrete']
 
             dist = self.network.select('actor')(batch['observations'], batch['actor_goals'], params=grad_params)
@@ -119,6 +131,7 @@ class CRLAgent(flax.struct.PyTreeNode):
             )
             q = jnp.minimum(q1, q2)
 
+            # Normalize Q values by the absolute mean to make the loss scale invariant.
             q_loss = -q.mean() / jax.lax.stop_gradient(jnp.abs(q).mean() + 1e-6)
             log_prob = dist.log_prob(batch['actions'])
 
@@ -219,6 +232,7 @@ class CRLAgent(flax.struct.PyTreeNode):
                 encoders['critic_goal'] = encoder_module()
 
         if config['use_q']:
+            # Standard CRL: Use both V and Q (AWR) or only Q (DDPG+BC).
             value_def = GCBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
                 latent_dim=config['latent_dim'],
@@ -250,6 +264,7 @@ class CRLAgent(flax.struct.PyTreeNode):
                     goal_encoder=encoders.get('critic_goal'),
                 )
         else:
+            # Value-only CRL: Only use V.
             value_def = GCBilinearValue(
                 hidden_dims=config['value_hidden_dims'],
                 latent_dim=config['latent_dim'],
@@ -298,33 +313,35 @@ class CRLAgent(flax.struct.PyTreeNode):
 def get_config():
     config = ml_collections.ConfigDict(
         dict(
-            agent_name='crl',
-            lr=3e-4,
-            batch_size=1024,
-            actor_hidden_dims=(512, 512, 512),
-            value_hidden_dims=(512, 512, 512),
-            latent_dim=512,
-            layer_norm=True,
-            discount=0.99,
-            actor_loss='ddpgbc',  # ['awr', 'ddpgbc']
-            alpha=1.0,  # AWR temperature or DDPG+BC coefficient
-            use_q=True,  # Whether to fit Q or V with contrastive RL
-            actor_log_q=True,  # Whether to use log Q in actor loss
-            const_std=True,
-            discrete=False,
-            encoder=ml_collections.config_dict.placeholder(str),
-            dataset_class='GCDataset',
-            value_p_curgoal=0.0,
-            value_p_trajgoal=1.0,
-            value_p_randomgoal=0.0,
-            value_geom_sample=True,
-            actor_p_curgoal=0.0,
-            actor_p_trajgoal=1.0,
-            actor_p_randomgoal=0.0,
-            actor_geom_sample=False,
-            gc_negative=False,
-            p_aug=0.0,
-            frame_stack=ml_collections.config_dict.placeholder(int),
+            # Agent hyperparameters
+            agent_name='crl',  # Agent name
+            lr=3e-4,  # Learning rate
+            batch_size=1024,  # Batch size
+            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions
+            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions
+            latent_dim=512,  # Latent dimension for phi and psi
+            layer_norm=True,  # Whether to use layer normalization
+            discount=0.99,  # Discount factor
+            actor_loss='ddpgbc',  # Actor loss type ('awr' or 'ddpgbc')
+            alpha=1.0,  # Temperature in AWR or BC coefficient in DDPG+BC
+            use_q=True,  # Whether to use Q functions (True for standard CRL, False for value-only CRL)
+            actor_log_q=True,  # Whether to maximize log Q (True) or Q itself (False) in the actor loss
+            const_std=True,  # Whether to use constant standard deviation for the actor
+            discrete=False,  # Whether the action space is discrete
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.)
+            # Dataset hyperparameters
+            dataset_class='GCDataset',  # Dataset class name
+            value_p_curgoal=0.0,  # Probability of using the current state for value goals
+            value_p_trajgoal=1.0,  # Probability of using future states for value goals
+            value_p_randomgoal=0.0,  # Probability of using random states for value goals
+            value_geom_sample=True,  # Whether to use geometric sampling for future value goals
+            actor_p_curgoal=0.0,  # Probability of using the current state for actor goals
+            actor_p_trajgoal=1.0,  # Probability of using future states for actor goals
+            actor_p_randomgoal=0.0,  # Probability of using random states for actor goals
+            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals
+            gc_negative=False,  # Unused (defined for compatibility with GCDataset)
+            p_aug=0.0,  # Probability of applying image augmentation
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
         )
     )
     return config
