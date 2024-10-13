@@ -406,13 +406,15 @@ class SceneEnv(ManipSpaceEnv):
             is_healthy = True
             for i in range(self._num_cubes):
                 obj_pos = self._data.joint(f'object_joint_{i}').qpos[:3]
-                if np.any(obj_pos <= self._workspace_bounds[0] - 1) or np.any(obj_pos >= self._workspace_bounds[1] + 1):
+                if np.any(obj_pos <= self._workspace_bounds[0] - 0.2) or np.any(
+                    obj_pos >= self._workspace_bounds[1] + 0.2
+                ):
                     is_healthy = False
                     break
 
             if not is_healthy:
                 # Manually reset the cube position
-                print('Numerical instability detected. Resetting cube positions.')
+                print('Numerical instability detected. Resetting cube positions.', flush=True)
                 for i in range(self._num_cubes):
                     xy = self.np_random.uniform(*self._object_sampling_bounds)
                     obj_pos = (*xy, 0.02)
