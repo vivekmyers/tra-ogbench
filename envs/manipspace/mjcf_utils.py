@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from dm_control import mjcf
@@ -6,9 +7,9 @@ from lxml import etree
 
 
 def attach(
-    parent_xml_or_model: Path | mjcf.RootElement,
-    child_xml_or_model: Path | mjcf.RootElement,
-    attach_site: mjcf.Element | str | None = None,
+    parent_xml_or_model: Any,
+    child_xml_or_model: Any,
+    attach_site: Any = None,
     remove_keyframes: bool = True,
     add_freejoint: bool = False,
 ) -> mjcf.Element:
@@ -63,7 +64,7 @@ def to_string(
         assets = [asset for asset in root.find('asset').iter() if asset.tag == tag and 'file' in asset.attrib]
         for asset in assets:
             name, extension = asset.get('file').split('.')
-            asset.set('file', '.'.join((name[:-41], extension)))
+            asset.set('file', '.'.join((name[:-41], extension)))  # Remove hash.
 
     if not pretty:
         return etree.tostring(root, pretty_print=True).decode()
@@ -98,7 +99,7 @@ def get_assets(root: mjcf.RootElement) -> dict[str, bytes]:
     assets = {}
     for file, payload in root.get_assets().items():
         name, extension = file.split('.')
-        assets['.'.join((name[:-41], extension))] = payload
+        assets['.'.join((name[:-41], extension))] = payload  # Remove hash.
     return assets
 
 
@@ -119,7 +120,7 @@ def safe_find(root: mjcf.RootElement, namespace: str, identifier: str):
 
 
 def add_bounding_box_site(body: mjcf.Element, lower: np.ndarray, upper: np.ndarray, **kwargs) -> mjcf.Element:
-    """Visualizes a bounding box as a box site attached to the given body."""
+    """Visualize a bounding box as a box site attached to the given body."""
     pos = (lower + upper) / 2
     size = (upper - lower) / 2
     size += 1e-7

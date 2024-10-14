@@ -13,9 +13,10 @@ class CubePlanOracle(PlanOracle):
         super().__init__(*args, **kwargs)
 
     def compute_keyframes(self, plan_input):
+        # Poses.
         poses = {}
 
-        # Pick
+        # Pick.
         block_initial = self.shortest_yaw(
             eff_yaw=self.get_yaw(plan_input['effector_initial']),
             obj_yaw=self.get_yaw(plan_input['block_initial']),
@@ -27,7 +28,7 @@ class CubePlanOracle(PlanOracle):
         poses['pick_end'] = block_initial
         poses['postpick'] = poses['pick']
 
-        # Place
+        # Place.
         block_goal = self.shortest_yaw(
             eff_yaw=self.get_yaw(poses['postpick']),
             obj_yaw=self.get_yaw(plan_input['block_goal']),
@@ -39,7 +40,7 @@ class CubePlanOracle(PlanOracle):
         poses['postplace'] = poses['place']
         poses['final'] = plan_input['effector_goal']
 
-        # Clearance
+        # Clearance.
         midway = lie.interpolate(poses['postpick'], poses['place'])
         poses['clearance'] = lie.SE3.from_rotation_and_translation(
             rotation=midway.rotation(),
@@ -47,6 +48,7 @@ class CubePlanOracle(PlanOracle):
             + np.random.uniform([-0.1, -0.1, 0], [0.1, 0.1, 0.2]),
         )
 
+        # Times.
         times = {}
         times['initial'] = 0.0
         times['pick'] = times['initial'] + self._dt
@@ -63,6 +65,7 @@ class CubePlanOracle(PlanOracle):
             if time != 'initial':
                 times[time] += np.random.uniform(-1, 1) * self._dt * 0.2
 
+        # Grasps.
         g = 0.0
         grasps = {}
         for name in times.keys():

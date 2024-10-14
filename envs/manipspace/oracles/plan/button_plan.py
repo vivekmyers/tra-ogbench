@@ -9,6 +9,7 @@ class ButtonPlanOracle(PlanOracle):
         self._gripper_always_closed = gripper_always_closed
 
     def compute_keyframes(self, plan_input):
+        # Poses.
         poses = {}
         poses['initial'] = plan_input['effector_initial']
         poses['press_start'] = self.above(plan_input['button'], 0.06)
@@ -16,6 +17,7 @@ class ButtonPlanOracle(PlanOracle):
         poses['press_end'] = poses['press_start']
         poses['final'] = plan_input['effector_goal']
 
+        # Times.
         times = {}
         distance = np.linalg.norm(poses['initial'].translation() - poses['press_start'].translation())
         times['initial'] = 0.0
@@ -27,6 +29,7 @@ class ButtonPlanOracle(PlanOracle):
             if time != 'initial':
                 times[time] += np.random.uniform(-1, 1) * self._dt * 0.1
 
+        # Grasps.
         grasps = {}
         if self._gripper_always_closed:
             g = 1.0

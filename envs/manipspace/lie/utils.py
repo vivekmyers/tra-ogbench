@@ -27,3 +27,10 @@ def mat2quat(mat: np.ndarray):
     quat = np.empty(4, dtype=np.float64)
     mujoco.mju_mat2Quat(quat, mat)
     return quat
+
+
+def interpolate(p0, p1, alpha=0.5):
+    """Interpolate between two points on a manifold."""
+    assert 0.0 <= alpha <= 1.0
+    exp_func = getattr(type(p0), 'exp')
+    return p0 @ exp_func(alpha * (p0.inverse() @ p1).log())

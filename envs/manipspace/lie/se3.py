@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -14,8 +15,8 @@ _IDENTITY_WXYZ_XYZ = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], dtype=np.floa
 class SE3:
     """Special Euclidean group for proper rigid transforms in 3D.
 
-    Internal parameterization is (qw, qx, qy, qz, x, y, z). Tangent parameterization is
-    (vx, vy, vz, omega_x, omega_y, omega_z).
+    Internal parameterization is (qw, qx, qy, qz, x, y, z).
+    Tangent parameterization is (vx, vy, vz, omega_x, omega_y, omega_z).
     """
 
     wxyz_xyz: np.ndarray
@@ -142,7 +143,7 @@ class SE3:
             translation=(self.rotation() @ other.translation()) + self.translation(),
         )
 
-    def __matmul__(self, other: SE3 | np.ndarray) -> SE3 | np.ndarray:
+    def __matmul__(self, other: Any) -> Any:
         if isinstance(other, np.ndarray):
             return self.apply(target=other)
         elif isinstance(other, SE3):

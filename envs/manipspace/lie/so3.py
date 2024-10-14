@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import mujoco
 import numpy as np
@@ -22,8 +23,8 @@ class RollPitchYaw:
 class SO3:
     """Special orthogonal group for 3D rotations.
 
-    Internal parameterization is (qw, qx, qy, qz). Tangent parameterization is
-    (omega_x, omega_y, omega_z).
+    Internal parameterization is (qw, qx, qy, qz).
+    Tangent parameterization is (omega_x, omega_y, omega_z).
     """
 
     wxyz: np.ndarray
@@ -180,7 +181,7 @@ class SO3:
             )
         )
 
-    def __matmul__(self, other: SO3 | np.ndarray) -> SO3 | np.ndarray:
+    def __matmul__(self, other: Any) -> Any:
         if isinstance(other, np.ndarray):
             return self.apply(target=other)
         elif isinstance(other, SO3):

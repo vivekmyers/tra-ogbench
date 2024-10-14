@@ -8,6 +8,7 @@ class WindowPlanOracle(PlanOracle):
         super().__init__(*args, **kwargs)
 
     def compute_keyframes(self, plan_input):
+        # Poses.
         poses = {}
         window_initial = self.shortest_yaw(
             eff_yaw=self.get_yaw(plan_input['effector_initial']),
@@ -30,6 +31,7 @@ class WindowPlanOracle(PlanOracle):
         poses['clearance'] = self.above(window_goal, 0.06)
         poses['final'] = plan_input['effector_goal']
 
+        # Times.
         times = {}
         times['initial'] = 0.0
         times['approach'] = times['initial'] + self._dt
@@ -43,6 +45,7 @@ class WindowPlanOracle(PlanOracle):
             if time != 'initial':
                 times[time] += np.random.uniform(-1, 1) * self._dt * 0.1
 
+        # Grasps.
         grasps = {}
         g = 0.0
         for name in times.keys():
