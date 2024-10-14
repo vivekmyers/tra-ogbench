@@ -8,10 +8,12 @@ import jax.numpy as jnp
 
 
 def default_init(scale=1.0):
+    """Default kernel initializer."""
     return nn.initializers.variance_scaling(scale, 'fan_avg', 'uniform')
 
 
 def ensemblize(cls, num_qs, out_axes=0, **kwargs):
+    """Ensemblize a module."""
     return nn.vmap(
         cls,
         variable_axes={'params': 0},
@@ -24,11 +26,23 @@ def ensemblize(cls, num_qs, out_axes=0, **kwargs):
 
 
 class Identity(nn.Module):
+    """Identity layer."""
+
     def __call__(self, x):
         return x
 
 
 class MLP(nn.Module):
+    """Multi-layer perceptron.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        activations: Activation function.
+        activate_final: Whether to apply activation to the final layer.
+        kernel_init: Kernel initializer.
+        layer_norm: Whether to apply layer normalization.
+    """
+
     hidden_dims: Sequence[int]
     activations: Any = nn.gelu
     activate_final: bool = False
@@ -47,12 +61,19 @@ class MLP(nn.Module):
 
 
 class LengthNormalize(nn.Module):
+    """Length normalization layer.
+
+    It normalizes the input along the last dimension to have a length of sqrt(dim).
+    """
+
     @nn.compact
     def __call__(self, x):
         return x / jnp.linalg.norm(x, axis=-1, keepdims=True) * jnp.sqrt(x.shape[-1])
 
 
 class Param(nn.Module):
+    """Scalar parameter module."""
+
     init_value: float = 0.0
 
     @nn.compact
@@ -61,6 +82,8 @@ class Param(nn.Module):
 
 
 class LogParam(nn.Module):
+    """Scalar parameter module with log scale."""
+
     init_value: float = 1.0
 
     @nn.compact
@@ -70,11 +93,23 @@ class LogParam(nn.Module):
 
 
 class TransformedWithMode(distrax.Transformed):
+    """Transformed distribution with mode calculation."""
+
     def mode(self):
         return self.bijector.forward(self.distribution.mode())
 
 
 class RunningMeanStd(flax.struct.PyTreeNode):
+    """Running mean and standard deviation.
+
+    Attributes:
+        eps: Epsilon value to avoid division by zero.
+        mean: Running mean.
+        var: Running variance.
+        clip_max: Clip value after normalization.
+        count: Number of samples.
+    """
+
     eps: Any = 1e-6
     mean: Any = 1.0
     var: Any = 1.0
@@ -106,6 +141,20 @@ class RunningMeanStd(flax.struct.PyTreeNode):
 
 
 class GCActor(nn.Module):
+    """Goal-conditioned actor.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        action_dim: Action dimension.
+        log_std_min: Minimum value of log standard deviation.
+        log_std_max: Maximum value of log standard deviation.
+        tanh_squash: Whether to squash the action with tanh.
+        state_dependent_std: Whether to use state-dependent standard deviation.
+        const_std: Whether to use constant standard deviation.
+        final_fc_init_scale: Initial scale of the final fully-connected layer.
+        gc_encoder: Optional GCEncoder module to encode the inputs.
+    """
+
     hidden_dims: Sequence[int]
     action_dim: int
     log_std_min: Optional[float] = -5
@@ -118,7 +167,6 @@ class GCActor(nn.Module):
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
-
         self.mean_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
         if self.state_dependent_std:
             self.log_std_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
@@ -133,6 +181,14 @@ class GCActor(nn.Module):
         goal_encoded=False,
         temperature=1.0,
     ):
+        """Return the action distribution.
+
+        Args:
+            observations: Observations.
+            goals: Goals (optional).
+            goal_encoded: Whether the goals are already encoded.
+            temperature: Scaling factor for the standard deviation.
+        """
         if self.gc_encoder is not None:
             inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
         else:
@@ -161,6 +217,15 @@ class GCActor(nn.Module):
 
 
 class GCDiscreteActor(nn.Module):
+    """Goal-conditioned actor for discrete actions.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        action_dim: Action dimension.
+        final_fc_init_scale: Initial scale of the final fully-connected layer.
+        gc_encoder: Optional GCEncoder module to encode the inputs.
+    """
+
     hidden_dims: Sequence[int]
     action_dim: int
     final_fc_init_scale: float = 1e-2
@@ -168,7 +233,6 @@ class GCDiscreteActor(nn.Module):
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
-
         self.logit_net = nn.Dense(self.action_dim, kernel_init=default_init(self.final_fc_init_scale))
 
     def __call__(
@@ -178,6 +242,14 @@ class GCDiscreteActor(nn.Module):
         goal_encoded=False,
         temperature=1.0,
     ):
+        """Return the action distribution.
+
+        Args:
+            observations: Observations.
+            goals: Goals (optional).
+            goal_encoded: Whether the goals are already encoded.
+            temperature: Inverse scaling factor for the logits (set to 0 to get the argmax).
+        """
         if self.gc_encoder is not None:
             inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
         else:
@@ -195,6 +267,18 @@ class GCDiscreteActor(nn.Module):
 
 
 class GCValue(nn.Module):
+    """Goal-conditioned value/critic function.
+
+    This module can be used for both value V(s, g) and critic Q(s, a, g) functions.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        layer_norm: Whether to apply layer normalization.
+        ensemble: Whether to ensemble the value function.
+        value_exp: Whether to exponentiate the value. Useful for contrastive learning.
+        gc_encoder: Optional GCEncoder module to encode the inputs.
+    """
+
     hidden_dims: Sequence[int]
     layer_norm: bool = True
     ensemble: bool = True
@@ -209,7 +293,14 @@ class GCValue(nn.Module):
 
         self.value_net = value_net
 
-    def __call__(self, observations, goals=None, actions=None, info=False):
+    def __call__(self, observations, goals=None, actions=None):
+        """Return the value/critic function.
+
+        Args:
+            observations: Observations.
+            goals: Goals (optional).
+            actions: Actions (optional).
+        """
         if self.gc_encoder is not None:
             inputs = [self.gc_encoder(observations, goals)]
         else:
@@ -229,6 +320,8 @@ class GCValue(nn.Module):
 
 
 class GCDiscreteCritic(GCValue):
+    """Goal-conditioned critic for discrete actions."""
+
     action_dim: int = None
 
     def __call__(self, observations, goals=None, actions=None, info=False):
@@ -237,6 +330,21 @@ class GCDiscreteCritic(GCValue):
 
 
 class GCBilinearValue(nn.Module):
+    """Goal-conditioned bilinear value/critic function.
+
+    This module computes the value function as V(s, g) = phi(s)^T psi(g) / sqrt(d) or the critic function as
+    Q(s, a, g) = phi(s, a)^T psi(g) / sqrt(d), where phi and psi output d-dimensional vectors.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        latent_dim: Latent dimension.
+        layer_norm: Whether to apply layer normalization.
+        ensemble: Whether to ensemble the value function.
+        value_exp: Whether to exponentiate the value. Useful for contrastive learning.
+        state_encoder: Optional state encoder.
+        goal_encoder: Optional goal encoder.
+    """
+
     hidden_dims: Sequence[int]
     latent_dim: int
     layer_norm: bool = True
@@ -254,6 +362,14 @@ class GCBilinearValue(nn.Module):
         self.psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
 
     def __call__(self, observations, goals, actions=None, info=False):
+        """Return the value/critic function.
+
+        Args:
+            observations: Observations.
+            goals: Goals.
+            actions: Actions (optional).
+            info: Whether to additionally return the representations phi and psi.
+        """
         if self.state_encoder is not None:
             observations = self.state_encoder(observations)
         if self.goal_encoder is not None:
@@ -279,6 +395,8 @@ class GCBilinearValue(nn.Module):
 
 
 class GCDiscreteBilinearCritic(GCBilinearValue):
+    """Goal-conditioned bilinear critic for discrete actions."""
+
     action_dim: int = None
 
     def __call__(self, observations, goals=None, actions=None, info=False):
@@ -287,6 +405,19 @@ class GCDiscreteBilinearCritic(GCBilinearValue):
 
 
 class GCMRNValue(nn.Module):
+    """Metric residual network (MRN) value function.
+
+    This module computes the value function as the sum of a symmetric Euclidean distance and an asymmetric
+    L^infinity-based quasimetric.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        latent_dim: Latent dimension.
+        layer_norm: Whether to apply layer normalization.
+        value_exp: Whether to exponentiate the value.
+        encoder: Optional state/goal encoder.
+    """
+
     hidden_dims: Sequence[int]
     latent_dim: int
     layer_norm: bool = True
@@ -297,6 +428,14 @@ class GCMRNValue(nn.Module):
         self.phi = MLP((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
 
     def __call__(self, observations, goals, is_phi=False, info=False):
+        """Return the MRN value function.
+
+        Args:
+            observations: Observations.
+            goals: Goals.
+            is_phi: Whether the inputs are already encoded by phi.
+            info: Whether to additionally return the representations phi_s and phi_g.
+        """
         if is_phi:
             phi_s = observations
             phi_g = goals
@@ -325,6 +464,19 @@ class GCMRNValue(nn.Module):
 
 
 class GCIQEValue(nn.Module):
+    """Interval quasimetric embedding (IQE) value function.
+
+    This module computes the value function as an IQE-based quasimetric.
+
+    Attributes:
+        hidden_dims: Hidden layer dimensions.
+        latent_dim: Latent dimension.
+        dim_per_component: Dimension of each component in IQE (i.e., number of intervals in each group).
+        layer_norm: Whether to apply layer normalization.
+        value_exp: Whether to exponentiate the value.
+        encoder: Optional state/goal encoder.
+    """
+
     hidden_dims: Sequence[int]
     latent_dim: int
     dim_per_component: int
@@ -337,6 +489,14 @@ class GCIQEValue(nn.Module):
         self.alpha = Param()
 
     def __call__(self, observations, goals, is_phi=False, info=False):
+        """Return the IQE value function.
+
+        Args:
+            observations: Observations.
+            goals: Goals.
+            is_phi: Whether the inputs are already encoded by phi.
+            info: Whether to additionally return the representations phi_s and phi_g.
+        """
         alpha = jax.nn.sigmoid(self.alpha())
         if is_phi:
             phi_s = observations

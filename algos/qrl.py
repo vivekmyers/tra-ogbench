@@ -8,7 +8,7 @@ import numpy as np
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import GCActor, GCDiscreteActor, GCMRNValue, GCIQEValue, LogParam, MLP
+from utils.networks import MLP, GCActor, GCDiscreteActor, GCIQEValue, GCMRNValue, LogParam
 from utils.train_state import ModuleDict, TrainState, nonpytree_field
 
 
@@ -203,12 +203,14 @@ class QRLAgent(flax.struct.PyTreeNode):
         else:
             action_dim = ex_actions.shape[-1]
 
+        # Define encoders.
         encoders = dict()
         if config['encoder'] is not None:
             encoder_module = encoder_modules[config['encoder']]
             encoders['value'] = encoder_module()
             encoders['actor'] = GCEncoder(concat_encoder=encoder_module())
 
+        # Define value and actor networks.
         if config['quasimetric_type'] == 'mrn':
             value_def = GCMRNValue(
                 hidden_dims=config['value_hidden_dims'],
@@ -228,6 +230,7 @@ class QRLAgent(flax.struct.PyTreeNode):
             raise ValueError(f'Unsupported quasimetric type: {config["quasimetric_type"]}')
 
         if config['actor_loss'] == 'ddpgbc':
+            # DDPG+BC requires a latent dynamics model.
             dynamics_def = MLP(
                 hidden_dims=(*config['value_hidden_dims'], config['latent_dim']),
                 layer_norm=config['layer_norm'],
@@ -248,7 +251,8 @@ class QRLAgent(flax.struct.PyTreeNode):
                 gc_encoder=encoders.get('actor'),
             )
 
-        lam_def = LogParam()  # Dual lambda variable
+        # Define the dual lambda variable.
+        lam_def = LogParam()
 
         network_info = dict(
             value=(value_def, (ex_observations, ex_goals)),
@@ -273,35 +277,35 @@ class QRLAgent(flax.struct.PyTreeNode):
 def get_config():
     config = ml_collections.ConfigDict(
         dict(
-            # Agent hyperparameters
-            agent_name='qrl',  # Agent name
-            lr=3e-4,  # Learning rate
-            batch_size=1024,  # Batch size
-            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions
-            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions
-            quasimetric_type='iqe',  # Quasimetric parameterization type ('iqe' or 'mrn')
-            latent_dim=512,  # Latent dimension for the quasimetric value function
-            layer_norm=True,  # Whether to use layer normalization
-            discount=0.99,  # Discount factor (unused by default; can be used for sampling future goals in GCDataset)
-            eps=0.05,  # Margin for the dual lambda loss
-            actor_loss='ddpgbc',  # Actor loss type ('awr' or 'ddpgbc')
-            alpha=3.0,  # Temperature in AWR or BC coefficient in DDPG+BC
-            const_std=True,  # Whether to use constant standard deviation for the actor
-            discrete=False,  # Whether the action space is discrete
-            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.)
-            # Dataset hyperparameters
-            dataset_class='GCDataset',  # Dataset class name
-            value_p_curgoal=0.0,  # Probability of using the current state for value goals
-            value_p_trajgoal=0.0,  # Probability of using future states for value goals
-            value_p_randomgoal=1.0,  # Probability of using random states for value goals
-            value_geom_sample=True,  # Whether to use geometric sampling for future value goals
-            actor_p_curgoal=0.0,  # Probability of using the current state for actor goals
-            actor_p_trajgoal=1.0,  # Probability of using future states for actor goals
-            actor_p_randomgoal=0.0,  # Probability of using random states for actor goals
-            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals
-            gc_negative=False,  # Unused (defined for compatibility with GCDataset)
-            p_aug=0.0,  # Probability of applying image augmentation
-            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
+            # Agent hyperparameters.
+            agent_name='qrl',  # Agent name.
+            lr=3e-4,  # Learning rate.
+            batch_size=1024,  # Batch size.
+            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions.
+            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions.
+            quasimetric_type='iqe',  # Quasimetric parameterization type ('iqe' or 'mrn').
+            latent_dim=512,  # Latent dimension for the quasimetric value function.
+            layer_norm=True,  # Whether to use layer normalization.
+            discount=0.99,  # Discount factor (unused by default; can be used for sampling future goals in GCDataset).
+            eps=0.05,  # Margin for the dual lambda loss.
+            actor_loss='ddpgbc',  # Actor loss type ('awr' or 'ddpgbc').
+            alpha=3.0,  # Temperature in AWR or BC coefficient in DDPG+BC.
+            const_std=True,  # Whether to use constant standard deviation for the actor.
+            discrete=False,  # Whether the action space is discrete.
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).
+            # Dataset hyperparameters.
+            dataset_class='GCDataset',  # Dataset class name.
+            value_p_curgoal=0.0,  # Probability of using the current state as the value goal.
+            value_p_trajgoal=0.0,  # Probability of using a future state in the same trajectory as the value goal.
+            value_p_randomgoal=1.0,  # Probability of using a random state as the value goal.
+            value_geom_sample=True,  # Whether to use geometric sampling for future value goals.
+            actor_p_curgoal=0.0,  # Probability of using the current state as the actor goal.
+            actor_p_trajgoal=1.0,  # Probability of using a future state in the same trajectory as the actor goal.
+            actor_p_randomgoal=0.0,  # Probability of using a random state as the actor goal.
+            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
+            gc_negative=False,  # Unused (defined for compatibility with GCDataset).
+            p_aug=0.0,  # Probability of applying image augmentation.
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack.
         )
     )
     return config

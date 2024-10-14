@@ -56,6 +56,8 @@ class ResnetStack(nn.Module):
 
 
 class ImpalaEncoder(nn.Module):
+    """IMPALA encoder."""
+
     width: int = 1
     stack_sizes: tuple = (16, 32, 32)
     num_blocks: int = 2
@@ -97,18 +99,30 @@ class ImpalaEncoder(nn.Module):
 
 
 class GCEncoder(nn.Module):
+    """Helper module to handle inputs to goal-conditioned networks.
+
+    It takes in observations (s) and goals (g) and returns the concatenation of `state_encoder(s)`, `goal_encoder(g)`,
+    and `concat_encoder([s, g])`. If any of the encoders are not provided, they are ignored. This way, the module can
+    handle both early and late fusion of state and goal information.
+    """
+
     state_encoder: nn.Module = None
     goal_encoder: nn.Module = None
     concat_encoder: nn.Module = None
 
     @nn.compact
     def __call__(self, observations, goals=None, goal_encoded=False):
+        """Returns the representations of observations and goals.
+
+        If `goal_encoded` is True, `goals` is assumed to be already encoded representations. In this case, either
+        `goal_encoder` or `concat_encoder` must be None.
+        """
         reps = []
         if self.state_encoder is not None:
             reps.append(self.state_encoder(observations))
         if goals is not None:
             if goal_encoded:
-                # goals are either concat representations or goal representations
+                # Can't have both goal_encoder and concat_encoder in this case.
                 assert self.goal_encoder is None or self.concat_encoder is None
                 reps.append(goals)
             else:

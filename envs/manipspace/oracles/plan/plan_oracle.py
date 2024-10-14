@@ -99,6 +99,6 @@ class PlanOracle:
         action[:3] = ab_action[:3] - info['proprio/effector_pos']
         action[3] = ab_action[3] - info['proprio/effector_yaw'][0]
         action[4] = ab_action[4] - info['proprio/gripper_opening'][0]
-        action = self._env.normalize_action(action)
+        action = self._env.unwrapped.normalize_action(action)
 
         return action

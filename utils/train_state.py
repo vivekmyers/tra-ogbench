@@ -11,18 +11,22 @@ nonpytree_field = functools.partial(flax.struct.field, pytree_node=False)
 
 
 class ModuleDict(nn.Module):
-    """A wrapper for multiple modules.
+    """A dictionary of modules.
 
-    This allows sharing parameters between modules and calling them by name.
+    This allows sharing parameters between modules and provides a convenient way to access them.
+
+    Attributes:
+        modules: A dictionary of modules.
     """
+
     modules: Dict[str, nn.Module]
 
     @nn.compact
     def __call__(self, *args, name=None, **kwargs):
-        """Either call all modules with the provided arguments or call a single module by name.
+        """Forward pass.
 
         For initialization, call with `name=None` and provide the arguments for each module in `kwargs`.
-        For forward pass, call with `name=<module_name>` and provide the arguments for that module.
+        Otherwise, call with `name=<module_name>` and provide the arguments for that module.
         """
         if name is None:
             if kwargs.keys() != self.modules.keys():
@@ -44,6 +48,17 @@ class ModuleDict(nn.Module):
 
 
 class TrainState(flax.struct.PyTreeNode):
+    """Custom train state for models.
+
+    Attributes:
+        step: The counter to keep track of the training steps. It is incremented by 1 after each `apply_gradients` call.
+        apply_fn: The apply function of the model.
+        model_def: The model definition.
+        params: The parameters of the model.
+        tx: The optax optimizer.
+        opt_state: The optimizer state.
+    """
+
     step: int
     apply_fn: Any = nonpytree_field()
     model_def: Any = nonpytree_field()
@@ -53,6 +68,7 @@ class TrainState(flax.struct.PyTreeNode):
 
     @classmethod
     def create(cls, model_def, params, tx=None, **kwargs):
+        """Create a new train state."""
         if tx is not None:
             opt_state = tx.init(params)
         else:
@@ -69,6 +85,21 @@ class TrainState(flax.struct.PyTreeNode):
         )
 
     def __call__(self, *args, params=None, method=None, **kwargs):
+        """Forward pass.
+
+        When `params` is not provided, it uses the stored parameters.
+
+        The typical use case is to set `params` to `None` when you want to *stop* the gradients, and set it to the
+        current parameters when you want to flow the gradients. In other words, the default behavior is to stop the
+        gradients, and you need to explicitly provide the parameters to flow the gradients.
+
+        Args:
+            *args: The positional arguments for the forward pass.
+            params: The parameters to use to flow the gradients. If `None`, it uses the stored parameters, without
+                flowing the gradients.
+            method: The method to call in the model definition.
+            **kwargs: The keyword arguments for the forward pass.
+        """
         if params is None:
             params = self.params
         variables = {'params': params}
@@ -80,9 +111,11 @@ class TrainState(flax.struct.PyTreeNode):
         return self.apply_fn(variables, *args, method=method_name, **kwargs)
 
     def select(self, name):
+        """Helper function to select a module from a `ModuleDict`."""
         return functools.partial(self, name=name)
 
     def apply_gradients(self, grads, **kwargs):
+        """Apply the gradients and return the updated state."""
         updates, new_opt_state = self.tx.update(grads, self.opt_state, self.params)
         new_params = optax.apply_updates(self.params, updates)
 
@@ -94,9 +127,12 @@ class TrainState(flax.struct.PyTreeNode):
         )
 
     def apply_loss_fn(self, loss_fn):
+        """Apply the loss function and return the updated state and info.
+
+        It additionally computes the gradient statistics and adds them to the dictionary.
+        """
         grads, info = jax.grad(loss_fn, has_aux=True)(self.params)
 
-        # Compute grad stats
         grad_max = jax.tree_util.tree_map(jnp.max, grads)
         grad_min = jax.tree_util.tree_map(jnp.min, grads)
         grad_norm = jax.tree_util.tree_map(jnp.linalg.norm, grads)
@@ -120,6 +156,7 @@ class TrainState(flax.struct.PyTreeNode):
         return self.apply_gradients(grads=grads), info
 
     def save(self):
+        """Save the state."""
         return {
             'params': self.params,
             'opt_state': self.opt_state,
@@ -127,4 +164,5 @@ class TrainState(flax.struct.PyTreeNode):
         }
 
     def load(self, data):
+        """Load the state."""
         return self.replace(**data)

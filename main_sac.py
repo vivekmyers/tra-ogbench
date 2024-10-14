@@ -18,35 +18,35 @@ from envs.env_loader import make_online_env
 from envs.viz_utils import visualize_trajs
 from utils.dataset import ReplayBuffer
 from utils.evaluation import evaluate, flatten
-from utils.logger import CsvLogger, get_flag_dict, get_wandb_video, setup_wandb, get_exp_name
+from utils.logger import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('run_group', 'Debug', 'Run group')
-flags.DEFINE_integer('seed', 0, 'Random seed')
-flags.DEFINE_string('env_name', 'antmaze-large-diverse-v2', 'Environment name')
-flags.DEFINE_string('dataset_path', None, 'Dataset path')
-flags.DEFINE_string('save_dir', 'exp/', 'Save directory')
-flags.DEFINE_string('restore_path', None, 'Restore path')
-flags.DEFINE_integer('restore_epoch', None, 'Restore epoch')
+flags.DEFINE_string('run_group', 'Debug', 'Run group.')
+flags.DEFINE_integer('seed', 0, 'Random seed.')
+flags.DEFINE_string('env_name', 'antmaze-large-diverse-v2', 'Environment name.')
+flags.DEFINE_string('dataset_path', None, 'Dataset path.')
+flags.DEFINE_string('save_dir', 'exp/', 'Save directory.')
+flags.DEFINE_string('restore_path', None, 'Restore path.')
+flags.DEFINE_integer('restore_epoch', None, 'Restore epoch.')
 
-flags.DEFINE_integer('seed_steps', 10000, 'Number of seed steps')
-flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps')
-flags.DEFINE_integer('train_interval', 1, 'Train interval')
-flags.DEFINE_integer('num_epochs', 1, 'Number of updates per train interval')
-flags.DEFINE_integer('log_interval', 5000, 'Logging interval')
-flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval')
-flags.DEFINE_integer('save_interval', 1000000, 'Saving interval')
-flags.DEFINE_integer('reset_interval', 0, 'Full parameter reset interval')
-flags.DEFINE_integer('terminate_at_end', 0, 'Whether to set terminated=True when truncated=True')
+flags.DEFINE_integer('seed_steps', 10000, 'Number of seed steps.')
+flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps.')
+flags.DEFINE_integer('train_interval', 1, 'Train interval.')
+flags.DEFINE_integer('num_epochs', 1, 'Number of updates per train interval.')
+flags.DEFINE_integer('log_interval', 5000, 'Logging interval.')
+flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval.')
+flags.DEFINE_integer('save_interval', 1000000, 'Saving interval.')
+flags.DEFINE_integer('reset_interval', 0, 'Full parameter reset interval.')
+flags.DEFINE_integer('terminate_at_end', 0, 'Whether to set terminated=True when truncated=True.')
 
-flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all)')
-flags.DEFINE_integer('eval_episodes', 50, 'Number of episodes for each task')
-flags.DEFINE_float('eval_temperature', 0, 'Actor temperature for evaluation')
-flags.DEFINE_float('eval_gaussian', None, 'Action Gaussian noise for evaluation')
-flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each task')
-flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos')
-flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU')
+flags.DEFINE_integer('eval_tasks', None, 'Number of tasks to evaluate (None for all).')
+flags.DEFINE_integer('eval_episodes', 50, 'Number of episodes for each task.')
+flags.DEFINE_float('eval_temperature', 0, 'Actor temperature for evaluation.')
+flags.DEFINE_float('eval_gaussian', None, 'Action Gaussian noise for evaluation.')
+flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each task.')
+flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
+flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU.')
 
 config_flags.DEFINE_config_file('agent', 'algos/sac.py', lock_config=False)
 

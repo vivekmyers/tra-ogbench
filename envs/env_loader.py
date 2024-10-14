@@ -11,6 +11,7 @@ from utils.dataset import Dataset
 
 
 class EpisodeMonitor(gymnasium.Wrapper):
+    """Environment wrapper to monitor episode statistics."""
     def __init__(self, env):
         super().__init__(env)
         self._reset_stats()
@@ -48,6 +49,7 @@ class EpisodeMonitor(gymnasium.Wrapper):
 
 
 class FrameStackWrapper(gymnasium.Wrapper):
+    """Environment wrapper to stack observations."""
     def __init__(self, env, num_stack):
         super().__init__(env)
 
@@ -77,7 +79,9 @@ class FrameStackWrapper(gymnasium.Wrapper):
 
 
 def setup_egl():
+    """Set up EGL for rendering."""
     if 'mac' in platform.platform():
+        # macOS doesn't support EGL.
         pass
     else:
         os.environ['MUJOCO_GL'] = 'egl'
@@ -86,6 +90,15 @@ def setup_egl():
 
 
 def truncate_dataset(dataset, ratio, return_both=False):
+    """Truncate dataset to a certain ratio of states.
+
+    This can be useful for splitting the dataset into training and validation sets.
+
+    Args:
+        dataset: Dataset to truncate.
+        ratio: Ratio of states to keep.
+        return_both: Whether to return both truncated and complementary datasets.
+    """
     size = dataset.size
     traj_idxs = []
     traj_start = 0
@@ -93,8 +106,6 @@ def truncate_dataset(dataset, ratio, return_both=False):
         if dataset['terminals'][i] == 1.0:
             traj_idxs.append(np.arange(traj_start, i + 1))
             traj_start = i + 1
-    np.random.seed(0)
-    np.random.shuffle(traj_idxs)
     new_idxs = []
     num_states = 0
     for idxs in traj_idxs:
@@ -111,6 +122,16 @@ def truncate_dataset(dataset, ratio, return_both=False):
 
 
 def get_dataset(dataset_path, ob_dtype=np.float32, action_dtype=np.float32):
+    """Load OGBench dataset.
+
+    Args:
+        dataset_path: Path to the dataset file.
+        ob_dtype: dtype for observations.
+        action_dtype: dtype for actions.
+
+    Returns:
+        Tuple of training and validation datasets.
+    """
     train_path = dataset_path
     val_path = dataset_path.replace('.npz', '-val.npz')
     train_dataset = dict()
@@ -127,32 +148,45 @@ def get_dataset(dataset_path, ob_dtype=np.float32, action_dtype=np.float32):
                 dtype = np.float32
             dataset[k] = file[k][...].astype(dtype)
 
+        # At this point, we have:
+        # terminals: [0, 0, ..., 0, 0, 1, 0, 0, ..., 0, 0, 1, 0, 0, ..., 0, 0, 1]
+        #             |<--trajectory-->|  |<--trajectory-->|  |<- trajectory-->|
+
         # Since the dataset doesn't contain next_observations, we need to invalidate the last state of each trajectory
         # so that we can safely get next_observations[t] by using observations[t + 1].
         dataset['valids'] = 1.0 - dataset['terminals']
         new_terminals = np.concatenate([dataset['terminals'][1:], [1.0]])
         dataset['terminals'] = np.minimum(dataset['terminals'] + new_terminals, 1.0)
+
         # Now, we have the following:
-        # terminals: [0, 0, ..., 0, 1, 1, 0, 0, 0, ..., 0, 1, 1, 0, 0, ..., 1, 1]
-        # valids   : [1, 1, ..., 1, 1, 0, 1, 1, 1, ..., 1, 0, 1, 1, 1, ..., 1, 0]
+        # terminals: [0, 0, ..., 0, 1, 1, 0, 0, ..., 0, 1, 1, 0, 0, ..., 0, 1, 1]
+        # valids   : [1, 1, ..., 1, 1, 0, 1, 1, ..., 1, 0, 1, 1, 1, ..., 1, 1, 0]
+        #             |<--trajectory-->|  |<--trajectory-->|  |<--trajectory-->|
 
     return Dataset.create(**train_dataset), Dataset.create(**val_dataset)
 
 
 def make_env_and_dataset(env_name, dataset_path=None, frame_stack=None):
+    """Make environment and dataset.
+
+    Args:
+        env_name: Name of the environment.
+        dataset_path: Path to the dataset file.
+        frame_stack: Number of frames to stack.
+    """
     setup_egl()
 
     if 'antmaze' in env_name and ('diverse' in env_name or 'play' in env_name):
-        from envs.d4rl.wrappers import AntMazeGoalWrapper
         from envs.d4rl import d4rl_utils
+        from envs.d4rl.wrappers import AntMazeGoalWrapper
 
         env = d4rl_utils.make_env(env_name)
         env = AntMazeGoalWrapper(env)
         dataset = d4rl_utils.get_dataset(env, env_name)
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'kitchen' in env_name:
-        from envs.d4rl.wrappers import KitchenGoalWrapper
         from envs.d4rl import d4rl_utils
+        from envs.d4rl.wrappers import KitchenGoalWrapper
 
         # HACK: Monkey patching to make it compatible with Python 3.10.
         if not hasattr(collections, 'Mapping'):
@@ -169,26 +203,29 @@ def make_env_and_dataset(env_name, dataset_path=None, frame_stack=None):
         )
         train_dataset, val_dataset = truncate_dataset(dataset, 0.95, return_both=True)
     elif 'pointmaze' in env_name or 'antmaze' in env_name or 'antsoccer' in env_name or 'humanoidmaze' in env_name:
+        # OGBench Locomotion environments.
         import envs.locomaze  # noqa
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(
             dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
         )
-    elif 'cube' in env_name or 'puzzle' in env_name or 'scene' in env_name:
+    elif 'cube' in env_name or 'scene' in env_name or 'puzzle' in env_name:
+        # OGBench Manipulation environments.
         import envs.manipspace  # noqa
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(
             dataset_path, ob_dtype=np.uint8 if 'visual' in env_name else np.float32
         )
-    elif 'crafter' in env_name:
-        import envs.crafter  # noqa
+    elif 'powderworld' in env_name:
+        # OGBench Drawing environments.
+        import envs.powderworld  # noqa
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8, action_dtype=np.int32)
-    elif 'powderworld' in env_name:
-        import envs.powderworld  # noqa
+    elif 'crafter' in env_name:
+        import envs.crafter  # noqa
 
         env = gymnasium.make(env_name)
         train_dataset, val_dataset = get_dataset(dataset_path, ob_dtype=np.uint8, action_dtype=np.int32)

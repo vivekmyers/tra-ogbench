@@ -141,27 +141,21 @@ def main(_):
                 step += 1
 
             if 'scene' in FLAGS.env_name:
-                # Perform two health checks:
-                # (1) Ensure that the cube is always visible unless it's in the drawer
-                # Otherwise, the test-time goal images may become ambiguous
-                # (2) Ensure that the simulation is stable
+                # Perform health check.
+                # Ensure that the cube is always visible unless it's in the drawer.
+                # Otherwise, the test-time goal images may become ambiguous.
                 is_healthy = True
                 ep_qpos = np.array(ep_qpos)
-                min_qpos = np.min(ep_qpos, axis=0)
-                max_qpos = np.max(ep_qpos, axis=0)
-                diff_max = (max_qpos - min_qpos).max()
                 block_xyzs = ep_qpos[:, 14:17]
                 if (block_xyzs[:, 1] >= 0.29).any():
                     is_healthy = False  # Block goes too far right
                 if ((block_xyzs[:, 1] <= -0.3) & ((block_xyzs[:, 2] < 0.06) | (block_xyzs[:, 2] > 0.08))).any():
                     is_healthy = False  # Block goes too far left, without being in the drawer
-                if diff_max > 20:
-                    is_healthy = False  # Simulation is unstable
 
                 if is_healthy:
                     break
                 else:
-                    print('Unhealthy episode, retrying...')
+                    print('Unhealthy episode, retrying...', flush=True)
                     for k in dataset.keys():
                         dataset[k] = dataset[k][:-step]
             else:

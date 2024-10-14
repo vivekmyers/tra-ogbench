@@ -123,7 +123,8 @@ class KitchenGoalWrapper(Wrapper):
 
     def render(self):
         from dm_control.mujoco import engine
+
         camera = engine.MovableCamera(self.env.unwrapped.sim, 200, 200)
-        camera.set_pose(distance=1.86, lookat=[-0.3, .5, 2.], azimuth=90, elevation=-60)
+        camera.set_pose(distance=1.86, lookat=[-0.3, 0.5, 2.0], azimuth=90, elevation=-60)
         img = camera.render()
         return img

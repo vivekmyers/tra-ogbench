@@ -82,7 +82,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
     def actor_loss(self, batch, grad_params, rng=None):
         if self.config['actor_loss'] == 'awr':
-            # AWR loss
+            # AWR loss.
             if self.config['use_q']:
                 # GCIQL: Compute Q(s, a, g) - V(s, g).
                 v = self.network.select('value')(batch['observations'], batch['actor_goals'])
@@ -120,7 +120,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 
             return actor_loss, actor_info
         elif self.config['actor_loss'] == 'ddpgbc':
-            # DDPG+BC loss
+            # DDPG+BC loss.
             assert self.config['use_q'] and not self.config['discrete']
 
             dist = self.network.select('actor')(batch['observations'], batch['actor_goals'], params=grad_params)
@@ -229,6 +229,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
         else:
             action_dim = ex_actions.shape[-1]
 
+        # Define encoders.
         encoders = dict()
         if config['encoder'] is not None:
             encoder_module = encoder_modules[config['encoder']]
@@ -237,6 +238,7 @@ class GCIQLAgent(flax.struct.PyTreeNode):
             if config['use_q']:
                 encoders['critic'] = GCEncoder(concat_encoder=encoder_module())
 
+        # Define value and actor networks.
         if config['use_q']:
             # GCIQL: Use both V and Q.
             value_def = GCValue(
@@ -314,35 +316,35 @@ class GCIQLAgent(flax.struct.PyTreeNode):
 def get_config():
     config = ml_collections.ConfigDict(
         dict(
-            # Agent hyperparameters
-            agent_name='gciql',  # Agent name
-            lr=3e-4,  # Learning rate
-            batch_size=1024,  # Batch size
-            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions
-            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions
-            layer_norm=True,  # Whether to use layer normalization
-            discount=0.99,  # Discount factor
-            tau=0.005,  # Target network update rate
-            expectile=0.9,  # IQL expectile
-            actor_loss='awr',  # Actor loss type ('awr' or 'ddpgbc')
-            alpha=10.0,  # Temperature in AWR or BC coefficient in DDPG+BC
-            use_q=True,  # Whether to use Q functions (True for GCIQL, False for GCIVL)
-            const_std=True,  # Whether to use constant standard deviation for the actor
-            discrete=False,  # Whether the action space is discrete
-            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.)
-            # Dataset hyperparameters
-            dataset_class='GCDataset',  # Dataset class name
-            value_p_curgoal=0.2,  # Probability of using the current state for value goals
-            value_p_trajgoal=0.5,  # Probability of using future states for value goals
-            value_p_randomgoal=0.3,  # Probability of using random states for value goals
-            value_geom_sample=True,  # Whether to use geometric sampling for future value goals
-            actor_p_curgoal=0.0,  # Probability of using the current state for actor goals
-            actor_p_trajgoal=1.0,  # Probability of using future states for actor goals
-            actor_p_randomgoal=0.0,  # Probability of using random states for actor goals
-            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals
-            gc_negative=True,  # Whether to use '0 if s == g else -1' (True) or '1 if s == g else 0' (False)
-            p_aug=0.0,  # Probability of applying image augmentation
-            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
+            # Agent hyperparameters.
+            agent_name='gciql',  # Agent name.
+            lr=3e-4,  # Learning rate.
+            batch_size=1024,  # Batch size.
+            actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions.
+            value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions.
+            layer_norm=True,  # Whether to use layer normalization.
+            discount=0.99,  # Discount factor.
+            tau=0.005,  # Target network update rate.
+            expectile=0.9,  # IQL expectile.
+            actor_loss='awr',  # Actor loss type ('awr' or 'ddpgbc').
+            alpha=10.0,  # Temperature in AWR or BC coefficient in DDPG+BC.
+            use_q=True,  # Whether to use Q functions (True for GCIQL, False for GCIVL).
+            const_std=True,  # Whether to use constant standard deviation for the actor.
+            discrete=False,  # Whether the action space is discrete.
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).
+            # Dataset hyperparameters.
+            dataset_class='GCDataset',  # Dataset class name.
+            value_p_curgoal=0.2,  # Probability of using the current state as the value goal.
+            value_p_trajgoal=0.5,  # Probability of using a future state in the same trajectory as the value goal.
+            value_p_randomgoal=0.3,  # Probability of using a random state as the value goal.
+            value_geom_sample=True,  # Whether to use geometric sampling for future value goals.
+            actor_p_curgoal=0.0,  # Probability of using the current state as the actor goal.
+            actor_p_trajgoal=1.0,  # Probability of using a future state in the same trajectory as the actor goal.
+            actor_p_randomgoal=0.0,  # Probability of using a random state as the actor goal.
+            actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
+            gc_negative=True,  # Whether to use '0 if s == g else -1' (True) or '1 if s == g else 0' (False) as reward.
+            p_aug=0.0,  # Probability of applying image augmentation.
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack.
         )
     )
     return config
