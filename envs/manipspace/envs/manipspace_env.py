@@ -32,11 +32,13 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         """Initialize the ManipSpace environment.
 
         Args:
-            ob_type: Observation type. Either 'states' (default) or 'pixels'.
+            ob_type: Observation type. Either 'states' or 'pixels'.
             physics_timestep: Physics timestep.
             control_timestep: Control timestep.
             terminate_at_goal: Whether to terminate the episode when the goal is reached.
-            mode: Mode of the environment. Either 'task' (default) or 'data_collection'.
+            mode: Mode of the environment. Either 'task' or 'data_collection'. In 'task' mode, the environment is used
+                for training and evaluation. In 'data_collection' mode, the environment is used for collecting offline
+                data.
             visualize_info: Whether to visualize the task information (e.g., success status).
             **kwargs: Additional keyword arguments.
         """
@@ -283,10 +285,10 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
                 self.cur_task_idx = np.random.randint(self.num_tasks)
                 self.cur_task_info = self.task_infos[self.cur_task_idx]
 
+            # Whether to provide a rendering of the goal.
+            self._render_goal = False
             if 'render_goal' in options:
                 self._render_goal = options['render_goal']
-            else:
-                self._render_goal = False
 
         return super().reset(*args, **kwargs)
 

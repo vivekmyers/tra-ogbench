@@ -244,31 +244,37 @@ def make_env_and_dataset(env_name, dataset_path=None, frame_stack=None):
 
 
 def make_online_env(env_name):
+    """Make online environment.
+
+    Args:
+        env_name: Name of the environment.
+    """
     setup_egl()
 
-    if 'Ant' in env_name or 'Humanoid' in env_name:
-        import envs.locomotion  # noqa
+    if 'online-ant' in env_name or 'online-humanoid' in env_name:
+        import envs.online_locomotion  # noqa
 
+        # Manually recognize the '-xy' suffix, which indicates that the environment should be wrapped with a
+        # directional locomotion wrapper.
         if '-xy' in env_name:
             env_name = env_name.replace('-xy', '')
             apply_xy_wrapper = True
         else:
             apply_xy_wrapper = False
 
-        if 'Ant' in env_name:
-            env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200)
-        elif 'HumanoidCustom' in env_name:
+        if 'humanoid' in env_name:
             env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200, camera_id=0)
         else:
             env = gymnasium.make(env_name, render_mode='rgb_array', height=200, width=200)
 
         if apply_xy_wrapper:
-            from envs.locomotion.wrappers import DMCHumanoidXYWrapper, GymXYWrapper
+            # Apply the directional locomotion wrapper.
+            from envs.online_locomotion.wrappers import DMCHumanoidXYWrapper, GymXYWrapper
 
-            if 'HumanoidCustom' in env_name:
+            if 'humanoid' in env_name:
                 env = DMCHumanoidXYWrapper(env, resample_interval=200)
             else:
-                env = GymXYWrapper(env, resample_interval=100 if 'Ant' in env_name else 200)
+                env = GymXYWrapper(env, resample_interval=100)
 
         env = EpisodeMonitor(env)
     elif 'crafter' in env_name:

@@ -82,6 +82,12 @@ def tolerance(x, bounds=(0.0, 0.0), margin=0.0, sigmoid='gaussian', value_at_mar
 
 
 class HumanoidEnv(MujocoEnv, utils.EzPickle):
+    """DMC Humanoid environment.
+
+    Several methods are reimplemented to remove the dependency on the `dm_control` package. It is supposed to work
+    identically to the original Humanoid environment.
+    """
+
     xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'humanoid.xml')
     metadata = {
         'render_modes': ['human', 'rgb_array', 'depth_array'],
@@ -140,7 +146,7 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
     def _step_mujoco_simulation(self, ctrl, n_frames):
         self.data.ctrl[:] = ctrl
 
-        # DMC-style stepping (see Page 6 of https://arxiv.org/abs/2006.12983)
+        # DMC-style stepping (see Page 6 of https://arxiv.org/abs/2006.12983).
         if self.model.opt.integrator != mujoco.mjtIntegrator.mjINT_RK4.value:
             mujoco.mj_step2(self.model, self.data)
             if n_frames > 1:
@@ -151,7 +157,7 @@ class HumanoidEnv(MujocoEnv, utils.EzPickle):
         mujoco.mj_step1(self.model, self.data)
 
     def _get_obs(self):
-        joint_angles = self.data.qpos[7:]  # Skip the 7 DoFs of the free root joint
+        joint_angles = self.data.qpos[7:]  # Skip the 7 DoFs of the free root joint.
         head_height = self.data.xpos[2, 2]  # ['head', 'z']
         torso_frame = self.data.xmat[1].reshape(3, 3)  # ['torso']
         torso_pos = self.data.xpos[1]  # ['torso']

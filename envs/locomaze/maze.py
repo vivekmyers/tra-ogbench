@@ -10,6 +10,14 @@ from envs.locomaze.point import PointEnv
 
 
 def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
+    """Factory function for creating a maze environment.
+
+    Args:
+        loco_env_type: Locomotion environment type. One of ['point', 'ant', 'humanoid'].
+        maze_env_type: Maze environment type. One of ['maze', 'ball'].
+        *args: Additional arguments to pass to the target class.
+        **kwargs: Additional keyword arguments to pass to the target class.
+    """
     if loco_env_type == 'point':
         loco_env_class = PointEnv
     elif loco_env_type == 'ant':
@@ -20,6 +28,11 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         raise ValueError(f'Unknown locomotion environment type: {loco_env_type}')
 
     class MazeEnv(loco_env_class):
+        """Maze environment.
+
+        It inherits from the locomotion environment and adds a maze to it.
+        """
+
         def __init__(
             self,
             maze_type='large',
@@ -30,6 +43,17 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             *args,
             **kwargs,
         ):
+            """Initialize the maze environment.
+
+            Args:
+                maze_type: Maze type. One of ['arena', 'medium', 'large', 'giant', 'teleport'].
+                maze_unit: Size of a maze unit block.
+                maze_height: Height of the maze walls.
+                terminate_at_goal: Whether to terminate the episode when the goal is reached.
+                ob_type: Observation type. Either 'states' or 'pixels'.
+                *args: Additional arguments to pass to the parent locomotion environment.
+                **kwargs: Additional keyword arguments to pass to the parent locomotion environment.
+            """
             self._maze_type = maze_type
             self._maze_unit = maze_unit
             self._maze_height = maze_height
@@ -37,11 +61,13 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self._ob_type = ob_type
             assert ob_type in ['states', 'pixels']
 
+            # Define constants.
             self._offset_x = 4
             self._offset_y = 4
             self._noise = 1
             self._goal_tol = 1.0 if loco_env_type == 'point' else 0.5
 
+            # Define maze map.
             self._teleport_info = None
             if self._maze_type == 'arena':
                 maze_map = [
@@ -120,6 +146,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             self.maze_map = np.array(maze_map)
 
+            # Update XML file.
             xml_file = self.xml_file
             tree = ET.parse(xml_file)
             self.update_tree(tree)
@@ -136,6 +163,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             super().__init__(xml_file=maze_xml_file, *args, **kwargs)
 
+            # Set task goals.
             self.task_infos = []
             self.cur_task_idx = None
             self.cur_task_info = None
@@ -146,7 +174,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             if self._ob_type == 'pixels':
                 self.observation_space = Box(low=0, high=255, shape=(64, 64, 3), dtype=np.uint8)
 
-                # Manually color the floor
+                # Manually color the floor to enable the agent to infer its position from the observation.
                 tex_grid = self.model.tex('grid')
                 tex_height = tex_grid.height[0]
                 tex_width = tex_grid.width[0]
@@ -163,7 +191,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 ex_ob = self.get_ob()
                 self.observation_space = Box(low=-np.inf, high=np.inf, shape=ex_ob.shape, dtype=ex_ob.dtype)
 
-            # Set camera
+            # Set camera.
             self.reset()
             self.render()
             self.mujoco_renderer.viewer.cam.lookat[0] = 2 * (self.maze_map.shape[1] - 3)
@@ -172,9 +200,10 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self.mujoco_renderer.viewer.cam.elevation = -90
 
         def update_tree(self, tree):
+            """Update the XML tree to include the maze."""
             worldbody = tree.find('.//worldbody')
 
-            # Add walls
+            # Add walls.
             for i in range(self.maze_map.shape[0]):
                 for j in range(self.maze_map.shape[1]):
                     struct = self.maze_map[i, j]
@@ -190,7 +219,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                             conaffinity='1',
                             material='wall',
                         )
-            # Adjust floor size
+
+            # Adjust floor size.
             center_x, center_y = 2 * (self.maze_map.shape[1] - 3), 2 * (self.maze_map.shape[0] - 3)
             size_x, size_y = 2 * self.maze_map.shape[1], 2 * self.maze_map.shape[0]
             floor = tree.find('.//geom[@name="floor"]')
@@ -198,7 +228,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             floor.set('size', f'{size_x} {size_y} 0.2')
 
             if self._teleport_info is not None:
-                # Add teleports
+                # Add teleports.
                 for i, (x, y) in enumerate(self._teleport_info['teleport_in_xys']):
                     ET.SubElement(
                         worldbody,
@@ -225,26 +255,26 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     )
 
             if self._ob_type == 'pixels':
-                # Color wall
+                # Color wall.
                 wall = tree.find('.//material[@name="wall"]')
                 wall.set('rgba', '.6 .6 .6 1')
-                # Remove ambient light
+                # Remove ambient light.
                 light = tree.find('.//light[@name="global"]')
                 light.attrib.pop('ambient')
-                # Remove torso light
+                # Remove torso light.
                 torso_light = tree.find('.//light[@name="torso_light"]')
                 torso_light_parent = tree.find('.//light[@name="torso_light"]/..')
                 torso_light_parent.remove(torso_light)
-                # Remove texture repeat
+                # Remove texture repeat.
                 grid = tree.find('.//material[@name="grid"]')
                 grid.set('texuniform', 'false')
                 if loco_env_type == 'ant':
-                    # Color one leg to break symmetry
+                    # Color one leg white to break symmetry.
                     tree.find('.//geom[@name="aux_1_geom"]').set('material', 'self_white')
                     tree.find('.//geom[@name="left_leg_geom"]').set('material', 'self_white')
                     tree.find('.//geom[@name="left_ankle_geom"]').set('material', 'self_white')
             else:
-                # Show target only when ob_type == states
+                # Only show the target for states-based observation.
                 ET.SubElement(
                     worldbody,
                     'geom',
@@ -258,6 +288,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 )
 
         def set_tasks(self):
+            # `tasks` is a list of tasks, where each task is a list of two tuples: (init_ij, goal_ij).
             if self._maze_type == 'arena':
                 tasks = [
                     [(1, 1), (6, 6)],
@@ -310,38 +341,47 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 )
 
         def reset(self, options=None, *args, **kwargs):
-            render_goal = False
-            if options is not None:
-                if 'task_idx' in options:
-                    self.cur_task_idx = options['task_idx']
-                    self.cur_task_info = self.task_infos[self.cur_task_idx]
-                elif 'task_info' in options:
-                    self.cur_task_idx = None
-                    self.cur_task_info = options['task_info']
-                else:
-                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
-
-                if 'render_goal' in options:
-                    render_goal = options['render_goal']
+            if options is None:
+                options = {}
+            # Set the task goal.
+            if 'task_idx' in options:
+                # Use the pre-defined task.
+                self.cur_task_idx = options['task_idx']
+                self.cur_task_info = self.task_infos[self.cur_task_idx]
+            elif 'task_info' in options:
+                # Use the provided task information.
+                self.cur_task_idx = None
+                self.cur_task_info = options['task_info']
             else:
-                # Randomly sample task
+                # Randomly sample a task.
                 self.cur_task_idx = np.random.randint(self.num_tasks)
                 self.cur_task_info = self.task_infos[self.cur_task_idx]
 
+            # Whether to provide a rendering of the goal.
+            render_goal = False
+            if 'render_goal' in options:
+                render_goal = options['render_goal']
+
+            # Get initial and goal positions with noise.
             init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['init_ij']))
             goal_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
 
-            # Get goal observation
+            # First, force set the position to the goal position to obtain the goal observation.
             super().reset(*args, **kwargs)
+
+            # Do a few random steps to stabilize the environment.
             num_random_actions = 40 if loco_env_type == 'humanoid' else 5
             for _ in range(num_random_actions):
                 super().step(self.action_space.sample())
+
+            # Save the goal observation.
             self.set_goal(goal_xy=goal_xy)
             self.set_xy(goal_xy)
             goal_ob = self.get_ob()
             if render_goal:
                 goal_frame = self.render()
 
+            # Now, do the actual reset.
             ob, info = super().reset(*args, **kwargs)
             self.set_goal(goal_xy=goal_xy)
             self.set_xy(init_xy)
@@ -356,16 +396,17 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             ob, reward, terminated, truncated, info = super().step(action)
 
             if self._teleport_info is not None:
-                # Check teleports
+                # Check if the agent is close to a inbound teleport.
                 for x, y in self._teleport_info['teleport_in_xys']:
                     if np.linalg.norm(self.get_xy() - np.array([x, y])) <= self._teleport_info['teleport_radius'] * 1.5:
-                        # Randomly teleport to one of the outbound teleports
+                        # Teleport the agent to a random outbound teleport.
                         teleport_out_xy = self._teleport_info['teleport_out_xys'][
                             np.random.randint(len(self._teleport_info['teleport_out_xys']))
                         ]
                         self.set_xy(np.array(teleport_out_xy))
                         break
 
+            # Check if the agent has reached the goal.
             if np.linalg.norm(self.get_xy() - self.cur_goal_xy) <= self._goal_tol:
                 if self._terminate_at_goal:
                     terminated = True
@@ -386,6 +427,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 return frame
 
         def set_goal(self, goal_ij=None, goal_xy=None):
+            """Set the goal position and update the target object."""
             if goal_xy is None:
                 self.cur_goal_xy = self.add_noise(self.ij_to_xy(goal_ij))
             else:
@@ -394,13 +436,25 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 self.model.geom('target').pos[:2] = goal_xy
 
         def get_oracle_subgoal(self, start_xy, goal_xy):
-            # Run BFS to find the next subgoal
+            """Get the oracle subgoal for the agent.
+
+            If the goal is unreachable, it returns the current position as the subgoal.
+
+            Args:
+                start_xy: Starting position of the agent.
+                goal_xy: Goal position of the agent.
+            Returns:
+                A tuple of the oracle subgoal and the BFS map.
+            """
             start_ij = self.xy_to_ij(start_xy)
             goal_ij = self.xy_to_ij(goal_xy)
+
+            # Run BFS to find the next subgoal.
             bfs_map = self.maze_map.copy()
             for i in range(self.maze_map.shape[0]):
                 for j in range(self.maze_map.shape[1]):
                     bfs_map[i][j] = -1
+
             bfs_map[goal_ij[0], goal_ij[1]] = 0
             queue = [goal_ij]
             while len(queue) > 0:
@@ -415,6 +469,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                     ):
                         bfs_map[ni][nj] = bfs_map[i][j] + 1
                         queue.append((ni, nj))
+
+            # Find the subgoal that attains the minimum BFS value.
             subgoal_ij = start_ij
             for di, dj in [(-1, 0), (0, -1), (1, 0), (0, 1)]:
                 ni, nj = start_ij[0] + di, start_ij[1] + dj
@@ -449,6 +505,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def update_tree(self, tree):
             super().update_tree(tree)
 
+            # Add ball.
             worldbody = tree.find('.//worldbody')
             ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 0.5')
             ET.SubElement(ball, 'freejoint', name='ball_root')
@@ -458,6 +515,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
         def set_tasks(self):
+            # `tasks` is a list of tasks, where each task is a list of three tuples: (agent_init_ij, ball_init_ij,
+            # goal_ij).
             if self._maze_type == 'arena':
                 tasks = [
                     [(1, 6), (2, 3), (5, 2)],
@@ -492,38 +551,47 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
                 )
 
         def reset(self, options=None, *args, **kwargs):
-            render_goal = False
-            if options is not None:
-                if 'task_idx' in options:
-                    self.cur_task_idx = options['task_idx']
-                    self.cur_task_info = self.task_infos[self.cur_task_idx]
-                elif 'task_info' in options:
-                    self.cur_task_idx = None
-                    self.cur_task_info = options['task_info']
-                else:
-                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
-
-                if 'render_goal' in options:
-                    render_goal = options['render_goal']
+            if options is None:
+                options = {}
+            # Set the task goal.
+            if 'task_idx' in options:
+                # Use the pre-defined task.
+                self.cur_task_idx = options['task_idx']
+                self.cur_task_info = self.task_infos[self.cur_task_idx]
+            elif 'task_info' in options:
+                # Use the provided task information.
+                self.cur_task_idx = None
+                self.cur_task_info = options['task_info']
             else:
-                # Randomly sample task
+                # Randomly sample a task.
                 self.cur_task_idx = np.random.randint(self.num_tasks)
                 self.cur_task_info = self.task_infos[self.cur_task_idx]
 
+            # Whether to provide a rendering of the goal.
+            render_goal = False
+            if 'render_goal' in options:
+                render_goal = options['render_goal']
+
+            # Get initial and goal positions with noise.
             agent_init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
             ball_init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
             goal_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
 
-            # Get goal observation
+            # First, force set the position to the goal position to obtain the goal observation.
             super(MazeEnv, self).reset(*args, **kwargs)
+
+            # Do a few random steps to stabilize the environment.
             for _ in range(10):
                 super(MazeEnv, self).step(self.action_space.sample())
+
+            # Save the goal observation.
             self.set_goal(goal_xy=goal_xy)
             self.set_agent_ball_xy(goal_xy, goal_xy)
             goal_ob = self.get_ob()
             if render_goal:
                 goal_frame = self.render()
 
+            # Now, do the actual reset.
             ob, info = super(MazeEnv, self).reset(*args, **kwargs)
             self.set_goal(goal_xy=goal_xy)
             self.set_agent_ball_xy(agent_init_xy, ball_init_xy)
@@ -537,6 +605,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def step(self, action):
             ob, reward, terminated, truncated, info = super(MazeEnv, self).step(action)
 
+            # Check if the ball has reached the goal.
             if np.linalg.norm(self.get_agent_ball_xy()[1] - self.cur_goal_xy) <= self._goal_tol:
                 if self._terminate_at_goal:
                     terminated = True

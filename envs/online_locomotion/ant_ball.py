@@ -4,11 +4,17 @@ import xml.etree.ElementTree as ET
 import numpy as np
 from gymnasium.spaces import Box
 
-from envs.locomotion.ant import AntEnv
+from envs.online_locomotion.ant import AntEnv
 
 
 class AntBallEnv(AntEnv):
-    def __init__(self, xml_file, *args, **kwargs):
+    """Gymnasium Ant environment with a ball."""
+
+    def __init__(self, xml_file=None, *args, **kwargs):
+        if xml_file is None:
+            xml_file = self.xml_file
+
+        # Add a ball to the environment.
         tree = ET.parse(xml_file)
         worldbody = tree.find('.//worldbody')
         ET.SubElement(
@@ -26,8 +32,10 @@ class AntBallEnv(AntEnv):
         ET.SubElement(ball, 'freejoint', name='ball_root')
         ET.SubElement(ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6')
         ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
+
+        # Rename the track camera to avoid automatic tracking.
         track_camera = tree.find('.//camera[@name="track"]')
-        track_camera.set('name', 'back')  # Rename the track camera to avoid automatic tracking
+        track_camera.set('name', 'back')
         _, xml_file = tempfile.mkstemp(text=True, suffix='.xml')
         tree.write(xml_file)
 
@@ -38,6 +46,8 @@ class AntBallEnv(AntEnv):
 
         self.reset()
         self.render()
+
+        # Adjust the camera.
         self.mujoco_renderer.viewer.cam.lookat[0] = 0
         self.mujoco_renderer.viewer.cam.lookat[1] = 0
         self.mujoco_renderer.viewer.cam.distance = 30
@@ -69,10 +79,12 @@ class AntBallEnv(AntEnv):
         else:
             info['success'] = 0.0
 
+        # Compute the distance between the agent and the ball, and the ball and the goal.
         agent_xy, ball_xy = self.get_agent_ball_xy()
         agent_ball_dist = np.linalg.norm(agent_xy - ball_xy)
         ball_goal_dist = np.linalg.norm(ball_xy - goal_xy)
 
+        # Use the change in distances as the reward.
         reward = ((prev_ball_goal_dist - ball_goal_dist) * 2.5 + (prev_agent_ball_dist - agent_ball_dist)) * 10
 
         return ob, reward, terminated, truncated, info
@@ -95,6 +107,7 @@ class AntBallEnv(AntEnv):
         self.set_state(qpos, qvel)
 
     def _get_obs(self):
+        # Return the agent's position, velocity, the ball's relative position, and the goal's relative position.
         agent_xy, ball_xy = self.get_agent_ball_xy()
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()

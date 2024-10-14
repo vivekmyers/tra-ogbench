@@ -8,6 +8,12 @@ from gymnasium.spaces import Box
 
 
 class PointEnv(MujocoEnv, utils.EzPickle):
+    """PointMass environment.
+
+    This is a simple 2-D point mass environment, where the agent is controlled by an x-y action vector that is added to
+    the current position of the point mass.
+    """
+
     xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'point.xml')
     metadata = {
         'render_modes': ['human', 'rgb_array', 'depth_array'],
@@ -22,6 +28,15 @@ class PointEnv(MujocoEnv, utils.EzPickle):
         height=200,
         **kwargs,
     ):
+        """Initialize the Humanoid environment.
+
+        Args:
+            xml_file: Path to the XML description (optional).
+            render_mode: Rendering mode.
+            width: Width of the rendered image.
+            height: Height of the rendered image.
+            **kwargs: Additional keyword arguments.
+        """
         if xml_file is None:
             xml_file = self.xml_file
         utils.EzPickle.__init__(

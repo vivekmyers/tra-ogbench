@@ -1,4 +1,4 @@
-import envs.locomotion  # noqa
+import envs.online_locomotion  # noqa
 import gymnasium
 from dm_control import suite
 import numpy as np

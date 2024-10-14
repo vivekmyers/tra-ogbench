@@ -7,6 +7,13 @@ from gymnasium.spaces import Box
 
 
 class AntEnv(MujocoEnv, utils.EzPickle):
+    """Gymnasium Ant environment.
+
+    Unlike the original Ant environment, this environment uses a restricted joint range for the actuators, as typically
+    done in previous works in hierarchical reinforcement learning. It also uses a control frequency of 10Hz instead of
+    20Hz, which is the default in the original environment.
+    """
+
     xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'ant.xml')
     metadata = {
         'render_modes': ['human', 'rgb_array', 'depth_array'],
@@ -22,6 +29,16 @@ class AntEnv(MujocoEnv, utils.EzPickle):
         height=200,
         **kwargs,
     ):
+        """Initialize the Ant environment.
+
+        Args:
+            xml_file: Path to the XML description (optional).
+            reset_noise_scale: Scale of the noise added to the initial state during reset.
+            render_mode: Rendering mode.
+            width: Width of the rendered image.
+            height: Height of the rendered image.
+            **kwargs: Additional keyword arguments.
+        """
         if xml_file is None:
             xml_file = self.xml_file
         utils.EzPickle.__init__(

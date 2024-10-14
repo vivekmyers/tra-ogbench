@@ -435,7 +435,7 @@ class CubeEnv(ManipSpaceEnv):
             init_xyzs = self.cur_task_info['init_xyzs'].copy()[permutation]
             goal_xyzs = self.cur_task_info['goal_xyzs'].copy()[permutation]
 
-            # First, force set the current scene to the goal state to obtain a goal observation.
+            # First, force set the current scene to the goal state to obtain the goal observation.
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
             self.initialize_arm()

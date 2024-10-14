@@ -521,7 +521,7 @@ class PuzzleEnv(ManipSpaceEnv):
             init_button_states = self.cur_task_info['init_button_states'].copy()
             goal_button_states = self.cur_task_info['goal_button_states'].copy()
 
-            # First, force set the current scene to the goal state to obtain a goal observation.
+            # First, force set the current scene to the goal state to obtain the goal observation.
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
             self.initialize_arm()

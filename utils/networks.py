@@ -324,9 +324,9 @@ class GCDiscreteCritic(GCValue):
 
     action_dim: int = None
 
-    def __call__(self, observations, goals=None, actions=None, info=False):
+    def __call__(self, observations, goals=None, actions=None):
         actions = jnp.eye(self.action_dim)[actions]
-        return super().__call__(observations, goals, actions, info)
+        return super().__call__(observations, goals, actions)
 
 
 class GCBilinearValue(nn.Module):

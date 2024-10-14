@@ -4,7 +4,15 @@ from gymnasium.spaces import Box
 
 
 class GymXYWrapper(gymnasium.Wrapper):
+    """Wrapper for directional locomotion tasks."""
+
     def __init__(self, env, resample_interval=100):
+        """Initialize the wrapper.
+
+        Args:
+            env: Environment.
+            resample_interval: Interval at which to resample the direction.
+        """
         super().__init__(env)
 
         self.z = None
@@ -28,6 +36,7 @@ class GymXYWrapper(gymnasium.Wrapper):
         next_xy = self.unwrapped.data.qpos[:2].copy()
         self.num_steps += 1
 
+        # Reward is the dot product of the direction and the change in xy.
         reward = (next_xy - cur_xy).dot(self.z)
         info['xy'] = next_xy
         info['direction'] = self.z
@@ -40,8 +49,10 @@ class GymXYWrapper(gymnasium.Wrapper):
 
 
 class DMCHumanoidXYWrapper(GymXYWrapper):
+    """Wrapper for the directional Humanoid task."""
+
     def step(self, action):
-        from envs.locomotion.humanoid import tolerance
+        from envs.online_locomotion.humanoid import tolerance
 
         cur_xy = self.unwrapped.data.qpos[:2].copy()
         ob, reward, terminated, truncated, info = self.env.step(action)
@@ -50,17 +61,13 @@ class DMCHumanoidXYWrapper(GymXYWrapper):
 
         head_height = self.unwrapped.data.xpos[2, 2]  # ['head', 'z']
         torso_upright = self.unwrapped.data.xmat[1, 8]  # ['torso', 'zz']
-        center_of_mass_velocity = self.unwrapped.data.sensordata[0:3]  # ['torso_subtreelinvel']
-        control = self.unwrapped.data.ctrl.copy()
 
         standing = tolerance(head_height, bounds=(1.4, float('inf')), margin=1.4 / 4)
         upright = tolerance(torso_upright, bounds=(0.9, float('inf')), margin=1.9, sigmoid='linear', value_at_margin=0)
         stand_reward = standing * upright
-        small_control = tolerance(control, margin=1, value_at_margin=0, sigmoid='quadratic').mean()
-        small_control = (4 + small_control) / 5
-        move = center_of_mass_velocity[0:2].dot(self.z)
-        move = (5 * move + 1) / 6
-        # reward = small_control * stand_reward * move
+
+        # Reward is the dot product of the direction and the change in xy, multiplied by the stand reward to encourage
+        # the agent to stand.
         reward = stand_reward * (1 + (next_xy - cur_xy).dot(self.z) * 100)
 
         info['xy'] = next_xy

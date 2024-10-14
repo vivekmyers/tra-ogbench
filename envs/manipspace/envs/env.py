@@ -27,7 +27,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         Args:
             physics_timestep: Internal timestep used for physics simulation.
             control_timestep: Timestep used for control. This is the actual control frequency.
-            render_mode: Render mode. This is for compatibility with the `gymnasium.Env` class. Not used.
+            render_mode: Rendering mode. Unused; for compatibility with `gymnasium`.
             width: Width of the rendered image.
             height: Height of the rendered image.
         """

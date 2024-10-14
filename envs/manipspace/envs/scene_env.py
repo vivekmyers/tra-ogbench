@@ -273,7 +273,7 @@ class SceneEnv(ManipSpaceEnv):
             init_window_pos = self.cur_task_info['init']['window_pos']
             goal_window_pos = self.cur_task_info['goal']['window_pos']
 
-            # First, force set the current scene to the goal state to obtain a goal observation.
+            # First, force set the current scene to the goal state to obtain the goal observation.
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
             self.initialize_arm()

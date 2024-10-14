@@ -9,7 +9,7 @@ FLAGS = flags.FLAGS
 
 
 def main(_):
-    dataset_paths = sorted(glob.glob('data/manipspace/visual-scene-*.npz'))
+    dataset_paths = sorted(glob.glob('data/manipspace/*scene-*.npz'))
     for dataset_path in dataset_paths:
         print(dataset_path, flush=True)
         dataset = np.load(dataset_path)

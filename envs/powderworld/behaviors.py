@@ -2,6 +2,7 @@ import numpy as np
 
 
 class Behavior:
+    """Base class for action behaviors."""
     def __init__(self, env):
         self._env = env
         self._done = False
@@ -30,11 +31,13 @@ class Behavior:
 
 
 class FillBehavior(Behavior):
+    """Fill the entire grid with a single element."""
     def reset(self, ob, info):
         self._done = False
         self._step = 0
         self._elem_name = np.random.choice(self._env.unwrapped._elem_names)
 
+        # Randomly flip the fill directions.
         flip_x = np.random.randint(2)
         flip_y = np.random.randint(2)
         flip_xy = np.random.randint(2)
@@ -54,11 +57,13 @@ class FillBehavior(Behavior):
 
 
 class LineBehavior(Behavior):
+    """Fill a single line with a single element."""
     def reset(self, ob, info):
         self._done = False
         self._step = 0
         self._elem_name = np.random.choice(self._env.unwrapped._elem_names)
 
+        # Randomly select the line direction.
         target_idx = np.random.randint(self._size)
         flip_dir = np.random.randint(2)
         flip_xy = np.random.randint(2)
@@ -75,6 +80,7 @@ class LineBehavior(Behavior):
 
 
 class SquareBehavior(Behavior):
+    """Draw a square with a single element."""
     def reset(self, ob, info):
         self._done = False
         self._step = 0
@@ -92,12 +98,12 @@ class SquareBehavior(Behavior):
         sides.append([(x, y1) for x in range(x1, x2 + 1)])
         sides.append([(x, y2) for x in range(x1, x2 + 1)])
 
-        # Random flip
+        # Randomly reverse sides.
         for i in range(4):
             if np.random.randint(2):
                 sides[i].reverse()
 
-        # Random permutation
+        # Randomly shuffle the order of sides.
         np.random.shuffle(sides)
 
         self._sequence = []

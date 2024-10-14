@@ -11,6 +11,13 @@ DEFAULT_CAMERA_CONFIG = {
 
 
 class AntEnv(MujocoEnv, utils.EzPickle):
+    """Gymnasium Ant environment.
+
+    Unlike the original Ant environment, this environment uses a restricted joint range for the actuators, as typically
+    done in previous works in hierarchical reinforcement learning. It also uses a control frequency of 10Hz instead of
+    20Hz, which is the default in the original environment.
+    """
+
     xml_file = os.path.join(os.path.dirname(__file__), 'assets', 'ant.xml')
     metadata = {
         'render_modes': [

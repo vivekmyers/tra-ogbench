@@ -1,12 +1,18 @@
 import gymnasium
 import numpy as np
-from gymnasium.spaces import Box, Discrete
 from PIL import Image
+from gymnasium.spaces import Box, Discrete
 
 from envs.powderworld.sim import PWRenderer, PWSim, interp, pw_element_names
 
 
 class PowderworldEnv(gymnasium.Env):
+    """Powderworld enviroment.
+
+    This wraps the numpy version of the Powderworld simulator to create a gymnasium environment. It supports
+    goal-based tasks where the agent must recreate a given world state.
+    """
+
     metadata = {
         'render_modes': ['rgb_array'],
         'render_fps': 15,
@@ -18,11 +24,25 @@ class PowderworldEnv(gymnasium.Env):
         grid_size=4,
         brush_size=4,
         num_elems=5,
-        mode='task',  # 'task' or 'data_collection'
-        render_mode=None,  # Unused; for compatibility with gymnasium
-        width=192,  # Only used for rendering, not for observations
-        height=192,  # Only used for rendering, not for observations
+        mode='task',
+        render_mode=None,
+        width=192,
+        height=192,
     ):
+        """Initialize the Powderworld environment.
+
+        Args:
+            world_size: Size of the world grid.
+            grid_size: Size of the action grid.
+            brush_size: Size of the brush.
+            num_elems: Number of elements in the world. Must be 2, 5, or 8.
+            mode: Mode of the environment. Either 'task' or 'data_collection'. In 'task' mode, the environment is used
+                for training and evaluation. In 'data_collection' mode, the environment is used for collecting offline
+                data.
+            render_mode: Rendering mode. Unused; for compatibility with `gymnasium`.
+            width: Width of the rendered image. Only used for rendering, not for observations.
+            height: Height of the rendered image. Only used for rendering, not for observations.
+        """
         self.pw = PWSim()
         self.pwr = PWRenderer()
 
@@ -50,12 +70,17 @@ class PowderworldEnv(gymnasium.Env):
 
         self._world = None
 
-        self._action_step = 0  # 0: set element id, 1: set x, 2: set y
-        self._action_elem_id = None
-        self._action_x = None
-        self._action_y = None
+        # The environment has three action stages:
+        # 0: Set element id.
+        # 1: Set the x coordinate.
+        # 2: Set the y coordinate.
+        self._action_step = 0  # The current stage.
+        self._action_elem_id = None  # The selected element id.
+        self._action_x = None  # The selected x coordinate.
+        self._action_y = None  # The selected y coordinate
 
         if self._mode == 'task':
+            # Set task goals.
             self.task_infos = []
             self.cur_task_idx = None
             self.cur_task_info = None
@@ -65,6 +90,7 @@ class PowderworldEnv(gymnasium.Env):
 
     def set_tasks(self):
         def add_square(action_seq, elem_name, x, y, size):
+            """Add a square to the action sequence."""
             for i in range(0, size):
                 action_seq.append((elem_name, x + i, y + size - 1))
             for i in range(size - 2, -1, -1):
@@ -75,14 +101,14 @@ class PowderworldEnv(gymnasium.Env):
                 action_seq.append((elem_name, x + i, y))
 
         if self._num_elems == 2:
-            # Task 1
+            # Task 1: Plant.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
                     action_seq.append(('plant', x, y))
             self.task_infos.append(dict(task_name='task1_plant', action_seq=action_seq, tol=32))
 
-            # Task 2
+            # Task 2: Stone.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
@@ -92,7 +118,7 @@ class PowderworldEnv(gymnasium.Env):
                     action_seq.append(('stone', x, y))
             self.task_infos.append(dict(task_name='task2_stone', action_seq=action_seq, tol=32))
 
-            # Task 3
+            # Task 3: Square.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
@@ -100,7 +126,7 @@ class PowderworldEnv(gymnasium.Env):
             add_square(action_seq, 'stone', 1, 1, 6)
             self.task_infos.append(dict(task_name='task3_square', action_seq=action_seq, tol=32))
 
-            # Task 4
+            # Task 4: Four squares.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
@@ -112,7 +138,7 @@ class PowderworldEnv(gymnasium.Env):
                 add_square(action_seq, 'plant', sx, sy, 3)
             self.task_infos.append(dict(task_name='task4_four_squares', action_seq=action_seq, tol=32))
 
-            # Task 5
+            # Task 5: Mosaic.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
@@ -123,7 +149,7 @@ class PowderworldEnv(gymnasium.Env):
                         action_seq.append(('stone', x, y))
             self.task_infos.append(dict(task_name='task5_mosaic', action_seq=action_seq, tol=32))
         elif self._num_elems == 5:
-            # Task 1
+            # Task 1: Squares.
             action_seq = []
             add_square(action_seq, 'plant', 1, 1, 6)
             add_square(action_seq, 'sand', 0, 0, 8)
@@ -131,7 +157,7 @@ class PowderworldEnv(gymnasium.Env):
             add_square(action_seq, 'water', 3, 3, 2)
             self.task_infos.append(dict(task_name='task1_squares', action_seq=action_seq, tol=32))
 
-            # Task 2
+            # Task 2: Water plant.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
@@ -139,7 +165,7 @@ class PowderworldEnv(gymnasium.Env):
             add_square(action_seq, 'plant', 0, 0, 8)
             self.task_infos.append(dict(task_name='task2_water_plant', action_seq=action_seq, tol=64))
 
-            # Task 3
+            # Task 3: Sandpile.
             action_seq = []
             add_square(action_seq, 'stone', 0, 0, 8)
             for _ in range(32):
@@ -151,7 +177,7 @@ class PowderworldEnv(gymnasium.Env):
                 )
             self.task_infos.append(dict(task_name='task3_sandpile', action_seq=action_seq, tol=64))
 
-            # Task 4
+            # Task 4: Two rooms.
             action_seq = []
             for x in range(0, 8):
                 action_seq.append(('plant', x, 6))
@@ -172,7 +198,7 @@ class PowderworldEnv(gymnasium.Env):
                 action_seq.append(('fire', 4, 7))
             self.task_infos.append(dict(task_name='task4_two_rooms', action_seq=action_seq, tol=64))
 
-            # Task 5
+            # Task 5: Elements.
             action_seq = []
             for y in reversed(range(8)):
                 for x in range(8):
@@ -185,7 +211,7 @@ class PowderworldEnv(gymnasium.Env):
                     action_seq.append(('fire', x, 0))
             self.task_infos.append(dict(task_name='task5_elements', action_seq=action_seq, tol=96))
         elif self._num_elems == 8:
-            # Task 1
+            # Task 1: Bubbles.
             action_seq = []
             for y in range(7, -1, -1):
                 for x in range(8):
@@ -200,7 +226,7 @@ class PowderworldEnv(gymnasium.Env):
                 action_seq.append(('water', x, 7))
             self.task_infos.append(dict(task_name='task1_bubbles', action_seq=action_seq, tol=96))
 
-            # Task 2
+            # Task 2: Firework.
             action_seq = []
             add_square(action_seq, 'wood', 0, 0, 8)
             add_square(action_seq, 'plant', 1, 1, 6)
@@ -210,7 +236,7 @@ class PowderworldEnv(gymnasium.Env):
                     action_seq.append(('fire', x, 0))
             self.task_infos.append(dict(task_name='task2_firework', action_seq=action_seq, tol=96))
 
-            # Task 3
+            # Task 3: Three rooms.
             action_seq = []
             for x in range(8):
                 action_seq.append(('ice', x, 0))
@@ -232,7 +258,7 @@ class PowderworldEnv(gymnasium.Env):
                 action_seq.append(('gas', 7, y))
             self.task_infos.append(dict(task_name='task3_three_rooms', action_seq=action_seq, tol=96))
 
-            # Task 4
+            # Task 4: Four squares.
             action_seq = []
             add_square(action_seq, 'plant', 1, 4, 3)
             add_square(action_seq, 'wood', 4, 4, 3)
@@ -242,7 +268,7 @@ class PowderworldEnv(gymnasium.Env):
                 add_square(action_seq, 'plant', 4, 1, 3)
             self.task_infos.append(dict(task_name='task4_four_squares', action_seq=action_seq, tol=64))
 
-            # Task 5
+            # Task 5: Ice plant.
             action_seq = []
             for y in range(7, -1, -1):
                 for x in range(8):
@@ -257,24 +283,29 @@ class PowderworldEnv(gymnasium.Env):
 
     def reset(self, *, seed=None, options=None):
         if self._mode == 'task':
-            render_goal = False
-            if options is not None:
-                if 'task_idx' in options:
-                    self.cur_task_idx = options['task_idx']
-                    self.cur_task_info = self.task_infos[self.cur_task_idx]
-                elif 'task_info' in options:
-                    self.cur_task_idx = None
-                    self.cur_task_info = options['task_info']
-                else:
-                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
+            # Set the task goal.
+            if options is None:
+                options = {}
 
-                if 'render_goal' in options:
-                    render_goal = options['render_goal']
+            if 'task_idx' in options:
+                # Use the pre-defined task.
+                self.cur_task_idx = options['task_idx']
+                self.cur_task_info = self.task_infos[self.cur_task_idx]
+            elif 'task_info' in options:
+                # Use the provided task information.
+                self.cur_task_idx = None
+                self.cur_task_info = options['task_info']
             else:
-                # Randomly sample task
+                # Randomly sample a task.
                 self.cur_task_idx = np.random.randint(self.num_tasks)
                 self.cur_task_info = self.task_infos[self.cur_task_idx]
 
+            # Whether to provide a rendering of the goal.
+            render_goal = False
+            if 'render_goal' in options:
+                render_goal = options['render_goal']
+
+        # Initialize a new world.
         np_world = np.zeros((1, self._world_size, self._world_size), dtype=np.uint8)
         np_world[:, 0, :] = 1
         np_world[:, -1, :] = 1
@@ -288,8 +319,8 @@ class PowderworldEnv(gymnasium.Env):
         self._action_y = None
 
         if self._mode == 'task':
-            # First get a goal observation
-            self._mode = 'internal'
+            # Before doing the actual reset, we simulate the goal actions to get a goal observation.
+            self._mode = 'internal'  # Set the mode to 'internal' to prevent the agent from computing the success.
             self.reset()
             for semantic_action in self.cur_task_info['action_seq']:
                 for _ in range(3):
@@ -300,10 +331,11 @@ class PowderworldEnv(gymnasium.Env):
             if render_goal:
                 goal_frame = self.render()
 
-            # Do actual reset and perform one random action
-            self._mode = 'internal'
+            # Do the actual reset.
+            self._mode = 'internal'  # Set the mode to 'internal' to prevent the agent from computing the success.
             self.reset()
             semantic_action = self.sample_semantic_action()
+            # Perform a single random action (3 steps) to add some randomness to the initial state.
             for _ in range(3):
                 self.step(self.semantic_action_to_action(*semantic_action))
             self._mode = 'task'
@@ -320,24 +352,31 @@ class PowderworldEnv(gymnasium.Env):
 
     def step(self, action):
         if self._action_step == 0:
+            # Step 0: Set the element id.
             if action < len(self._elems):
                 self._action_elem_id = action
             else:
+                # If the action is invalid, randomly select an element.
                 self._action_elem_id = np.random.randint(len(self._elems))
         elif self._action_step == 1:
+            # Step 1: Set the x coordinate.
             if action < self._xy_action_size:
                 self._action_x = action
             else:
+                # If the action is invalid, randomly select an x coordinate.
                 self._action_x = np.random.randint(self._xy_action_size)
         else:
+            # Step 2: Set the y coordinate.
             if action < self._xy_action_size:
                 self._action_y = action
             else:
+                # If the action is invalid, randomly select a y coordinate.
                 self._action_y = np.random.randint(self._xy_action_size)
 
-            # Step world
+            # Step the world.
             self._world = self.pw.forward(self._world)
 
+            # Apply the action.
             np_action_world = np.zeros((1, self._world_size, self._world_size), dtype=np.uint8)
             elem = self._elems[self._action_elem_id]
             real_x = self._action_x * self._grid_size
@@ -350,6 +389,7 @@ class PowderworldEnv(gymnasium.Env):
                 world_delta,
             )
 
+            # Reset the action step.
             self._action_elem_id = None
             self._action_x = None
             self._action_y = None
@@ -362,6 +402,10 @@ class PowderworldEnv(gymnasium.Env):
         info = dict()
 
         if self._mode == 'task':
+            # Check if the current world matches the goal. To have some tolerance, for each pixel in the goal, we check
+            # if the current world has a matching pixel that is shifted by up to one pixel in any direction. We then
+            # compute the error as the number of pixels that do not match, and consider the task successful if the error
+            # is below a certain threshold.
             cur_world = self._world[0, 0].copy()
             world_shifts = []
             for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
@@ -382,6 +426,7 @@ class PowderworldEnv(gymnasium.Env):
         return ob, reward, done, done, info
 
     def semantic_action_to_action(self, elem_name, x, y):
+        """Convert a semantic action to an action based on the current action step."""
         elem_id = self._elem_names.index(elem_name)
         if self._action_step == 0:
             return elem_id
@@ -391,12 +436,14 @@ class PowderworldEnv(gymnasium.Env):
             return y
 
     def sample_action(self):
+        """Sample a random valid action."""
         if self._action_step == 0:
             return np.random.randint(len(self._elems))
         else:
             return np.random.randint(self._xy_action_size)
 
     def sample_semantic_action(self):
+        """Sample a random semantic action."""
         elem_name = np.random.choice(self._elem_names)
         x = np.random.randint(self._xy_action_size)
         y = np.random.randint(self._xy_action_size)
@@ -412,13 +459,17 @@ class PowderworldEnv(gymnasium.Env):
         return frame
 
     def _get_ob(self):
-        world_frame = self.pwr.render(self._world).copy()
-        action_frame = np.zeros_like(world_frame)
+        world_frame = self.pwr.render(self._world).copy()  # (world_size, world_size, 3)
+
+        # Compute an additional action frame to show the currently selected action.
+        action_frame = np.zeros_like(world_frame)  # (world_size, world_size, 3)
         if self._action_step == 1:
+            # Color the entire frame with the selected element color.
             color = self._elem_colors[self._action_elem_id]
             action_frame[..., :] = (color * 255.0).astype(np.uint8)
         elif self._action_step == 2:
+            # Color the selected x coordinate with the selected element color.
             color = self._elem_colors[self._action_elem_id]
             real_x = self._action_x * self._grid_size
             action_frame[:, real_x : real_x + self._brush_size, :] = (color * 255.0).astype(np.uint8)
-        return np.concatenate([world_frame, action_frame], axis=2)
+        return np.concatenate([world_frame, action_frame], axis=2)  # (world_size, world_size, 6)
