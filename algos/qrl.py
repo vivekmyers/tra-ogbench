@@ -9,7 +9,7 @@ import optax
 
 from utils.encoders import GCEncoder, encoder_modules
 from utils.networks import MLP, GCActor, GCDiscreteActor, GCIQEValue, GCMRNValue, LogParam
-from utils.train_state import ModuleDict, TrainState, nonpytree_field
+from utils.flax_utils import ModuleDict, TrainState, nonpytree_field
 
 
 class QRLAgent(flax.struct.PyTreeNode):

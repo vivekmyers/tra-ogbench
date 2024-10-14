@@ -1,4 +1,7 @@
 import functools
+import glob
+import os
+import pickle
 from typing import Any, Dict, Mapping, Sequence
 
 import flax
@@ -155,14 +158,30 @@ class TrainState(flax.struct.PyTreeNode):
 
         return self.apply_gradients(grads=grads), info
 
-    def save(self):
-        """Save the state."""
-        return {
-            'params': self.params,
-            'opt_state': self.opt_state,
-            'step': self.step,
-        }
 
-    def load(self, data):
-        """Load the state."""
-        return self.replace(**data)
+def save_agent(agent, save_dir, epoch):
+    save_dict = dict(
+        agent=flax.serialization.to_state_dict(agent),
+    )
+    save_path = os.path.join(save_dir, f'params_{epoch}.pkl')
+    with open(save_path, 'wb') as f:
+        pickle.dump(save_dict, f)
+
+    print(f'Saved to {save_path}')
+
+
+def restore_agent(agent, restore_path, restore_epoch):
+    candidates = glob.glob(restore_path)
+
+    assert len(candidates) == 1, f'Found {len(candidates)} candidates: {candidates}'
+
+    restore_path = candidates[0] + f'/params_{restore_epoch}.pkl'
+
+    with open(restore_path, 'rb') as f:
+        load_dict = pickle.load(f)
+
+    agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
+
+    print(f'Restored from {restore_path}')
+
+    return agent

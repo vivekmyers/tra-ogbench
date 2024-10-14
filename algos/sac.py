@@ -8,7 +8,7 @@ import ml_collections
 import optax
 
 from utils.networks import GCActor, GCValue, LogParam
-from utils.train_state import ModuleDict, TrainState, nonpytree_field
+from utils.flax_utils import ModuleDict, TrainState, nonpytree_field
 
 
 class SACAgent(flax.struct.PyTreeNode):

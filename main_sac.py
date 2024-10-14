@@ -1,11 +1,8 @@
-import glob
 import json
 import os
-import pickle
 import random
 import time
 
-import flax
 import jax
 import numpy as np
 import tqdm
@@ -18,6 +15,7 @@ from envs.env_loader import make_online_env
 from envs.viz_utils import visualize_trajs
 from utils.dataset import ReplayBuffer
 from utils.evaluation import evaluate, flatten
+from utils.flax_utils import restore_agent, save_agent
 from utils.logger import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
@@ -92,17 +90,7 @@ def main(_):
 
     # Restore agent.
     if FLAGS.restore_path is not None:
-        restore_path = FLAGS.restore_path
-        candidates = glob.glob(restore_path)
-        assert len(candidates) == 1, f'Found {len(candidates)} candidates: {candidates}'
-        if FLAGS.restore_epoch is None:
-            restore_path = candidates[0] + '/params.pkl'
-        else:
-            restore_path = candidates[0] + f'/params_{FLAGS.restore_epoch}.pkl'
-        with open(restore_path, 'rb') as f:
-            load_dict = pickle.load(f)
-        agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
-        print(f'Restored from {restore_path}')
+        agent = restore_agent(agent, FLAGS.restore_path, FLAGS.restore_epoch)
 
     # Train agent.
     expl_metrics = dict()
@@ -194,14 +182,7 @@ def main(_):
 
         # Save agent.
         if i % FLAGS.save_interval == 0:
-            save_dict = dict(
-                agent=flax.serialization.to_state_dict(agent),
-            )
-
-            save_path = os.path.join(FLAGS.save_dir, f'params_{i}.pkl')
-            print(f'Saving to {save_path}')
-            with open(save_path, 'wb') as f:
-                pickle.dump(save_dict, f)
+            save_agent(agent, FLAGS.save_dir, i)
 
         # Reset agent.
         if FLAGS.reset_interval > 0 and i % FLAGS.reset_interval == 0:

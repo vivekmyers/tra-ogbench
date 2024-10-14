@@ -1,12 +1,9 @@
-import glob
 import json
 import os
-import pickle
 import random
 import time
 from collections import defaultdict
 
-import flax
 import jax
 import numpy as np
 import tqdm
@@ -18,6 +15,7 @@ from algos import algos
 from envs.env_loader import make_env_and_dataset
 from utils.dataset import Dataset, GCDataset, HGCDataset
 from utils.evaluation import evaluate
+from utils.flax_utils import restore_agent, save_agent
 from utils.logger import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
@@ -77,7 +75,7 @@ def main(_):
 
     example_batch = train_dataset.sample(1)
     if config['discrete']:
-        # Fill with the maximum action.
+        # Fill with the maximum action to let the agent know the action space size.
         example_batch['actions'] = np.full_like(example_batch['actions'], env.action_space.n - 1)
 
     agent_class = algos[config['agent_name']]
@@ -90,17 +88,7 @@ def main(_):
 
     # Restore agent.
     if FLAGS.restore_path is not None:
-        restore_path = FLAGS.restore_path
-        candidates = glob.glob(restore_path)
-        assert len(candidates) == 1, f'Found {len(candidates)} candidates: {candidates}'
-        if FLAGS.restore_epoch is None:
-            restore_path = candidates[0] + '/params.pkl'
-        else:
-            restore_path = candidates[0] + f'/params_{FLAGS.restore_epoch}.pkl'
-        with open(restore_path, 'rb') as f:
-            load_dict = pickle.load(f)
-        agent = flax.serialization.from_state_dict(agent, load_dict['agent'])
-        print(f'Restored from {restore_path}')
+        agent = restore_agent(agent, FLAGS.restore_path, FLAGS.restore_epoch)
 
     # Train agent.
     train_logger = CsvLogger(os.path.join(FLAGS.save_dir, 'train.csv'))
@@ -169,13 +157,8 @@ def main(_):
 
         # Save agent.
         if i % FLAGS.save_interval == 0:
-            save_dict = dict(
-                agent=flax.serialization.to_state_dict(agent),
-            )
-            save_path = os.path.join(FLAGS.save_dir, f'params_{i}.pkl')
-            print(f'Saving to {save_path}')
-            with open(save_path, 'wb') as f:
-                pickle.dump(save_dict, f)
+            save_agent(agent, FLAGS.save_dir, i)
+
     train_logger.close()
     eval_logger.close()
 
