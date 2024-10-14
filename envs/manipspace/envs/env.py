@@ -12,7 +12,7 @@ from envs.manipspace import mjcf_utils
 
 
 class CustomMuJoCoEnv(gym.Env, abc.ABC):
-    """Base class for Mujoco environments."""
+    """Custom MuJoCo environment class."""
 
     def __init__(
         self,
@@ -22,17 +22,14 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         width: int = 200,
         height: int = 200,
     ):
-        """Initializes the Mujoco environment.
+        """Initialize the MuJoCo environment.
 
         Args:
-            physics_timestep: The timestep used for physics simulation. The default
-                value is Mujoco's default of 2ms.
-            control_timestep: The timestep used for the control signal. By default,
-                this is the same as the physics timestep.
-            render_mode: The render mode to use. This is for compatibility with the
-                `MujocoEnv` class in `gymnasium`. It is not used in this class.
-            width: The width of the rendered image in pixels.
-            height: The height of the rendered image in pixels.
+            physics_timestep: Internal timestep used for physics simulation.
+            control_timestep: Timestep used for control. This is the actual control frequency.
+            render_mode: Render mode. This is for compatibility with the `gymnasium.Env` class. Not used.
+            width: Width of the rendered image.
+            height: Height of the rendered image.
         """
         self._dirty = True
         self._passive_viewer_handle = None
@@ -54,7 +51,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     @abc.abstractmethod
     def build_mjcf_model(self) -> mjcf.RootElement:
-        """Builds the MJCF model for the environment using the `mjcf` library.
+        """Build the MJCF model for the environment using the `mjcf` library.
 
         Returns:
             The root element of the MJCF model.
@@ -62,15 +59,14 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         raise NotImplementedError
 
     def modify_mjcf_model(self, mjcf_model: mjcf.RootElement) -> mjcf.RootElement:
-        """Modifies the MJCF model at the beginning of each episode.
+        """Modify the MJCF model at the beginning of each episode.
 
-        This is useful for domain randomization or other forms of model modifications
-        that may require recompilation of the MjModel and MjData objects. If the
-        operation performed requires recompilation, call `mark_dirty` to force
+        This is useful for domain randomization or other forms of model modifications that may require recompilation of
+        the MjModel and MjData objects. If the operation performed requires recompilation, call `mark_dirty` to force
         recompilation.
 
         Args:
-            mjcf: The root element of the MJCF model.
+            mjcf_model: Root element of the MJCF model.
 
         Returns:
             The root element of the modified MJCF model.
@@ -79,12 +75,12 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     @abc.abstractmethod
     def initialize_episode(self) -> None:
-        """Initializes the environment at the beginning of each episode."""
+        """Initialize the environment at the beginning of each episode."""
         raise NotImplementedError
 
     @abc.abstractmethod
     def compute_observation(self) -> Any:
-        """Computes the observation at each timestep.
+        """Compute the observation at each timestep.
 
         Returns:
             A dictionary of observation arrays.
@@ -93,65 +89,64 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     @abc.abstractmethod
     def compute_reward(self, ob, action) -> SupportsFloat:
-        """Computes the reward at each timestep."""
+        """Compute the reward at each timestep."""
         raise NotImplementedError
 
     def set_control(self, action) -> None:
-        """Sets the control signal for the actuators at each timestep.
+        """Set the control signal for the actuators at each timestep.
 
-        This simply forwards the action to the underlying actuators. Override this
-        method to provide custom control logic such as end-effector Cartesian control.
+        This simply forwards the action to the underlying actuators. Override this method to provide custom control
+        logic such as end-effector Cartesian control.
         """
         self._data.ctrl[:] = action
 
     def post_compilation(self) -> None:
-        """Performs any post-compilation operations.
+        """Perform any post-compilation operations.
 
-        This can be useful for caching references to commonly accessed model or
-        data fields. By default, this method does nothing.
+        This can be useful for caching references to commonly accessed model or data fields. By default, this method
+        does nothing.
         """
         pass
 
     def terminate_episode(self) -> bool:
-        """Determines whether the episode should be terminated.
+        """Determine whether the episode should be terminated.
 
-        Can be used to implement custom termination conditions such as task success,
-        and task failure.
+        Can be used to implement custom termination conditions such as task success, and task failure.
         """
         return False
 
     def truncate_episode(self) -> bool:
-        """Determines whether the episode should be truncated.
+        """Determine whether the episode should be truncated.
 
         Can be used to implement custom truncation conditions such as time limits.
         """
         return False
 
     def get_reset_info(self) -> dict:
-        """Returns a dictionary of information to be included in the reset return."""
+        """Return a dictionary of information to be included in the reset return."""
         return {}
 
     def get_step_info(self) -> dict:
-        """Returns a dictionary of information to be included in the step return."""
+        """Return a dictionary of information to be included in the step return."""
         return {}
 
     def pre_step(self) -> None:
-        """Performs any pre-step operations.
+        """Perform any pre-step operations.
 
         This can be useful for saving information. By default, this method does nothing.
         """
         pass
 
     def post_step(self) -> None:
-        """Performs any post-step operations.
+        """Perform any post-step operations.
 
-        This can be useful for updating the environment state after the simulation has
-        been stepped. By default, this method does nothing.
+        This can be useful for updating the environment state after the simulation has been stepped. By default, this
+        method does nothing.
         """
         pass
 
     def compile_model_and_data(self):
-        """Compiles the MJCF model into MjModel and MjData objects."""
+        """Compile the MJCF model into MjModel and MjData objects."""
         getattr(self._mjcf_model.visual, 'global').offwidth = self._render_width
         getattr(self._mjcf_model.visual, 'global').offheight = self._render_height
 
@@ -183,21 +178,19 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         self._dirty = False
 
     def mark_dirty(self):
-        """Marks the environment as dirty, requiring recompilation of the model."""
+        """Mark the environment as dirty, requiring recompilation of the model."""
         self._dirty = True
 
-    def reset(self, seed: int | None = None, options=None, **kwargs):
-        """Resets the environment to the initial state.
+    def reset(self, seed: int = None, options=None, **kwargs):
+        """Reset the environment to the initial state.
 
-        - If this is the first call to `reset`, builds the MJCF model with
-            `build_mjcf_model`.
-        - Modifies the MJCF model by calling `modify_mjcf`.
-        - If the environment is dirty, MjModel and MjData objects will be recompiled.
-            Otherwise, compilation will be skipped unless this is the first call to
-            `reset`.
-        - Resets the simulation with `mujoco.mj_resetData`.
-        - Initializes the episode with `initialize_episode`.
-        - Computes the first observation with `compute_observation`.
+        - If this is the first call to `reset`, build the MJCF model with `build_mjcf_model`.
+        - Modify the MJCF model by calling `modify_mjcf`.
+        - If the environment is dirty, MjModel and MjData objects will be recompiled. Otherwise, compilation will be
+            skipped unless this is the first call to `reset`.
+        - Reset the simulation with `mujoco.mj_resetData`.
+        - Initialize the episode with `initialize_episode`.
+        - Compute the first observation with `compute_observation`.
         """
         super().reset(seed=seed, options=options, **kwargs)
         if self._mjcf_model is None:
@@ -217,7 +210,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         return ob, info
 
     def set_state(self, qpos, qvel):
-        """Resets the environment to a specific state."""
+        """Reset the environment to a specific state."""
         assert qpos.shape == (self.model.nq,) and qvel.shape == (self.model.nv,)
         self._data.qpos[:] = np.copy(qpos)
         self._data.qvel[:] = np.copy(qvel)
@@ -226,13 +219,13 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         mujoco.mj_forward(self._model, self._data)
 
     def step(self, action):
-        """Steps the environment forward by one timestep.
+        """Step the environment forward by one timestep.
 
-        - Sets the control signal with `set_control`.
-        - Steps the simulation with `mujoco.mj_step`.
-        - Computes the observation with `compute_observation`.
-        - Computes the reward with `compute_reward`.
-        - Checks if the time limit has been exceeded.
+        - Set the control signal with `set_control`.
+        - Step the simulation with `mujoco.mj_step`.
+        - Compute the observation with `compute_observation`.
+        - Compute the reward with `compute_reward`.
+        - Check if the time limit has been exceeded.
         """
         if self._reset_next_step:
             return self.reset()
@@ -250,10 +243,10 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     @property
     def action_space(self):
-        """Returns the action space for the environment.
+        """Return the action space for the environment.
 
-        By default, this returns a Box matching the actuators defined in the
-        model. Override this method to provide a custom action space.
+        By default, this returns a Box matching the actuators defined in the model. Override this method to provide a
+        custom action space.
         """
         if self._model is None:
             self.reset()
@@ -267,18 +260,17 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     @property
     def observation_space(self):
-        """Returns the observation space for the environment.
+        """Return the observation space for the environment.
 
         By default, this returns an empty Dict.
         """
         return gym.spaces.Dict({})
 
     def set_timesteps(self, physics_timestep: float, control_timestep: float) -> None:
-        """Sets the physics and control timesteps for the environment.
+        """Set the physics and control timesteps for the environment.
 
-        The physics timestep will be assigned to the MjModel during compilation. The
-        control timestep is used to determine the number of physics steps to take per
-        control step.
+        The physics timestep will be assigned to the MjModel during compilation. The control timestep is used to
+        determine the number of physics steps to take per control step.
         """
         # Check timesteps divisible.
         n_steps = control_timestep / physics_timestep
@@ -297,36 +289,37 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     @property
     def model(self) -> mujoco.MjModel:
-        """Returns the MjModel object."""
+        """Return the MjModel object."""
         if self._model is None:
             raise ValueError('MjModel object not yet initialized. Call `reset` to initialize.')
         return self._model
 
     @property
     def data(self) -> mujoco.MjData:
-        """Returns the MjData object."""
+        """Return the MjData object."""
         if self._data is None:
             raise ValueError('MjData object not yet initialized. Call `reset` to initialize.')
         return self._data
 
     @property
     def mjcf_model(self) -> mjcf.RootElement:
-        """Returns the root element of the MJCF model."""
+        """Return the root element of the MJCF model."""
         if self._mjcf_model is None:
             raise ValueError('MJCF model not yet initialized. Call `reset` to initialize.')
         return self._mjcf_model
 
     def physics_timestep(self) -> float:
-        """Returns the simulation timestep in seconds."""
+        """Return the simulation timestep in seconds."""
         return self._physics_timestep
 
     def control_timestep(self) -> float:
-        """Returns the control timestep in seconds."""
+        """Return the control timestep in seconds."""
         return self._control_timestep
 
     # Visualization.
 
     def launch_passive_viewer(self, *args, **kwargs):
+        """Launch a passive viewer for the environment."""
         if self._passive_viewer_handle is not None:
             raise ValueError('Passive viewer already launched.')
         if self._model is None or self._data is None:
@@ -341,17 +334,20 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         )
 
     def sync_passive_viewer(self):
+        """Sync the passive viewer with the current state of the environment."""
         if self._passive_viewer_handle is None:
             raise ValueError('Passive viewer not launched.')
         self._passive_viewer_handle.sync()
 
     def close_passive_viewer(self):
+        """Close the passive viewer."""
         if self._passive_viewer_handle is not None:
             self._passive_viewer_handle.close()
             self._passive_viewer_handle = None
 
     @contextlib.contextmanager
     def passive_viewer(self, *args, **kwargs):
+        """Context manager for the passive viewer."""
         self.launch_passive_viewer(*args, **kwargs)
         mujoco.mjv_defaultFreeCamera(self._model, self._passive_viewer_handle.cam)
         with self._passive_viewer_handle.lock():
@@ -363,6 +359,7 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
         self.close_passive_viewer()
 
     def _initialize_renderer(self):
+        """Initialize the renderer."""
         if self._model is None:
             raise ValueError('Call `reset` before rendering.')
         self._renderer = mujoco.Renderer(model=self._model, height=self._render_height, width=self._render_width)
@@ -370,12 +367,13 @@ class CustomMuJoCoEnv(gym.Env, abc.ABC):
 
     def render(
         self,
-        camera: int | str | mujoco.MjvCamera | None = None,
+        camera: Any = None,
         depth: bool = False,
         segmentation: bool = False,
         scene_option: Optional[mujoco.MjvOption] = None,
         scene_callback: Optional[Callable[[mujoco.MjvScene], None]] = None,
     ) -> np.ndarray:
+        """Render the current state of the environment."""
         if self._model is None or self._data is None:
             raise ValueError('Call `reset` before render.')
 

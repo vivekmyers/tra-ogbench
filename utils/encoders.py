@@ -8,6 +8,8 @@ from utils.networks import MLP
 
 
 class ResnetStack(nn.Module):
+    """ResNet stack module."""
+
     num_features: int
     num_blocks: int
     max_pooling: bool = True

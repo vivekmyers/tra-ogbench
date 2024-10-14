@@ -19,7 +19,7 @@ class ModuleDict(nn.Module):
     This allows sharing parameters between modules and provides a convenient way to access them.
 
     Attributes:
-        modules: A dictionary of modules.
+        modules: Dictionary of modules.
     """
 
     modules: Dict[str, nn.Module]
@@ -54,12 +54,12 @@ class TrainState(flax.struct.PyTreeNode):
     """Custom train state for models.
 
     Attributes:
-        step: The counter to keep track of the training steps. It is incremented by 1 after each `apply_gradients` call.
-        apply_fn: The apply function of the model.
-        model_def: The model definition.
-        params: The parameters of the model.
-        tx: The optax optimizer.
-        opt_state: The optimizer state.
+        step: Counter to keep track of the training steps. It is incremented by 1 after each `apply_gradients` call.
+        apply_fn: Apply function of the model.
+        model_def: Model definition.
+        params: Parameters of the model.
+        tx: optax optimizer.
+        opt_state: Optimizer state.
     """
 
     step: int
@@ -97,11 +97,11 @@ class TrainState(flax.struct.PyTreeNode):
         gradients, and you need to explicitly provide the parameters to flow the gradients.
 
         Args:
-            *args: The positional arguments for the forward pass.
-            params: The parameters to use to flow the gradients. If `None`, it uses the stored parameters, without
-                flowing the gradients.
-            method: The method to call in the model definition.
-            **kwargs: The keyword arguments for the forward pass.
+            *args: Arguments to pass to the model.
+            params: Parameters to use for the forward pass. If `None`, it uses the stored parameters, without flowing
+                the gradients.
+            method: Method to call in the model. If `None`, it uses the default `apply` method.
+            **kwargs: Keyword arguments to pass to the model.
         """
         if params is None:
             params = self.params
@@ -160,6 +160,14 @@ class TrainState(flax.struct.PyTreeNode):
 
 
 def save_agent(agent, save_dir, epoch):
+    """Save the agent to a file.
+
+    Args:
+        agent: Agent.
+        save_dir: Directory to save the agent.
+        epoch: Epoch number.
+    """
+
     save_dict = dict(
         agent=flax.serialization.to_state_dict(agent),
     )
@@ -171,6 +179,13 @@ def save_agent(agent, save_dir, epoch):
 
 
 def restore_agent(agent, restore_path, restore_epoch):
+    """Restore the agent from a file.
+
+    Args:
+        agent: Agent.
+        restore_path: Path to the directory containing the saved agent.
+        restore_epoch: Epoch number.
+    """
     candidates = glob.glob(restore_path)
 
     assert len(candidates) == 1, f'Found {len(candidates)} candidates: {candidates}'

@@ -7,6 +7,7 @@ matplotlib.use('Agg')
 
 
 def get_2d_colors(points, min_point, max_point):
+    """Get colors corresponding to 2-D points."""
     points = np.array(points)
     min_point = np.array(min_point)
     max_point = np.array(max_point)
@@ -20,6 +21,10 @@ def get_2d_colors(points, min_point, max_point):
 
 
 def visualize_trajs(env_name, trajs):
+    """Visualize x-y trajectories.
+
+    It reads 'xy' and 'direction' from the 'info' field of the trajectories.
+    """
     fig = figure.Figure(tight_layout=True)
     canvas = FigureCanvas(fig)
     if 'xy' in trajs[0]['info'][0]:

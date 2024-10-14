@@ -2,15 +2,26 @@ import mujoco
 import numpy as np
 from dm_control import mjcf
 
-from envs.manipspace.envs.manipspace_env import _COLORS, _DESC_DIR, _HOME_QPOS, ManipSpaceEnv
+from envs.manipspace.envs.manipspace_env import ManipSpaceEnv
 
 
 class PuzzleEnv(ManipSpaceEnv):
+    """Puzzle environment.
+
+    This environment implements the "Lights Out" puzzle game. The goal is to set all buttons to a specific state. It
+    supports the following variants:
+    - `env_type`: '3x3', '4x4', '4x5', '4x6'.
+
+    In addition to `qpos` and `qvel`, it maintains the following state variables.
+    - `button_states`: A binary array of size `num_buttons` representing the state of each button. Stored in
+        `_cur_button_states`.
+    """
+
     def __init__(self, env_type, *args, **kwargs):
         self._env_type = env_type
 
+        # Set the puzzle size.
         self._num_button_states = 2
-        self._effect_type = 'plus'
 
         if '3x3' in env_type:
             self._num_rows = 3
@@ -32,8 +43,10 @@ class PuzzleEnv(ManipSpaceEnv):
 
         super().__init__(*args, **kwargs)
 
+        # Adjust arm sampling bounds to a smaller region.
         self._arm_sampling_bounds = np.asarray([[0.25, -0.2, 0.20], [0.6, 0.2, 0.25]])
 
+        # Target info.
         self._target_task = 'button'
         self._target_button = 0
         self._target_button_states = np.array([0] * self._num_buttons)
@@ -154,6 +167,7 @@ class PuzzleEnv(ManipSpaceEnv):
                     ).flatten(),
                 ),
                 dict(
+                    task_name='task2',
                     init_button_states=np.array(
                         [
                             [1, 1, 1, 1],
@@ -170,7 +184,6 @@ class PuzzleEnv(ManipSpaceEnv):
                             [1, 1, 1, 1],
                         ]
                     ).flatten(),
-                    task_name='task2',
                 ),
                 dict(
                     task_name='task3',
@@ -430,16 +443,17 @@ class PuzzleEnv(ManipSpaceEnv):
             raise NotImplementedError
 
     def add_objects(self, arena_mjcf):
-        # Add objects to scene
-        button_outer_mjcf = mjcf.from_path((_DESC_DIR / 'button_outer.xml').as_posix())
+        # Add button scene.
+        button_outer_mjcf = mjcf.from_path((self._desc_dir / 'button_outer.xml').as_posix())
         arena_mjcf.include_copy(button_outer_mjcf)
 
-        r = 0.05
+        # Add buttons to the scene.
+        distance = 0.05
         for i in range(self._num_rows):
             for j in range(self._num_cols):
-                button_mjcf = mjcf.from_path((_DESC_DIR / 'button_inner.xml').as_posix())
-                pos_x = 0.425 - r * (self._num_rows - 1) + 2 * r * i
-                pos_y = 0.0 - r * (self._num_cols - 1) + 2 * r * j
+                button_mjcf = mjcf.from_path((self._desc_dir / 'button_inner.xml').as_posix())
+                pos_x = 0.425 - distance * (self._num_rows - 1) + 2 * distance * i
+                pos_y = 0.0 - distance * (self._num_cols - 1) + 2 * distance * j
                 button_mjcf.find('body', 'buttonbox_0').pos[:2] = np.array([pos_x, pos_y])
                 for tag in ['body', 'joint', 'geom', 'site']:
                     for item in button_mjcf.find_all(tag):
@@ -447,11 +461,12 @@ class PuzzleEnv(ManipSpaceEnv):
                             item.name = item.name[:-2] + f'_{i * self._num_cols + j}'
                 arena_mjcf.include_copy(button_mjcf)
 
+        # Save button geoms.
         self._button_geoms_list = []
         for i in range(self._num_buttons):
             self._button_geoms_list.append([arena_mjcf.find('geom', f'btngeom_{i}')])
 
-        # Add cameras
+        # Add cameras.
         cameras = {
             'front': {
                 'pos': (1.139, 0.000, 0.821),
@@ -466,6 +481,7 @@ class PuzzleEnv(ManipSpaceEnv):
             arena_mjcf.worldbody.add('camera', name=camera_name, **camera_kwargs)
 
     def post_compilation_objects(self):
+        # Button geom IDs.
         self._button_geom_ids_list = [
             [self._model.geom(geom.full_identifier).id for geom in button_geoms]
             for button_geoms in self._button_geoms_list
@@ -473,54 +489,60 @@ class PuzzleEnv(ManipSpaceEnv):
         self._button_site_ids = [self._model.site(f'btntop_{i}').id for i in range(self._num_buttons)]
 
     def _apply_button_states(self):
-        # Change colors
-        if self._num_button_states > 2:
-            raise NotImplementedError
+        # Adjust button colors based on the current state.
         for i in range(self._num_buttons):
             for gid in self._button_geom_ids_list[i]:
-                color_zero = _COLORS['red']
-                color_one = _COLORS['blue']
+                color_zero = self._colors['red']
+                color_one = self._colors['blue']
                 self._model.geom(gid).rgba = color_zero if self._cur_button_states[i] == 0 else color_one
 
         mujoco.mj_forward(self._model, self._data)
 
     def initialize_episode(self):
-        self._data.qpos[self._arm_joint_ids] = _HOME_QPOS
+        self._data.qpos[self._arm_joint_ids] = self._home_qpos
         mujoco.mj_kinematics(self._model, self._data)
 
         if self._mode == 'data_collection':
+            # Randomize the scene.
+
             self.initialize_arm()
 
-            # Randomize button states
+            # Randomize button states.
             for i in range(self._num_buttons):
                 self._cur_button_states[i] = self.np_random.choice(self._num_button_states)
             self._apply_button_states()
 
-            # Set a new target
+            # Set a new target.
             self.set_new_target(return_info=False)
         else:
-            # Set object positions and orientations based on the current task
+            # Set button states based on the current task.
+
+            # Get the current task info.
             init_button_states = self.cur_task_info['init_button_states'].copy()
             goal_button_states = self.cur_task_info['goal_button_states'].copy()
 
-            # First set the current scene to the goal state to get the goal observation
+            # First, force set the current scene to the goal state to obtain a goal observation.
             saved_qpos = self._data.qpos.copy()
             saved_qvel = self._data.qvel.copy()
             self.initialize_arm()
             self._cur_button_states = goal_button_states.copy()
             self._apply_button_states()
             mujoco.mj_forward(self._model, self._data)
+
+            # Do a few random steps to make the scene stable.
             for _ in range(5):
                 action = self.action_space.sample()
-                action[-1] = 1  # Close gripper
+                action[-1] = 1  # Close gripper.
                 self.step(action)
+
+            # Save the goal observation.
             self._cur_goal_ob = self.compute_observation()
             if self._render_goal:
                 self._cur_goal_frame = self.render()
             else:
                 self._cur_goal_frame = None
 
-            # Now do the actual reset
+            # Now, do the actual reset.
             self._data.qpos[:] = saved_qpos
             self._data.qvel[:] = saved_qvel
             self.initialize_arm()
@@ -528,7 +550,7 @@ class PuzzleEnv(ManipSpaceEnv):
             self._target_button_states = goal_button_states.copy()
             self._apply_button_states()
 
-        # Forward kinematics to update site positions
+        # Forward kinematics to update site positions.
         self.pre_step()
         mujoco.mj_forward(self._model, self._data)
         self.post_step()
@@ -536,8 +558,15 @@ class PuzzleEnv(ManipSpaceEnv):
         self._success = False
 
     def set_new_target(self, return_info=True, p_stack=0.5):
+        """Set a new random target for data collection.
+
+        Args:
+            return_info: Whether to return the observation and reset info.
+            p_stack: Unused; only for compatibility with the other environments.
+        """
         assert self._mode == 'data_collection'
 
+        # Set target button.
         self._target_button = self.np_random.choice(self._num_buttons)
         self._target_button_states[self._target_button] = (
             self._cur_button_states[self._target_button] + 1
@@ -553,24 +582,22 @@ class PuzzleEnv(ManipSpaceEnv):
         super().pre_step()
 
     def post_step(self):
-        # Change button states if pressed
+        # Update button states.
         for i in range(self._num_buttons):
             prev_joint_pos = self._prev_ob_info[f'privileged/button_{i}_pos'][0]
             cur_joint_pos = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()[0]
             if prev_joint_pos > -0.02 and cur_joint_pos <= -0.02:
-                if self._effect_type == 'point':
-                    self._cur_button_states[i] = (self._cur_button_states[i] + 1) % self._num_button_states
-                elif self._effect_type == 'plus':
-                    x, y = i // self._num_cols, i % self._num_cols
-                    for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
-                        nx, ny = x + dx, y + dy
-                        if 0 <= nx < self._num_rows and 0 <= ny < self._num_cols:
-                            self._cur_button_states[nx * self._num_cols + ny] = (
-                                self._cur_button_states[nx * self._num_cols + ny] + 1
-                            ) % self._num_button_states
+                # Button pressed: change the state of the button and its neighbors.
+                x, y = i // self._num_cols, i % self._num_cols
+                for dx, dy in [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < self._num_rows and 0 <= ny < self._num_cols:
+                        self._cur_button_states[nx * self._num_cols + ny] = (
+                            self._cur_button_states[nx * self._num_cols + ny] + 1
+                        ) % self._num_button_states
         self._apply_button_states()
 
-        # Evaluate successes
+        # Evaluate successes.
         button_successes = [
             (self._cur_button_states[i] == self._target_button_states[i]) for i in range(self._num_buttons)
         ]
@@ -581,12 +608,14 @@ class PuzzleEnv(ManipSpaceEnv):
             self._success = all(button_successes)
 
     def add_object_info(self, ob_info):
+        # Button states.
         for i in range(self._num_buttons):
             ob_info[f'privileged/button_{i}_state'] = self._cur_button_states[i]
             ob_info[f'privileged/button_{i}_pos'] = self._data.joint(f'buttonbox_joint_{i}').qpos.copy()
             ob_info[f'privileged/button_{i}_vel'] = self._data.joint(f'buttonbox_joint_{i}').qvel.copy()
 
         if self._mode == 'data_collection':
+            # Target button info.
             ob_info['privileged/target_task'] = self._target_task
 
             ob_info['privileged/target_button'] = self._target_button
@@ -603,7 +632,9 @@ class PuzzleEnv(ManipSpaceEnv):
             return self.get_pixel_observation()
         else:
             xyz_center = np.array([0.425, 0.0, 0.0])
-            xyz_scaler = 10
+            xyz_scaler = 10.0
+            gripper_scaler = 3.0
+            button_scaler = 120.0
 
             ob_info = self.compute_ob_info()
             ob = [
@@ -612,7 +643,7 @@ class PuzzleEnv(ManipSpaceEnv):
                 (ob_info['proprio/effector_pos'] - xyz_center) * xyz_scaler,
                 np.cos(ob_info['proprio/effector_yaw']),
                 np.sin(ob_info['proprio/effector_yaw']),
-                ob_info['proprio/gripper_opening'] * 3,
+                ob_info['proprio/gripper_opening'] * gripper_scaler,
                 ob_info['proprio/gripper_contact'],
             ]
             for i in range(self._num_buttons):
@@ -620,7 +651,7 @@ class PuzzleEnv(ManipSpaceEnv):
                 ob.extend(
                     [
                         button_state,
-                        ob_info[f'privileged/button_{i}_pos'] * 120,
+                        ob_info[f'privileged/button_{i}_pos'] * button_scaler,
                         ob_info[f'privileged/button_{i}_vel'],
                     ]
                 )

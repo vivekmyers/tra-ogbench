@@ -46,18 +46,18 @@ def evaluate(
     """Evaluate the agent in the environment.
 
     Args:
-        agent: The agent.
-        env: The environment.
-        task_idx: The task index to be passed to the environment.
-        config: The configuration dictionary.
-        num_eval_episodes: The number of episodes to evaluate the agent.
-        num_video_episodes: The number of episodes to render. These episodes are not included in the statistics.
-        video_frame_skip: The number of frames to skip between renders.
-        eval_temperature: The temperature to use when sampling actions.
-        eval_gaussian: The standard deviation of the Gaussian noise to be added to the actions.
+        agent: Agent.
+        env: Environment.
+        task_idx: Task index to be passed to the environment.
+        config: Configuration dictionary.
+        num_eval_episodes: Number of episodes to evaluate the agent.
+        num_video_episodes: Number of episodes to render. These episodes are not included in the statistics.
+        video_frame_skip: Number of frames to skip between renders.
+        eval_temperature: Action sampling temperature.
+        eval_gaussian: Standard deviation of the Gaussian noise to add to the actions.
 
     Returns:
-        A tuple containing the statistics, the trajectories, and the renders.
+        A tuple containing the statistics, trajectories, and rendered videos.
     """
     actor_fn = supply_rng(agent.sample_actions, rng=jax.random.PRNGKey(np.random.randint(0, 2**32)))
     trajs = []

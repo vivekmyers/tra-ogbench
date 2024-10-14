@@ -643,8 +643,6 @@ class BehaviorFluidFlow:
                 if_b=world_right,
             )
 
-        # todo: fix this and find out why
-        # OK, we know why, it's because new_fluid_momentum has excess info everywhere. we want to just update this for all fluid elements.
         world[:, 6:7, :, :] = interp(
             switch=(
                 self.pw.get_bool(world, 'empty')
@@ -890,7 +888,6 @@ class BehaviorCloner:
         for get_dir in [get_below, get_above, get_left, get_right]:
             is_cloner_empty = self.pw.get_bool(world, 'cloner') & ((cloner_assigns == 0) | (cloner_assigns == 13))
             dir_labels = get_dir(labels)
-            # TODO: replace this with a switch() function that covers edge cases. When closer_assigns is twice.
             world[:, 6:7, :, :] = interp2(
                 switch_a=is_not_cloner,
                 switch_b=is_cloner_empty,
