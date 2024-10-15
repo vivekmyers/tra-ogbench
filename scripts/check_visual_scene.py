@@ -1,9 +1,7 @@
 import glob
-import pickle
 
 import numpy as np
 from absl import app, flags
-from tqdm import trange
 
 FLAGS = flags.FLAGS
 

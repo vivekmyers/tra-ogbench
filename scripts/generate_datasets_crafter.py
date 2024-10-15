@@ -15,14 +15,14 @@ from utils.evaluation import supply_rng
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('seed', 0, 'Random seed')
-flags.DEFINE_string('env_name', 'cube-single-v0', 'Environment name')
-flags.DEFINE_string('dataset_type', 'play', 'Dataset type')
-flags.DEFINE_string('restore_path', None, 'Expert agent restore path')
-flags.DEFINE_integer('restore_epoch', None, 'Expert agent restore epoch')
-flags.DEFINE_string('save_path', None, 'Save path')
-flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes')
-flags.DEFINE_integer('add_demos', 0, 'Whether to add human demonstrations')
+flags.DEFINE_integer('seed', 0, 'Random seed.')
+flags.DEFINE_string('env_name', 'cube-single-v0', 'Environment name.')
+flags.DEFINE_string('dataset_type', 'play', 'Dataset type.')
+flags.DEFINE_string('restore_path', None, 'Expert agent restore path.')
+flags.DEFINE_integer('restore_epoch', None, 'Expert agent restore epoch.')
+flags.DEFINE_string('save_path', None, 'Save path.')
+flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes.')
+flags.DEFINE_integer('add_demos', 0, 'Whether to add human demonstrations.')
 
 
 def add_demo_to_dataset(env, dataset, demo_file):
