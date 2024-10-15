@@ -92,8 +92,8 @@ class TrainState(flax.struct.PyTreeNode):
 
         When `params` is not provided, it uses the stored parameters.
 
-        The typical use case is to set `params` to `None` when you want to *stop* the gradients, and set it to the
-        current parameters when you want to flow the gradients. In other words, the default behavior is to stop the
+        The typical use case is to set `params` to `None` when you want to *stop* the gradients, and to pass the current
+        traced parameters when you want to flow the gradients. In other words, the default behavior is to stop the
         gradients, and you need to explicitly provide the parameters to flow the gradients.
 
         Args:

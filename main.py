@@ -22,7 +22,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_string('run_group', 'Debug', 'Run group.')
 flags.DEFINE_integer('seed', 0, 'Random seed.')
-flags.DEFINE_string('env_name', 'antmaze-large-diverse-v2', 'Environment name.')
+flags.DEFINE_string('env_name', 'antmaze-large-v0', 'Environment name.')
 flags.DEFINE_string('dataset_path', None, 'Dataset path.')
 flags.DEFINE_string('save_dir', 'exp/', 'Save directory.')
 flags.DEFINE_string('restore_path', None, 'Restore path.')

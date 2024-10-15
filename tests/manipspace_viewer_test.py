@@ -37,15 +37,15 @@ def main():
             mode=mode,
             visualize_info=True,
         )
-    elif 'puzzle' in env_type:
-        env = PuzzleEnv(
+    elif 'scene' in env_type:
+        env = SceneEnv(
             env_type=env_type,
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
         )
-    elif 'scene' in env_type:
-        env = SceneEnv(
+    elif 'puzzle' in env_type:
+        env = PuzzleEnv(
             env_type=env_type,
             terminate_at_goal=False,
             mode=mode,

@@ -77,6 +77,24 @@ register(
 )
 
 register(
+    id='scene-v0',
+    entry_point='envs.manipspace.envs.scene_env:SceneEnv',
+    max_episode_steps=750,
+    kwargs=dict(
+        env_type='scene',
+    ),
+)
+register(
+    id='visual-scene-v0',
+    entry_point='envs.manipspace.envs.scene_env:SceneEnv',
+    max_episode_steps=750,
+    kwargs=dict(
+        env_type='scene',
+        **visual_dict,
+    ),
+)
+
+register(
     id='puzzle-3x3-v0',
     entry_point='envs.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
@@ -141,24 +159,6 @@ register(
     max_episode_steps=1000,
     kwargs=dict(
         env_type='puzzle_4x6',
-        **visual_dict,
-    ),
-)
-
-register(
-    id='scene-v0',
-    entry_point='envs.manipspace.envs.scene_env:SceneEnv',
-    max_episode_steps=750,
-    kwargs=dict(
-        env_type='scene',
-    ),
-)
-register(
-    id='visual-scene-v0',
-    entry_point='envs.manipspace.envs.scene_env:SceneEnv',
-    max_episode_steps=750,
-    kwargs=dict(
-        env_type='scene',
         **visual_dict,
     ),
 )

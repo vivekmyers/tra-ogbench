@@ -38,10 +38,7 @@ class CsvLogger:
 
 
 def get_exp_name(seed):
-    """Return the experiment name.
-
-    It includes the seed, SLURM_JOB_ID (if available), SLURM_PROCID (if available), and the current time.
-    """
+    """Return the experiment name."""
     exp_name = ''
     exp_name += f'sd{seed:03d}_'
     if 'SLURM_JOB_ID' in os.environ:

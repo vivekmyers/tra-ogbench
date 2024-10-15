@@ -54,20 +54,6 @@ def main(_):
             agents = {
                 'cube': CubePlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
             }
-    elif 'puzzle' in FLAGS.env_name:
-        if oracle_type == 'markov':
-            agents = {
-                'button': ButtonMarkovOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
-            }
-        else:
-            agents = {
-                'button': ButtonPlanOracle(
-                    env=env,
-                    noise=FLAGS.noise,
-                    noise_smoothing=FLAGS.noise_smoothing,
-                    gripper_always_closed=True,
-                ),
-            }
     elif 'scene' in FLAGS.env_name:
         if oracle_type == 'markov':
             agents = {
@@ -82,6 +68,20 @@ def main(_):
                 'button': ButtonPlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
                 'drawer': DrawerPlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
                 'window': WindowPlanOracle(env=env, noise=FLAGS.noise, noise_smoothing=FLAGS.noise_smoothing),
+            }
+    elif 'puzzle' in FLAGS.env_name:
+        if oracle_type == 'markov':
+            agents = {
+                'button': ButtonMarkovOracle(env=env, min_norm=FLAGS.min_norm, gripper_always_closed=True),
+            }
+        else:
+            agents = {
+                'button': ButtonPlanOracle(
+                    env=env,
+                    noise=FLAGS.noise,
+                    noise_smoothing=FLAGS.noise_smoothing,
+                    gripper_always_closed=True,
+                ),
             }
 
     # Collect data.
