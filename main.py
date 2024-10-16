@@ -12,7 +12,7 @@ from absl import app, flags
 from ml_collections import config_flags
 
 from agents import agents
-from envs.env_loader import make_env_and_dataset
+from ogbench.env_loader import make_env_and_dataset
 from utils.datasets import Dataset, GCDataset, HGCDataset
 from utils.evaluation import evaluate
 from utils.flax_utils import restore_agent, save_agent

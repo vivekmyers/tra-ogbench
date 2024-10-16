@@ -3,18 +3,18 @@ import time
 
 import numpy as np
 
-from envs.manipspace import viewer_utils
-from envs.manipspace.envs.cube_env import CubeEnv
-from envs.manipspace.envs.puzzle_env import PuzzleEnv
-from envs.manipspace.envs.scene_env import SceneEnv
-from envs.manipspace.oracles.markov.button_markov import ButtonMarkovOracle
-from envs.manipspace.oracles.markov.cube_markov import CubeMarkovOracle
-from envs.manipspace.oracles.markov.drawer_markov import DrawerMarkovOracle
-from envs.manipspace.oracles.markov.window_markov import WindowMarkovOracle
-from envs.manipspace.oracles.plan.button_plan import ButtonPlanOracle
-from envs.manipspace.oracles.plan.cube_plan import CubePlanOracle
-from envs.manipspace.oracles.plan.drawer_plan import DrawerPlanOracle
-from envs.manipspace.oracles.plan.window_plan import WindowPlanOracle
+from ogbench.manipspace import viewer_utils
+from ogbench.manipspace.envs.cube_env import CubeEnv
+from ogbench.manipspace.envs.puzzle_env import PuzzleEnv
+from ogbench.manipspace.envs.scene_env import SceneEnv
+from ogbench.manipspace.oracles.markov.button_markov import ButtonMarkovOracle
+from ogbench.manipspace.oracles.markov.cube_markov import CubeMarkovOracle
+from ogbench.manipspace.oracles.markov.drawer_markov import DrawerMarkovOracle
+from ogbench.manipspace.oracles.markov.window_markov import WindowMarkovOracle
+from ogbench.manipspace.oracles.plan.button_plan import ButtonPlanOracle
+from ogbench.manipspace.oracles.plan.cube_plan import CubePlanOracle
+from ogbench.manipspace.oracles.plan.drawer_plan import DrawerPlanOracle
+from ogbench.manipspace.oracles.plan.window_plan import WindowPlanOracle
 
 SPEED_UP = 3.0
 

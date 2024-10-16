@@ -9,7 +9,7 @@ import numpy as np
 from absl import app, flags
 from tqdm import trange
 
-import envs.crafter  # noqa
+import ogbench.crafter  # noqa
 from agents import PPOAgent
 from utils.evaluation import supply_rng
 

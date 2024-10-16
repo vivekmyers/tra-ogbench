@@ -5,8 +5,8 @@ import numpy as np
 from absl import app, flags
 from tqdm import trange
 
-import envs.powderworld  # noqa
-from envs.powderworld.behaviors import FillBehavior, LineBehavior, SquareBehavior
+import ogbench.powderworld  # noqa
+from ogbench.powderworld.behaviors import FillBehavior, LineBehavior, SquareBehavior
 
 FLAGS = flags.FLAGS
 

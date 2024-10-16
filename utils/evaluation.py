@@ -70,7 +70,7 @@ def evaluate(
 
         observation, info = env.reset(options=dict(task_id=task_id, render_goal=should_render))
         goal = info.get('goal')
-        goal_frame = info.get('goal_frame')
+        goal_frame = info.get('goal_rendered')
         done = False
         step = 0
         render = []

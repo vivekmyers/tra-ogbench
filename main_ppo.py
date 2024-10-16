@@ -11,8 +11,8 @@ from absl import app, flags
 from ml_collections import config_flags
 
 from agents import agents
-from envs.env_loader import make_online_env, make_vec_env
-from envs.viz_utils import visualize_trajs
+from ogbench.env_loader import make_online_env, make_vec_env
+from ogbench.viz_utils import visualize_trajs
 from utils.datasets import ReplayBuffer
 from utils.evaluation import evaluate, flatten
 from utils.flax_utils import restore_agent, save_agent
