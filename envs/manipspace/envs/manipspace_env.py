@@ -219,15 +219,6 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             name='arm_bounds',
         )
 
-        # TODO: Remove this
-        ################## FOR DEBUGGING ###################
-        import sys
-
-        if sys.platform == 'darwin':
-            with open('/Users/seohongpark/Downloads/ogcrl_mj/manip_cur.xml', 'w') as file:
-                file.write(mjcf_utils.to_string(arena_mjcf))
-        ################## FOR DEBUGGING ###################
-
         return arena_mjcf
 
     def add_objects(self, arena_mjcf):

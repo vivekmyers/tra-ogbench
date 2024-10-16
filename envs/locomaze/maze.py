@@ -153,14 +153,6 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             _, maze_xml_file = tempfile.mkstemp(text=True, suffix='.xml')
             tree.write(maze_xml_file)
 
-            # TODO: Remove this
-            ################## FOR DEBUGGING ###################
-            import sys
-
-            if sys.platform == 'darwin':
-                tree.write('/Users/seohongpark/Downloads/ogcrl_mj/loco_cur.xml')
-            ################## FOR DEBUGGING ###################
-
             super().__init__(xml_file=maze_xml_file, *args, **kwargs)
 
             # Set task goals.
