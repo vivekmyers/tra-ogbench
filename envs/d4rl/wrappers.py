@@ -23,21 +23,21 @@ class AntMazeGoalWrapper(Wrapper):
         ]
         self.num_tasks = len(self.task_infos)
 
-        self.cur_task_idx = None
+        self.cur_task_id = None
         self.cur_task_info = None
 
     def reset(self, options=None, *args, **kwargs):
         if options is not None:
-            task_idx = options.pop('task_idx', None)
+            task_id = options.pop('task_id', None)
         else:
-            task_idx = None
+            task_id = None
         goal_ob, _ = self.env.reset(*args, **kwargs)
         ob, _ = self.env.reset(*args, **kwargs)
 
-        if task_idx is None:
-            task_idx = np.random.randint(self.num_tasks)
-        self.cur_task_idx = task_idx
-        self.cur_task_info = self.task_infos[task_idx]
+        if task_id is None:
+            task_id = np.random.randint(1, self.num_tasks + 1)
+        self.cur_task_id = task_id
+        self.cur_task_info = self.task_infos[task_id - 1]
 
         self.unwrapped.set_xy(self.cur_task_info['init_pos'])
 
@@ -84,22 +84,22 @@ class KitchenGoalWrapper(Wrapper):
         ]
         self.num_tasks = len(self.task_infos)
 
-        self.cur_task_idx = None
+        self.cur_task_id = None
         self.cur_task_info = None
         self.cur_return = 0.0
 
     def reset(self, options=None, *args, **kwargs):
         if options is not None:
-            task_idx = options.pop('task_idx', None)
+            task_id = options.pop('task_id', None)
         else:
-            task_idx = None
+            task_id = None
         goal_ob, _ = self.env.reset(*args, **kwargs)
         ob, _ = self.env.reset(*args, **kwargs)
 
-        if task_idx is None:
-            task_idx = np.random.randint(self.num_tasks)
-        self.cur_task_idx = task_idx
-        self.cur_task_info = self.task_infos[task_idx]
+        if task_id is None:
+            task_id = np.random.randint(1, self.num_tasks + 1)
+        self.cur_task_id = task_id
+        self.cur_task_info = self.task_infos[task_id - 1]
         self.cur_return = 0.0
 
         goal_ob = np.concatenate([goal_ob[:9], ob[39:]])

@@ -27,7 +27,7 @@ class CrafterEnv(gymnasium.Env):
 
         if self._mode == 'task':
             self.task_infos = []
-            self.cur_task_idx = None
+            self.cur_task_id = None
             self.cur_task_info = None
             self.set_tasks()
             self.num_tasks = len(self.task_infos)
@@ -84,21 +84,21 @@ class CrafterEnv(gymnasium.Env):
         if self._mode == 'task':
             render_goal = False
             if options is not None:
-                if 'task_idx' in options:
-                    self.cur_task_idx = options['task_idx']
-                    self.cur_task_info = self.task_infos[self.cur_task_idx]
+                if 'task_id' in options:
+                    self.cur_task_id = options['task_id']
+                    self.cur_task_info = self.task_infos[self.cur_task_id - 1]
                 elif 'task_info' in options:
-                    self.cur_task_idx = None
+                    self.cur_task_id = None
                     self.cur_task_info = options['task_info']
                 else:
-                    raise ValueError('`options` must contain either `task_idx` or `task_info`')
+                    raise ValueError('`options` must contain either `task_id` or `task_info`')
 
                 if 'render_goal' in options:
                     render_goal = options['render_goal']
             else:
                 # Randomly sample task
-                self.cur_task_idx = np.random.randint(self.num_tasks)
-                self.cur_task_info = self.task_infos[self.cur_task_idx]
+                self.cur_task_id = np.random.randint(1, self.num_tasks + 1)
+                self.cur_task_info = self.task_infos[self.cur_task_id - 1]
 
         ob = self.env.reset()
         info = dict()

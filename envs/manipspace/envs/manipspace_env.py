@@ -98,7 +98,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         if self._mode == 'task':
             # Set task goals.
             self.task_infos = []
-            self.cur_task_idx = None
+            self.cur_task_id = None
             self.cur_task_info = None
             self.set_tasks()
             self.num_tasks = len(self.task_infos)
@@ -264,18 +264,19 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
             if options is None:
                 options = {}
 
-            if 'task_idx' in options:
+            if 'task_id' in options:
                 # Use the pre-defined task.
-                self.cur_task_idx = options['task_idx']
-                self.cur_task_info = self.task_infos[self.cur_task_idx]
+                assert 1 <= options['task_id'] <= self.num_tasks, f'Task ID must be in [1, {self.num_tasks}].'
+                self.cur_task_id = options['task_id']
+                self.cur_task_info = self.task_infos[self.cur_task_id - 1]
             elif 'task_info' in options:
                 # Use the provided task information.
-                self.cur_task_idx = None
+                self.cur_task_id = None
                 self.cur_task_info = options['task_info']
             else:
                 # Randomly sample a task.
-                self.cur_task_idx = np.random.randint(self.num_tasks)
-                self.cur_task_info = self.task_infos[self.cur_task_idx]
+                self.cur_task_id = np.random.randint(1, self.num_tasks + 1)
+                self.cur_task_info = self.task_infos[self.cur_task_id - 1]
 
             # Whether to provide a rendering of the goal.
             self._render_goal = False

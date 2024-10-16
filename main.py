@@ -124,12 +124,12 @@ def main(_):
             overall_metrics = defaultdict(list)
             task_infos = env.unwrapped.task_infos if hasattr(env.unwrapped, 'task_infos') else env.task_infos
             num_tasks = FLAGS.eval_tasks if FLAGS.eval_tasks is not None else len(task_infos)
-            for task_idx in tqdm.trange(num_tasks):
-                task_name = task_infos[task_idx]['task_name']
+            for task_id in tqdm.trange(1, num_tasks + 1):
+                task_name = task_infos[task_id - 1]['task_name']
                 eval_info, trajs, cur_renders = evaluate(
                     agent=eval_agent,
                     env=env,
-                    task_idx=task_idx,
+                    task_id=task_id,
                     config=config,
                     num_eval_episodes=FLAGS.eval_episodes,
                     num_video_episodes=FLAGS.video_episodes,

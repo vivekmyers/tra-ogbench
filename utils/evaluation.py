@@ -35,7 +35,7 @@ def add_to(dict_of_lists, single_dict):
 def evaluate(
     agent,
     env,
-    task_idx=None,
+    task_id=None,
     config=None,
     num_eval_episodes=50,
     num_video_episodes=0,
@@ -48,7 +48,7 @@ def evaluate(
     Args:
         agent: Agent.
         env: Environment.
-        task_idx: Task index to be passed to the environment.
+        task_id: Task ID to be passed to the environment.
         config: Configuration dictionary.
         num_eval_episodes: Number of episodes to evaluate the agent.
         num_video_episodes: Number of episodes to render. These episodes are not included in the statistics.
@@ -68,7 +68,7 @@ def evaluate(
         traj = defaultdict(list)
         should_render = i >= num_eval_episodes
 
-        observation, info = env.reset(options=dict(task_idx=task_idx, render_goal=should_render))
+        observation, info = env.reset(options=dict(task_id=task_id, render_goal=should_render))
         goal = info.get('goal')
         goal_frame = info.get('goal_frame')
         done = False

@@ -159,7 +159,7 @@ def main(_):
             eval_info, trajs, renders = evaluate(
                 agent=eval_agent,
                 env=eval_env,
-                task_idx=None,
+                task_id=None,
                 config=config,
                 num_eval_episodes=FLAGS.eval_episodes,
                 num_video_episodes=FLAGS.video_episodes,
