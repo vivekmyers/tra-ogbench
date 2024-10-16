@@ -509,7 +509,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             ball = ET.SubElement(worldbody, 'body', name='ball', pos='0 0 0.5')
             ET.SubElement(ball, 'freejoint', name='ball_root')
             ET.SubElement(
-                ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6'
+                ball, 'geom', name='ball', size='.25', material='ball', priority='1', conaffinity='1', condim='6',
             )
             ET.SubElement(ball, 'light', name='ball_light', pos='0 0 4', mode='trackcom')
 
