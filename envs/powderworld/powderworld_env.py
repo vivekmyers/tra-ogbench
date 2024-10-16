@@ -1,7 +1,7 @@
 import gymnasium
 import numpy as np
-from PIL import Image
 from gymnasium.spaces import Box, Discrete
+from PIL import Image
 
 from envs.powderworld.sim import PWRenderer, PWSim, interp, pw_element_names
 

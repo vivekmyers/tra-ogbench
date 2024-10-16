@@ -95,7 +95,7 @@ def to_string(
     return xml_string.decode()
 
 
-def get_assets(root: mjcf.RootElement) -> dict[str, bytes]:
+def get_assets(root: mjcf.RootElement) -> dict:
     assets = {}
     for file, payload in root.get_assets().items():
         name, extension = file.split('.')

@@ -10,13 +10,13 @@ import wandb
 from absl import app, flags
 from ml_collections import config_flags
 
-from algos import algos
+from agents import agents
 from envs.env_loader import make_online_env
 from envs.viz_utils import visualize_trajs
-from utils.dataset import ReplayBuffer
+from utils.datasets import ReplayBuffer
 from utils.evaluation import evaluate, flatten
 from utils.flax_utils import restore_agent, save_agent
-from utils.logger import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
+from utils.log_utils import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 
@@ -46,7 +46,7 @@ flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each tas
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
 flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU.')
 
-config_flags.DEFINE_config_file('agent', 'algos/sac.py', lock_config=False)
+config_flags.DEFINE_config_file('agent', 'agents/sac.py', lock_config=False)
 
 
 def main(_):
@@ -80,7 +80,7 @@ def main(_):
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
-    agent_class = algos[config['agent_name']]
+    agent_class = agents[config['agent_name']]
     agent = agent_class.create(
         FLAGS.seed,
         example_transition['observations'],

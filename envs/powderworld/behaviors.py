@@ -3,6 +3,7 @@ import numpy as np
 
 class Behavior:
     """Base class for action behaviors."""
+
     def __init__(self, env):
         self._env = env
         self._done = False
@@ -32,6 +33,7 @@ class Behavior:
 
 class FillBehavior(Behavior):
     """Fill the entire grid with a single element."""
+
     def reset(self, ob, info):
         self._done = False
         self._step = 0
@@ -58,6 +60,7 @@ class FillBehavior(Behavior):
 
 class LineBehavior(Behavior):
     """Fill a single line with a single element."""
+
     def reset(self, ob, info):
         self._done = False
         self._step = 0
@@ -81,6 +84,7 @@ class LineBehavior(Behavior):
 
 class SquareBehavior(Behavior):
     """Draw a square with a single element."""
+
     def reset(self, ob, info):
         self._done = False
         self._step = 0

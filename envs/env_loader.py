@@ -7,11 +7,12 @@ import gymnasium
 import numpy as np
 from gymnasium.spaces import Box
 
-from utils.dataset import Dataset
+from utils.datasets import Dataset
 
 
 class EpisodeMonitor(gymnasium.Wrapper):
     """Environment wrapper to monitor episode statistics."""
+
     def __init__(self, env):
         super().__init__(env)
         self._reset_stats()
@@ -50,6 +51,7 @@ class EpisodeMonitor(gymnasium.Wrapper):
 
 class FrameStackWrapper(gymnasium.Wrapper):
     """Environment wrapper to stack observations."""
+
     def __init__(self, env, num_stack):
         super().__init__(env)
 

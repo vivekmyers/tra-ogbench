@@ -15,7 +15,7 @@ class DiffIKController:
     def __init__(
         self,
         model: mujoco.MjModel,
-        sites: list[str],
+        sites: list,
         qpos0: np.ndarray = None,
         damping_coeff: float = 1e-12,
         max_angle_change: float = np.radians(45),

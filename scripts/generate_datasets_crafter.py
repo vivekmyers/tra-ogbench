@@ -10,7 +10,7 @@ from absl import app, flags
 from tqdm import trange
 
 import envs.crafter  # noqa
-from algos import PPOAgent
+from agents import PPOAgent
 from utils.evaluation import supply_rng
 
 FLAGS = flags.FLAGS

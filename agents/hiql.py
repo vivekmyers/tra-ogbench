@@ -8,8 +8,8 @@ import ml_collections
 import optax
 
 from utils.encoders import GCEncoder, encoder_modules
-from utils.networks import MLP, GCActor, GCDiscreteActor, GCValue, Identity, LengthNormalize
 from utils.flax_utils import ModuleDict, TrainState, nonpytree_field
+from utils.networks import MLP, GCActor, GCDiscreteActor, GCValue, Identity, LengthNormalize
 
 
 class HIQLAgent(flax.struct.PyTreeNode):

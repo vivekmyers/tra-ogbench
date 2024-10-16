@@ -4,6 +4,7 @@ The code is based on the original Powderworld simulator written in PyTorch. It i
 original simulator, but for performance reasons, the update rules that are not used in the OGBench Powderworld tasks are
 commented out. To use the full simulator, uncomment the unused update rules in the `register_update_rules` function.
 """
+
 from collections import namedtuple
 
 import numpy as np

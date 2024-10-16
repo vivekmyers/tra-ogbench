@@ -19,6 +19,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
     - 1-D relative end-effector yaw.
     - 1-D relative gripper opening.
     """
+
     def __init__(
         self,
         ob_type='states',
@@ -130,7 +131,7 @@ class ManipSpaceEnv(CustomMuJoCoEnv):
         )
 
     def normalize_action(self, action):
-        """ Normalize the action to the range [-1, 1]."""
+        """Normalize the action to the range [-1, 1]."""
         action = 2 * (action - self.action_low) / (self.action_high - self.action_low) - 1
         return np.clip(action, -1, 1)
 
