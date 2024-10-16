@@ -28,9 +28,9 @@ class Dataset(FrozenDict):
     """Dataset class.
 
     This class supports both regular datasets (i.e., storing both observations and next_observations) and
-    memory-efficient datasets (i.e., storing only observations). It assumes 'observations' is always present in the
-    keys. If 'next_observations' is not present, it will be inferred from 'observations' by shifting the indices by 1.
-    In this case, set 'valids' appropriately to mask out the last state of each trajectory.
+    compact datasets (i.e., storing only observations). It assumes 'observations' is always present in the keys. If
+    'next_observations' is not present, it will be inferred from 'observations' by shifting the indices by 1. In this
+    case, set 'valids' appropriately to mask out the last state of each trajectory.
     """
 
     @classmethod
@@ -159,7 +159,7 @@ class GCDataset:
             self.config['actor_p_curgoal'] + self.config['actor_p_trajgoal'] + self.config['actor_p_randomgoal'], 1.0
         )
         if self.config['frame_stack'] is not None:
-            # Only support memory-efficient (observation-only) datasets.
+            # Only support compact (observation-only) datasets.
             assert 'next_observations' not in self.dataset
             if self.preprocess_frame_stack:
                 stacked_observations = self.get_stacked_observations(np.arange(self.size))

@@ -17,8 +17,17 @@ class SceneEnv(ManipSpaceEnv):
         `_cur_button_states`.
     """
 
-    def __init__(self, env_type, *args, **kwargs):
-        self._env_type = env_type  # Unused; only for compatibility with the other environments.
+    def __init__(self, env_type, permute_blocks=True, *args, **kwargs):
+        """Initialize the Scene environment.
+
+        Args:
+            env_type: Unused; defined for compatibility with the other environments.
+            permute_blocks: Whether to randomly permute the order of the blocks at task initialization.
+            *args: Additional arguments to pass to the parent class.
+            **kwargs: Additional keyword arguments to pass to the parent class.
+        """
+        self._env_type = env_type
+        self._permute_blocks = permute_blocks
 
         super().__init__(*args, **kwargs)
 
@@ -261,8 +270,11 @@ class SceneEnv(ManipSpaceEnv):
         else:
             # Set object positions and orientations based on the current task.
 
-            # Randomize the order of the cubes when there are multiple cubes.
-            block_permutation = self.np_random.permutation(self._num_cubes)
+            if self._permute_blocks:
+                # Randomize the order of the cubes when there are multiple cubes.
+                block_permutation = self.np_random.permutation(self._num_cubes)
+            else:
+                block_permutation = np.arange(self._num_cubes)
             init_block_xyzs = self.cur_task_info['init']['block_xyzs'].copy()[block_permutation]
             goal_block_xyzs = self.cur_task_info['goal']['block_xyzs'].copy()[block_permutation]
             # Get the current task info for the other objects.

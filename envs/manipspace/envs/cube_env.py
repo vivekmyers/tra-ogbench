@@ -11,19 +11,28 @@ class CubeEnv(ManipSpaceEnv):
 
     This environment consists of a single or multiple cubes. The goal is to move the cubes to target positions. It
     supports the following variants:
-    - `env_type`: 'cube_single', 'cube_double', 'cube_triple', 'cube_quadruple'.
+    - `env_type`: 'single', 'double', 'triple', 'quadruple'.
     """
 
-    def __init__(self, env_type, *args, **kwargs):
-        self._env_type = env_type
+    def __init__(self, env_type, permute_blocks=True, *args, **kwargs):
+        """Initialize the Cube environment.
 
-        if self._env_type == 'cube_single':
+        Args:
+            env_type: Environment type. One of 'single', 'double', 'triple', or 'quadruple'.
+            permute_blocks: Whether to randomly permute the order of the blocks at task initialization.
+            *args: Additional arguments to pass to the parent class.
+            **kwargs: Additional keyword arguments to pass to the parent class.
+        """
+        self._env_type = env_type
+        self._permute_blocks = permute_blocks
+
+        if self._env_type == 'single':
             self._num_cubes = 1
-        elif self._env_type == 'cube_double':
+        elif self._env_type == 'double':
             self._num_cubes = 2
-        elif self._env_type == 'cube_triple':
+        elif self._env_type == 'triple':
             self._num_cubes = 3
-        elif self._env_type == 'cube_quadruple':
+        elif self._env_type == 'quadruple':
             self._num_cubes = 4
         else:
             raise ValueError(f'Invalid env_type: {env_type}')
@@ -54,7 +63,7 @@ class CubeEnv(ManipSpaceEnv):
         self._target_block = 0
 
     def set_tasks(self):
-        if self._env_type == 'cube_single':
+        if self._env_type == 'single':
             self.task_infos = [
                 dict(
                     task_name='task1_horizontal',
@@ -82,7 +91,7 @@ class CubeEnv(ManipSpaceEnv):
                     goal_xyzs=np.array([[0.50, -0.2, 0.02]]),
                 ),
             ]
-        elif self._env_type == 'cube_double':
+        elif self._env_type == 'double':
             self.task_infos = [
                 dict(
                     task_name='task1_single_pnp',
@@ -160,7 +169,7 @@ class CubeEnv(ManipSpaceEnv):
                     ),
                 ),
             ]
-        elif self._env_type == 'cube_triple':
+        elif self._env_type == 'triple':
             self.task_infos = [
                 dict(
                     task_name='task1_single_pnp',
@@ -248,7 +257,7 @@ class CubeEnv(ManipSpaceEnv):
                     ),
                 ),
             ]
-        elif self._env_type == 'cube_quadruple':
+        elif self._env_type == 'quadruple':
             self.task_infos = [
                 dict(
                     task_name='task1_double_pnp',
@@ -430,8 +439,11 @@ class CubeEnv(ManipSpaceEnv):
         else:
             # Set object positions and orientations based on the current task.
 
-            # Randomize the order of the cubes when there are multiple cubes.
-            permutation = self.np_random.permutation(self._num_cubes)
+            if self._permute_blocks:
+                # Randomize the order of the cubes when there are multiple cubes.
+                permutation = self.np_random.permutation(self._num_cubes)
+            else:
+                permutation = np.arange(self._num_cubes)
             init_xyzs = self.cur_task_info['init_xyzs'].copy()[permutation]
             goal_xyzs = self.cur_task_info['goal_xyzs'].copy()[permutation]
 

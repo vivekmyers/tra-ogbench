@@ -13,8 +13,8 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
     """Factory function for creating a maze environment.
 
     Args:
-        loco_env_type: Locomotion environment type. One of ['point', 'ant', 'humanoid'].
-        maze_env_type: Maze environment type. One of ['maze', 'ball'].
+        loco_env_type: Locomotion environment type. One of 'point', 'ant', or 'humanoid'.
+        maze_env_type: Maze environment type. Either 'maze' or 'ball'.
         *args: Additional arguments to pass to the target class.
         **kwargs: Additional keyword arguments to pass to the target class.
     """
@@ -40,17 +40,19 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             maze_height=0.5,
             terminate_at_goal=True,
             ob_type='states',
+            add_noise_to_goal=True,
             *args,
             **kwargs,
         ):
             """Initialize the maze environment.
 
             Args:
-                maze_type: Maze type. One of ['arena', 'medium', 'large', 'giant', 'teleport'].
+                maze_type: Maze type. One of 'arena', 'medium', 'large', 'giant', or 'teleport'.
                 maze_unit: Size of a maze unit block.
                 maze_height: Height of the maze walls.
                 terminate_at_goal: Whether to terminate the episode when the goal is reached.
                 ob_type: Observation type. Either 'states' or 'pixels'.
+                add_noise_to_goal: Whether to add noise to the goal position.
                 *args: Additional arguments to pass to the parent locomotion environment.
                 **kwargs: Additional keyword arguments to pass to the parent locomotion environment.
             """
@@ -59,6 +61,7 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             self._maze_height = maze_height
             self._terminate_at_goal = terminate_at_goal
             self._ob_type = ob_type
+            self._add_noise_to_goal = add_noise_to_goal
             assert ob_type in ['states', 'pixels']
 
             # Define constants.
@@ -356,7 +359,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
 
             # Get initial and goal positions with noise.
             init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['init_ij']))
-            goal_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
+            goal_xy = self.ij_to_xy(self.cur_task_info['goal_ij'])
+            if self._add_noise_to_goal:
+                goal_xy = self.add_noise(goal_xy)
 
             # First, force set the position to the goal position to obtain the goal observation.
             super().reset(*args, **kwargs)
@@ -421,7 +426,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
         def set_goal(self, goal_ij=None, goal_xy=None):
             """Set the goal position and update the target object."""
             if goal_xy is None:
-                self.cur_goal_xy = self.add_noise(self.ij_to_xy(goal_ij))
+                self.cur_goal_xy = self.ij_to_xy(goal_ij)
+                if self._add_noise_to_goal:
+                    self.cur_goal_xy = self.add_noise(self.cur_goal_xy)
             else:
                 self.cur_goal_xy = goal_xy
             if self._ob_type == 'states':
@@ -567,7 +574,9 @@ def make_maze_env(loco_env_type, maze_env_type, *args, **kwargs):
             # Get initial and goal positions with noise.
             agent_init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['agent_init_ij']))
             ball_init_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['ball_init_ij']))
-            goal_xy = self.add_noise(self.ij_to_xy(self.cur_task_info['goal_ij']))
+            goal_xy = self.ij_to_xy(self.cur_task_info['goal_ij'])
+            if self._add_noise_to_goal:
+                goal_xy = self.add_noise(goal_xy)
 
             # First, force set the position to the goal position to obtain the goal observation.
             super(MazeEnv, self).reset(*args, **kwargs)

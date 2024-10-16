@@ -12,7 +12,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=200,
     kwargs=dict(
-        env_type='cube_single',
+        env_type='single',
     ),
 )
 register(
@@ -20,7 +20,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=200,
     kwargs=dict(
-        env_type='cube_single',
+        env_type='single',
         **visual_dict,
     ),
 )
@@ -29,7 +29,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='cube_double',
+        env_type='double',
     ),
 )
 register(
@@ -37,7 +37,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='cube_double',
+        env_type='double',
         **visual_dict,
     ),
 )
@@ -46,7 +46,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='cube_triple',
+        env_type='triple',
     ),
 )
 register(
@@ -54,7 +54,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='cube_triple',
+        env_type='triple',
         **visual_dict,
     ),
 )
@@ -63,7 +63,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='cube_quadruple',
+        env_type='quadruple',
     ),
 )
 register(
@@ -71,7 +71,7 @@ register(
     entry_point='envs.manipspace.envs.cube_env:CubeEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='cube_quadruple',
+        env_type='quadruple',
         **visual_dict,
     ),
 )

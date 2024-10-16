@@ -21,32 +21,33 @@ SPEED_UP = 3.0
 
 def main():
     use_oracle = True
+    # use_oracle = False
     # oracle_type = 'markov'
     oracle_type = 'plan'
     use_viewer = os.environ.get('USE_VIEWER', 'False') == 'True'
-    env_type = 'cube_quadruple'
-    # env_type = 'puzzle_4x6'
-    # env_type = 'scene'
-    mode = 'data_collection'
-    # mode = 'task'
+    env_name = 'cube_quadruple'
+    # env_name = 'puzzle_4x6'
+    # env_name = 'scene'
+    # mode = 'data_collection'
+    mode = 'task'
     min_norm = 0.4
-    if 'cube' in env_type:
+    if 'cube' in env_name:
         env = CubeEnv(
-            env_type=env_type,
+            env_type=env_name.split('_')[-1],
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
         )
-    elif 'scene' in env_type:
+    elif 'scene' in env_name:
         env = SceneEnv(
-            env_type=env_type,
+            env_type='',
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
         )
-    elif 'puzzle' in env_type:
+    elif 'puzzle' in env_name:
         env = PuzzleEnv(
-            env_type=env_type,
+            env_type=env_name.split('_')[-1],
             terminate_at_goal=False,
             mode=mode,
             visualize_info=True,
@@ -54,7 +55,7 @@ def main():
 
     ob, info = env.reset(seed=0)
     if use_oracle:
-        if 'cube' in env_type:
+        if 'cube' in env_name:
             if oracle_type == 'markov':
                 agents = {
                     'cube': CubeMarkovOracle(env=env, min_norm=min_norm),
@@ -63,7 +64,7 @@ def main():
                 agents = {
                     'cube': CubePlanOracle(env=env),
                 }
-        elif 'puzzle' in env_type:
+        elif 'puzzle' in env_name:
             if oracle_type == 'markov':
                 agents = {
                     'button': ButtonMarkovOracle(env=env, min_norm=min_norm, gripper_always_closed=True),
@@ -72,7 +73,7 @@ def main():
                 agents = {
                     'button': ButtonPlanOracle(env=env, gripper_always_closed=False),
                 }
-        elif 'scene' in env_type:
+        elif 'scene' in env_name:
             if oracle_type == 'markov':
                 agents = {
                     'cube': CubeMarkovOracle(env=env, min_norm=min_norm, max_step=100),

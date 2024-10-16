@@ -18,21 +18,28 @@ class PuzzleEnv(ManipSpaceEnv):
     """
 
     def __init__(self, env_type, *args, **kwargs):
+        """Initialize the Puzzle environment.
+
+        Args:
+            env_type: Environment type. One of '3x3', '4x4', '4x5', or '4x6'.
+            *args: Additional arguments to pass to the parent class.
+            **kwargs: Additional keyword arguments to pass to the parent class.
+        """
         self._env_type = env_type
 
         # Set the puzzle size.
         self._num_button_states = 2
 
-        if '3x3' in env_type:
+        if env_type == '3x3':
             self._num_rows = 3
             self._num_cols = 3
-        elif '4x4' in env_type:
+        elif env_type == '4x4':
             self._num_rows = 4
             self._num_cols = 4
-        elif '4x5' in env_type:
+        elif env_type == '4x5':
             self._num_rows = 4
             self._num_cols = 5
-        elif '4x6' in env_type:
+        elif env_type == '4x6':
             self._num_rows = 4
             self._num_cols = 6
         else:
@@ -562,7 +569,7 @@ class PuzzleEnv(ManipSpaceEnv):
 
         Args:
             return_info: Whether to return the observation and reset info.
-            p_stack: Unused; only for compatibility with the other environments.
+            p_stack: Unused; defined for compatibility with the other environments.
         """
         assert self._mode == 'data_collection'
 
