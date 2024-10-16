@@ -1,0 +1,25 @@
+name: ogbench
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip=24.0
+  - scipy=1.14.1
+  - tqdm=4.66
+  - wandb=0.18.1
+  - numba=0.60.0
+  - pip:
+    - distrax==0.1.5
+    - flax==0.9.0
+    - jax==0.4.28
+    - optax==0.2.2
+    - chex==0.1.87
+    - gymnasium==1.0.0
+    - shimmy[gym-v21,gym-v26]
+    - gym==0.24.1
+    - matplotlib==3.9.2
+    - moviepy==1.0.3
+    - shapely==2.0.6
+    - ml_collections==0.1.1
+    - lockfile==0.12.2
+    - jaxlib==0.4.28+cuda12.cudnn89
