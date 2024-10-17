@@ -142,7 +142,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         for k, v in actor_info.items():
             info[f"actor/{k}"] = v
 
-        loss = value_loss + critic_loss + actor_loss
+        loss = critic_loss + actor_loss
         return loss, info
 
     @jax.jit
