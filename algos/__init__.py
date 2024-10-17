@@ -5,6 +5,7 @@ from algos.hiql import HIQLAgent
 from algos.ppo import PPOAgent
 from algos.qrl import QRLAgent
 from algos.sac import SACAgent
+from algos.tra import TRAAgent
 
 algos = dict(
     crl=CRLAgent,
@@ -14,4 +15,5 @@ algos = dict(
     ppo=PPOAgent,
     qrl=QRLAgent,
     sac=SACAgent,
+    tra=TRAAgent,
 )
