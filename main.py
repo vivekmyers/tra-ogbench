@@ -41,7 +41,7 @@ flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each tas
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
 flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU.')
 
-config_flags.DEFINE_config_file('agent', 'algos/gciql.py', lock_config=False)
+config_flags.DEFINE_config_file('agent', 'algos/tra.py', lock_config=False)
 
 
 def main(_):

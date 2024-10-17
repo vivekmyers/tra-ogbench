@@ -1,4 +1,3 @@
-from typing import Any
 
 import flax
 import jax
@@ -14,7 +13,7 @@ from utils.networks import (
     GCDiscreteBilinearCritic,
 )
 from utils.flax_utils import ModuleDict, TrainState, nonpytree_field
-from typing import Dict
+from typing import Any, Dict
 
 
 class TRAAgent(flax.struct.PyTreeNode):
@@ -23,24 +22,15 @@ class TRAAgent(flax.struct.PyTreeNode):
     config: Dict[str, Any] = nonpytree_field()
     ex_actions: Any = nonpytree_field()
 
-    def contrastive_loss(self, batch, grad_params, module_name="critic"):
+    def contrastive_loss(self, batch, grad_params, module_name="value"):
         batch_size = batch["observations"].shape[0]
 
-        if module_name == "critic":
-            v, phi, psi = self.network.select(module_name)(
-                batch["observations"],
-                batch["value_goals"],
-                jnp.zeros_like(batch["actions"]),
-                info=True,
-                params=grad_params,
-            )
-        else:
-            v, phi, psi = self.network.select(module_name)(
-                batch["observations"],
-                batch["value_goals"],
-                info=True,
-                params=grad_params,
-            )
+        v, phi, psi = self.network.select(module_name)(
+            batch["observations"],
+            batch["value_goals"],
+            info=True,
+            params=grad_params,
+        )
         if len(phi.shape) == 2:  # Non-ensemble
             phi = phi[None, ...]
             psi = psi[None, ...]
@@ -83,10 +73,9 @@ class TRAAgent(flax.struct.PyTreeNode):
 
     def actor_loss(self, batch, grad_params, rng=None):
 
-        _, _, psi = self.network.select("critic")(
+        _, _, psi = self.network.select("value")(
             batch["observations"],
             batch["actor_goals"],
-            jnp.zeros_like(batch["actions"]),
             info=True,
             params=grad_params,
         )
@@ -105,7 +94,7 @@ class TRAAgent(flax.struct.PyTreeNode):
             # 'adv': adv.mean(),
             "bc_log_prob": log_prob.mean(),
         }
-        if not self.config["discrete"]:
+        if not self.config["discrete"]:  # pylint: disable=unsubscriptable-object
             actor_info.update(
                 {
                     "mse": jnp.mean((dist.mode() - batch["actions"]) ** 2),
@@ -121,21 +110,10 @@ class TRAAgent(flax.struct.PyTreeNode):
         rng = rng if rng is not None else self.rng
 
         critic_loss, critic_info = self.contrastive_loss(
-            batch, grad_params, "critic"
+            batch, grad_params, "value"
         )
         for k, v in critic_info.items():
             info[f"critic/{k}"] = v
-        # else:
-        #     critic_loss = 0.0
-
-        # if not self.config["use_q"] or (
-        #     self.config["use_q"] and self.config["actor_loss"] == "awr"
-        # ):
-        #     value_loss, value_info = self.contrastive_loss(batch, grad_params, "value")
-        #     for k, v in value_info.items():
-        #         info[f"value/{k}"] = v
-        # else:
-        #     value_loss = 0.0
 
         rng, actor_rng = jax.random.split(rng)
         actor_loss, actor_info = self.actor_loss(batch, grad_params, actor_rng)
@@ -164,7 +142,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         seed=None,
         temperature=1.0,
     ):
-        _, _, psi = self.network.select("critic")(
+        _, _, psi = self.network.select("value")(
             observations,
             goals,
             jnp.zeros_like(self.ex_actions),
@@ -204,55 +182,17 @@ class TRAAgent(flax.struct.PyTreeNode):
             encoders["value_state"] = encoder_module()
             encoders["value_goal"] = encoder_module()
             encoders["actor"] = GCEncoder(concat_encoder=encoder_module())
-            if config["use_q"]:
-                encoders["critic_state"] = encoder_module()
-                encoders["critic_goal"] = encoder_module()
 
         # Define value and actor networks.
-        if config["use_q"]:
-            # Standard CRL: Use both V and Q (AWR) or only Q (DDPG+BC).
-            value_def = GCBilinearValue(
-                hidden_dims=config["value_hidden_dims"],
-                latent_dim=config["latent_dim"],
-                layer_norm=config["layer_norm"],
-                ensemble=False,
-                value_exp=True,
-                state_encoder=encoders.get("value_state"),
-                goal_encoder=encoders.get("value_goal"),
-            )
-            if config["discrete"]:
-                critic_def = GCDiscreteBilinearCritic(
-                    hidden_dims=config["value_hidden_dims"],
-                    latent_dim=config["latent_dim"],
-                    layer_norm=config["layer_norm"],
-                    ensemble=True,
-                    value_exp=True,
-                    state_encoder=encoders.get("critic_state"),
-                    goal_encoder=encoders.get("critic_goal"),
-                    action_dim=action_dim,
-                )
-            else:
-                critic_def = GCBilinearValue(
-                    hidden_dims=config["value_hidden_dims"],
-                    latent_dim=config["latent_dim"],
-                    layer_norm=config["layer_norm"],
-                    ensemble=True,
-                    value_exp=True,
-                    state_encoder=encoders.get("critic_state"),
-                    goal_encoder=encoders.get("critic_goal"),
-                )
-        else:
-            # Value-only CRL: Only use V.
-            value_def = GCBilinearValue(
-                hidden_dims=config["value_hidden_dims"],
-                latent_dim=config["latent_dim"],
-                layer_norm=config["layer_norm"],
-                ensemble=True,
-                value_exp=True,
-                state_encoder=encoders.get("value_state"),
-                goal_encoder=encoders.get("value_goal"),
-            )
-            critic_def = None
+        value_def = GCBilinearValue(
+            hidden_dims=config["value_hidden_dims"],
+            latent_dim=config["latent_dim"],
+            layer_norm=config["layer_norm"],
+            ensemble=True,
+            value_exp=True,
+            state_encoder=encoders.get("value_state"),
+            goal_encoder=encoders.get("value_goal"),
+        )
 
         if config["discrete"]:
             actor_def = GCDiscreteActor(
@@ -273,10 +213,6 @@ class TRAAgent(flax.struct.PyTreeNode):
             value=(value_def, (ex_observations, ex_goals)),
             actor=(actor_def, (ex_observations, ex_goals)),
         )
-        if config["use_q"]:
-            network_info.update(
-                critic=(critic_def, (ex_observations, ex_goals, ex_actions)),
-            )
         networks = {k: v[0] for k, v in network_info.items()}
         network_args = {k: v[1] for k, v in network_info.items()}
 
@@ -292,7 +228,7 @@ def get_config():
     config = ml_collections.ConfigDict(
         dict(
             # Agent hyperparameters.
-            agent_name="crl",  # Agent name.
+            agent_name="tra",  # Agent name.
             lr=3e-4,  # Learning rate.
             batch_size=1024,  # Batch size.
             actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions.
@@ -300,9 +236,7 @@ def get_config():
             latent_dim=512,  # Latent dimension for phi and psi.
             layer_norm=True,  # Whether to use layer normalization.
             discount=0.99,  # Discount factor.
-            actor_loss="ddpgbc",  # Actor loss type ('awr' or 'ddpgbc').
             alpha=1.0,  # Temperature in AWR or BC coefficient in DDPG+BC.
-            use_q=True,  # Whether to use Q functions (True for standard CRL, False for value-only CRL).
             actor_log_q=True,  # Whether to maximize log Q (True) or Q itself (False) in the actor loss.
             const_std=True,  # Whether to use constant standard deviation for the actor.
             discrete=False,  # Whether the action space is discrete.
