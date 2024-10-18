@@ -93,9 +93,10 @@ class PlanOracle:
         plan = np.array(plan)
 
         # Add temporally correlated noise to the plan.
-        noise = np.random.normal(0, 1, size=(len(plan), 5)) * np.array([0.05, 0.05, 0.05, 0.3, 1.0]) * self._noise
-        noise = gaussian_filter1d(noise, axis=0, sigma=self._noise_smoothing)
-        plan += noise
+        if self._noise > 0:
+            noise = np.random.normal(0, 1, size=(len(plan), 5)) * np.array([0.05, 0.05, 0.05, 0.3, 1.0]) * self._noise
+            noise = gaussian_filter1d(noise, axis=0, sigma=self._noise_smoothing)
+            plan += noise
 
         return plan
 
