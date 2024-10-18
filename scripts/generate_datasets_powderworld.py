@@ -16,7 +16,7 @@ flags.DEFINE_string('dataset_type', 'play', 'Dataset type.')
 flags.DEFINE_string('save_path', None, 'Save path.')
 flags.DEFINE_integer('num_episodes', 1000, 'Number of episodes.')
 flags.DEFINE_integer('max_episode_steps', 1001, 'Maximum number of steps in an episode.')
-flags.DEFINE_float('p_random_action', 0.05, 'Probability of selecting a random action.')
+flags.DEFINE_float('p_random_action', 0.5, 'Probability of selecting a random action.')
 
 
 def main(_):

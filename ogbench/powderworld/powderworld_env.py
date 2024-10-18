@@ -399,7 +399,7 @@ class PowderworldEnv(gymnasium.Env):
 
         ob = self._get_ob()
         reward = 0.0
-        done = False
+        terminated = False
         info = dict()
 
         if self._mode == 'task':
@@ -417,14 +417,14 @@ class PowderworldEnv(gymnasium.Env):
 
             success = error.sum() < self.cur_task_info['tol']
             if success:
-                done = True
+                terminated = True
                 info['success'] = 1.0
                 reward = 1.0
             else:
                 info['success'] = 0.0
                 reward = 0.0
 
-        return ob, reward, done, done, info
+        return ob, reward, terminated, False, info
 
     def semantic_action_to_action(self, elem_name, x, y):
         """Convert a semantic action to an action based on the current action step."""

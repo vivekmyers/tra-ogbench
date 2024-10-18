@@ -99,7 +99,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='puzzle_3x3',
+        env_type='3x3',
     ),
 )
 register(
@@ -107,7 +107,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='puzzle_3x3',
+        env_type='3x3',
         **visual_dict,
     ),
 )
@@ -116,7 +116,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='puzzle_4x4',
+        env_type='4x4',
     ),
 )
 register(
@@ -124,7 +124,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=500,
     kwargs=dict(
-        env_type='puzzle_4x4',
+        env_type='4x4',
         **visual_dict,
     ),
 )
@@ -133,7 +133,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='puzzle_4x5',
+        env_type='4x5',
     ),
 )
 register(
@@ -141,7 +141,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='puzzle_4x5',
+        env_type='4x5',
         **visual_dict,
     ),
 )
@@ -150,7 +150,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='puzzle_4x6',
+        env_type='4x6',
     ),
 )
 register(
@@ -158,7 +158,7 @@ register(
     entry_point='ogbench.manipspace.envs.puzzle_env:PuzzleEnv',
     max_episode_steps=1000,
     kwargs=dict(
-        env_type='puzzle_4x6',
+        env_type='4x6',
         **visual_dict,
     ),
 )
