@@ -34,7 +34,11 @@ class TRAAgent(flax.struct.PyTreeNode):
         if len(phi.shape) == 2:  # Non-ensemble
             phi = phi[None, ...]
             psi = psi[None, ...]
+        #print(phi.shape)
+        #print(psi.shape)
+        
         logits = jnp.einsum("eik,ejk->ije", phi, psi) / jnp.sqrt(phi.shape[-1])
+        #print(logits.shape)
         # logits.shape is (B, B, e) with one term for positive pair and (B - 1) terms for negative pairs in each row.
 
         # binary NCE
@@ -49,10 +53,13 @@ class TRAAgent(flax.struct.PyTreeNode):
         # symmetric infoNCE 
         assert logits.shape[0] == batch_size and logits.shape[1] == batch_size
         I = jnp.eye(batch_size)
+        #print(jax.nn.log_softmax(logits, axis=0).shape)
+
         contrastive_loss = (
-            jax.nn.log_softmax(logits, axis=0) * I
-            + jax.nn.log_softmax(logits, axis=1) * I
+        jax.nn.log_softmax(logits, axis=0) * I[...,None]
+        + jax.nn.log_softmax(logits, axis=1) * I[...,None]
         )
+
 
         logits = jnp.mean(logits, axis=-1)
         correct = jnp.argmax(logits, axis=1) == jnp.argmax(I, axis=1)
@@ -73,14 +80,17 @@ class TRAAgent(flax.struct.PyTreeNode):
 
     def actor_loss(self, batch, grad_params, rng=None):
 
-        _, _, psi = self.network.select("value")(
+        v, phi, psi = self.network.select("value")(
             batch["observations"],
             batch["actor_goals"],
             info=True,
             params=grad_params,
         )
+        print("v shape: ", v.shape)
+        print("phi shape: ", phi.shape)
         psi = jax.lax.stop_gradient(psi)
-
+        print("psi shape: ", psi.shape)
+        print("observation shape: ", batch["observations"].shape)
         dist = self.network.select("actor")(
             batch["observations"], psi, params=grad_params
         )
@@ -165,6 +175,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         ex_observations,
         ex_actions,
         config,
+        use_same_val_critic=True
     ):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
@@ -182,7 +193,6 @@ class TRAAgent(flax.struct.PyTreeNode):
             encoders["value_state"] = encoder_module()
             encoders["value_goal"] = encoder_module()
             encoders["actor"] = GCEncoder(concat_encoder=encoder_module())
-
         # Define value and actor networks.
         value_def = GCBilinearValue(
             hidden_dims=config["value_hidden_dims"],
