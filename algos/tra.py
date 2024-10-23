@@ -185,7 +185,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         rng, init_rng = jax.random.split(rng, 2)
         #print(ex_observations.shape)
         ex_goals_val = ex_observations#jnp.zeros((1, 512))
-        ex_goals_act = jnp.zeros((1, 512))
+        ex_goals_act = jnp.zeros((1, config["latent_dim"]))
         if config["discrete"]:
             action_dim = ex_actions.max() + 1
         else:
