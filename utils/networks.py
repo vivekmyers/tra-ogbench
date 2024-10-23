@@ -357,10 +357,9 @@ class GCBilinearValue(nn.Module):
         mlp_module = MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-
+        #print(*self.hidden_dims, self.latent_dim)
         self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
         self.psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
-
     def __call__(self, observations, goals, actions=None, info=False):
         """Return the value/critic function.
 

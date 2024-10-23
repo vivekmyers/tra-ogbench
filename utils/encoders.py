@@ -84,6 +84,7 @@ class ImpalaEncoder(nn.Module):
         x = x.astype(jnp.float32) / 255.0
 
         conv_out = x
+        print(x.shape)
 
         for idx in range(len(self.stack_blocks)):
             conv_out = self.stack_blocks[idx](conv_out)
@@ -121,6 +122,7 @@ class GCEncoder(nn.Module):
         """
         reps = []
         if self.state_encoder is not None:
+            print("we have state encoder")
             reps.append(self.state_encoder(observations))
         if goals is not None:
             if goal_encoded:
@@ -129,8 +131,10 @@ class GCEncoder(nn.Module):
                 reps.append(goals)
             else:
                 if self.goal_encoder is not None:
+                    print("we have goal encoder")
                     reps.append(self.goal_encoder(goals))
                 if self.concat_encoder is not None:
+                    print("we have concat encoder")
                     reps.append(self.concat_encoder(jnp.concatenate([observations, goals], axis=-1)))
         reps = jnp.concatenate(reps, axis=-1)
         return reps
