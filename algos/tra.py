@@ -24,6 +24,7 @@ class TRAAgent(flax.struct.PyTreeNode):
 
     def contrastive_loss(self, batch, grad_params, module_name="value"):
         batch_size = batch["observations"].shape[0]
+        #print(batch)
 
         v, phi, psi = self.network.select(module_name)(
             batch["observations"],
@@ -59,7 +60,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         jax.nn.log_softmax(logits, axis=0) * I[...,None]
         + jax.nn.log_softmax(logits, axis=1) * I[...,None]
         )
-
+        contrastive_loss = jnp.mean(contrastive_loss)
 
         logits = jnp.mean(logits, axis=-1)
         correct = jnp.argmax(logits, axis=1) == jnp.argmax(I, axis=1)
@@ -86,13 +87,13 @@ class TRAAgent(flax.struct.PyTreeNode):
             info=True,
             params=grad_params,
         )
-        print("v shape: ", v.shape)
-        print("phi shape: ", phi.shape)
+        #print("v shape: ", v.shape)
+        #print("phi shape: ", phi.shape)
         psi = jax.lax.stop_gradient(psi)
-        print("psi shape: ", psi.shape)
-        print("observation shape: ", batch["observations"].shape)
+        #print("psi shape: ", psi.shape)
+        #print("observation shape: ", batch["observations"].shape)
         dist = self.network.select("actor")(
-            batch["observations"], psi, params=grad_params
+            batch["observations"], batch["actor_goals"], params=grad_params
         )
         log_prob = dist.log_prob(batch["actions"])
 
@@ -155,13 +156,13 @@ class TRAAgent(flax.struct.PyTreeNode):
         _, _, psi = self.network.select("value")(
             observations,
             goals,
-            jnp.zeros_like(self.ex_actions),
+            # jnp.zeros_like(self.ex_actions),
             info=True,
         )
         psi = jax.lax.stop_gradient(psi)
 
         dist = self.network.select("actor")(
-            observations, psi, temperature=temperature
+            observations, goals, temperature=temperature
         )
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
@@ -180,7 +181,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
 
-        ex_goals = ex_observations
+        ex_goals = ex_observations #jnp.zeros((2, 1024, 512))
         if config["discrete"]:
             action_dim = ex_actions.max() + 1
         else:
