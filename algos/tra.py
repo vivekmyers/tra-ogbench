@@ -87,13 +87,14 @@ class TRAAgent(flax.struct.PyTreeNode):
             info=True,
             params=grad_params,
         )
+        psi = jnp.mean(psi, axis=0)
         #print("v shape: ", v.shape)
         #print("phi shape: ", phi.shape)
         psi = jax.lax.stop_gradient(psi)
         #print("psi shape: ", psi.shape)
         #print("observation shape: ", batch["observations"].shape)
         dist = self.network.select("actor")(
-            batch["observations"], batch["actor_goals"], params=grad_params
+            batch["observations"], psi, params=grad_params
         )
         log_prob = dist.log_prob(batch["actions"])
 
@@ -159,10 +160,11 @@ class TRAAgent(flax.struct.PyTreeNode):
             # jnp.zeros_like(self.ex_actions),
             info=True,
         )
+        psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
         dist = self.network.select("actor")(
-            observations, goals, temperature=temperature
+            observations, psi, temperature=temperature
         )
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
@@ -178,10 +180,12 @@ class TRAAgent(flax.struct.PyTreeNode):
         config,
         use_same_val_critic=True
     ):
+
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
-
-        ex_goals = ex_observations #jnp.zeros((2, 1024, 512))
+        #print(ex_observations.shape)
+        ex_goals_val = ex_observations#jnp.zeros((1, 512))
+        ex_goals_act = jnp.zeros((1, 512))
         if config["discrete"]:
             action_dim = ex_actions.max() + 1
         else:
@@ -221,8 +225,8 @@ class TRAAgent(flax.struct.PyTreeNode):
             )
 
         network_info = dict(
-            value=(value_def, (ex_observations, ex_goals)),
-            actor=(actor_def, (ex_observations, ex_goals)),
+            value=(value_def, (ex_observations, ex_goals_val)),
+            actor=(actor_def, (ex_observations, ex_goals_act)),
         )
         networks = {k: v[0] for k, v in network_info.items()}
         network_args = {k: v[1] for k, v in network_info.items()}
