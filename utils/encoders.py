@@ -80,21 +80,38 @@ class ImpalaEncoder(nn.Module):
             self.dropout = nn.Dropout(rate=self.dropout_rate)
 
     @nn.compact
-    def __call__(self, x, train=True, cond_var=None):
+    def __call__(self, x, z=None, train=True, cond_var=None):
+        """Optional task z for FiLM conditioning."""
         x = x.astype(jnp.float32) / 255.0
 
         conv_out = x
-        print(x.shape)
 
         for idx in range(len(self.stack_blocks)):
             conv_out = self.stack_blocks[idx](conv_out)
             if self.dropout_rate is not None:
                 conv_out = self.dropout(conv_out, deterministic=not train)
 
+            if z is not None:
+                gamma = nn.Dense(conv_out.shape[-1])(z)
+                gamma = jnp.expand_dims(gamma, axis=(-2, -3))
+                gamma = jnp.repeat(gamma, conv_out.shape[-2], axis=-2)
+                gamma = jnp.repeat(gamma, conv_out.shape[-3], axis=-3)
+
+                beta = nn.Dense(conv_out.shape[-1])(z)
+                beta = jnp.expand_dims(beta, axis=(-2, -3))
+                beta = jnp.repeat(beta, conv_out.shape[-2], axis=-2)
+                beta = jnp.repeat(beta, conv_out.shape[-3], axis=-3)
+
+                conv_out = act(gamma * conv_out + beta)
+
+
         conv_out = nn.relu(conv_out)
         if self.layer_norm:
             conv_out = nn.LayerNorm()(conv_out)
         out = conv_out.reshape((*x.shape[:-3], -1))
+
+        if z is not None:
+            out = jnp.concatenate([out, z], axis=-1)
 
         out = MLP(self.mlp_hidden_dims, activate_final=True, layer_norm=self.layer_norm)(out)
 
