@@ -10,13 +10,13 @@ import wandb
 from absl import app, flags
 from ml_collections import config_flags
 
-from algos import algos
-from envs.env_loader import make_online_env, make_vec_env
-from envs.viz_utils import visualize_trajs
-from utils.dataset import ReplayBuffer
+from agents import agents
+from ogbench.env_loader import make_online_env, make_vec_env
+from ogbench.viz_utils import visualize_trajs
+from utils.datasets import ReplayBuffer
 from utils.evaluation import evaluate, flatten
 from utils.flax_utils import restore_agent, save_agent
-from utils.logger import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
+from utils.log_utils import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 
@@ -42,7 +42,7 @@ flags.DEFINE_float('eval_gaussian', None, 'Action Gaussian noise for evaluation.
 flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each task.')
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
 
-config_flags.DEFINE_config_file('agent', 'algos/ppo.py', lock_config=False)
+config_flags.DEFINE_config_file('agent', 'agents/ppo.py', lock_config=False)
 
 
 def main(_):
@@ -80,7 +80,7 @@ def main(_):
     random.seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
-    agent_class = algos[config['agent_name']]
+    agent_class = agents[config['agent_name']]
     agent = agent_class.create(
         FLAGS.seed,
         example_transition['observations'],
@@ -149,7 +149,7 @@ def main(_):
             eval_info, trajs, renders = evaluate(
                 agent=agent,
                 env=eval_env,
-                task_idx=None,
+                task_id=None,
                 config=config,
                 num_eval_episodes=FLAGS.eval_episodes,
                 num_video_episodes=FLAGS.video_episodes,
