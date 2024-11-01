@@ -164,6 +164,7 @@ class GCActor(nn.Module):
     const_std: bool = True
     final_fc_init_scale: float = 1e-2
     gc_encoder: nn.Module = None
+    encode_goal: bool = True
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
@@ -190,7 +191,7 @@ class GCActor(nn.Module):
             temperature: Scaling factor for the standard deviation.
         """
         if self.gc_encoder is not None:
-            inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
+            inputs = self.gc_encoder(observations, goals, goal_encoded=self.encode_goal)
         else:
             inputs = [observations]
             if goals is not None:
