@@ -1,5 +1,6 @@
 import json
 import os
+import datetime
 import random
 import time
 from collections import defaultdict
@@ -41,16 +42,13 @@ flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each tas
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
 flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU.')
 
-<<<<<<< HEAD
 config_flags.DEFINE_config_file('agent', 'algos/tra.py', lock_config=False)
-=======
-config_flags.DEFINE_config_file('agent', 'agents/gciql.py', lock_config=False)
->>>>>>> origin/master
 
 
 def main(_):
     # Set up logger.
     exp_name = get_exp_name(FLAGS.seed)
+    exp_name = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + FLAGS.dataset_path[:-4] + exp_name
     setup_wandb(project='ogcrl', group=FLAGS.run_group, name=exp_name)
 
     FLAGS.save_dir = os.path.join(FLAGS.save_dir, wandb.run.project, FLAGS.run_group, exp_name)

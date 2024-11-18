@@ -35,10 +35,14 @@ class TRAAgent(flax.struct.PyTreeNode):
         if len(phi.shape) == 2:  # Non-ensemble
             phi = phi[None, ...]
             psi = psi[None, ...]
-        #print(phi.shape)
-        #print(psi.shape)
+        print(phi.shape)
+        print(psi.shape)
+        
+        
         
         logits = jnp.einsum("eik,ejk->ije", phi, psi) / jnp.sqrt(phi.shape[-1])
+        
+        print(logits)
         #print(logits.shape)
         # logits.shape is (B, B, e) with one term for positive pair and (B - 1) terms for negative pairs in each row.
 
@@ -56,12 +60,17 @@ class TRAAgent(flax.struct.PyTreeNode):
         I = jnp.eye(batch_size)
         #print(jax.nn.log_softmax(logits, axis=0).shape)
 
-        contrastive_loss = (
-        jax.nn.log_softmax(logits, axis=0) * I[...,None]
-        + jax.nn.log_softmax(logits, axis=1) * I[...,None]
-        )
+        #contrastive_loss = (
+        #jax.nn.log_softmax(logits, axis=0) * I[...,None]
+        #+ jax.nn.log_softmax(logits, axis=1) * I[...,None]
+        #)
+        contrastive_loss = jax.vmap(
+                lambda _logits: optax.sigmoid_binary_cross_entropy(logits=_logits, labels=I),
+                in_axes=-1,
+                out_axies=-1,
+                )(logits)
         contrastive_loss = jnp.mean(contrastive_loss)
-
+        
         logits = jnp.mean(logits, axis=-1)
         correct = jnp.argmax(logits, axis=1) == jnp.argmax(I, axis=1)
         logits_pos = jnp.sum(logits * I) / jnp.sum(I)
@@ -125,7 +134,7 @@ class TRAAgent(flax.struct.PyTreeNode):
             batch, grad_params, "value"
         )
         for k, v in critic_info.items():
-            info[f"critic/{k}"] = v
+            info[f"value/{k}"] = v
 
         rng, actor_rng = jax.random.split(rng)
         actor_loss, actor_info = self.actor_loss(batch, grad_params, actor_rng)
