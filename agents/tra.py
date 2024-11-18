@@ -1,3 +1,4 @@
+# BZ 11.18: I heavily suspect the reason the code is not working here is the contrastive loss: I've kept the same procedure as CRL and see what we can do here:
 
 import flax
 import jax
