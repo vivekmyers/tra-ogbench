@@ -61,15 +61,15 @@ class TRAAgent(flax.struct.PyTreeNode):
         I = jnp.eye(batch_size)
         #print(jax.nn.log_softmax(logits, axis=0).shape)
 
-        #contrastive_loss = (
-        #jax.nn.log_softmax(logits, axis=0) * I[...,None]
-        #+ jax.nn.log_softmax(logits, axis=1) * I[...,None]
-        #)
-        contrastive_loss = jax.vmap(
-                lambda _logits: optax.sigmoid_binary_cross_entropy(logits=_logits, labels=I),
-                in_axes=-1,
-                out_axies=-1,
-                )(logits)
+        contrastive_loss = -(
+            jax.nn.log_softmax(logits, axis=0) * I[...,None]
+            + jax.nn.log_softmax(logits, axis=1) * I[...,None]
+        )
+        # contrastive_loss = jax.vmap(
+        #         lambda _logits: optax.sigmoid_binary_cross_entropy(logits=_logits, labels=I),
+        #         in_axes=-1,
+        #         out_axies=-1,
+        #         )(logits)
         contrastive_loss = jnp.mean(contrastive_loss)
         
         logits = jnp.mean(logits, axis=-1)
