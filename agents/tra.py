@@ -60,17 +60,13 @@ class TRAAgent(flax.struct.PyTreeNode):
         I = jnp.eye(batch_size)
         #print(jax.nn.log_softmax(logits, axis=0).shape)
 
-        #contrastive_loss = (
-        #jax.nn.log_softmax(logits, axis=0) * I[...,None]
-        #+ jax.nn.log_softmax(logits, axis=1) * I[...,None]
-        #)
-        contrastive_loss = jax.vmap(
-                lambda _logits: optax.sigmoid_binary_cross_entropy(logits=_logits, labels=I),
-                in_axes=-1,
-                out_axies=-1,
-                )(logits)
+        contrastive_loss = -(
+        jax.nn.log_softmax(logits, axis=0) * I[...,None]
+        + jax.nn.log_softmax(logits, axis=1) * I[...,None]
+        )
         contrastive_loss = jnp.mean(contrastive_loss)
-        
+        # regularization term
+        contrastive_loss += 1e-8 * jnp.mean(v)
         logits = jnp.mean(logits, axis=-1)
         correct = jnp.argmax(logits, axis=1) == jnp.argmax(I, axis=1)
         logits_pos = jnp.sum(logits * I) / jnp.sum(I)
@@ -141,7 +137,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         for k, v in actor_info.items():
             info[f"actor/{k}"] = v
 
-        loss = critic_loss + actor_loss
+        loss = self.config["alignment"] * critic_loss + actor_loss
         return loss, info
 
     @jax.jit
@@ -279,6 +275,7 @@ def get_config():
             actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
             gc_negative=False,  # Unused (defined for compatibility with GCDataset).
             p_aug=0.0,  # Probability of applying image augmentation.
+            alignment=1.0, # Coefficient for contrastive loss
             frame_stack=ml_collections.config_dict.placeholder(
                 int
             ),  # Number of frames to stack.
