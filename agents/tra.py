@@ -1,3 +1,4 @@
+# BZ 11.18: I heavily suspect the reason the code is not working here is the contrastive loss: I've kept the same procedure as CRL and see what we can do here:
 
 import flax
 import jax
@@ -24,7 +25,6 @@ class TRAAgent(flax.struct.PyTreeNode):
 
     def contrastive_loss(self, batch, grad_params, module_name="value"):
         batch_size = batch["observations"].shape[0]
-        #print(batch)
 
         v, phi, psi = self.network.select(module_name)(
             batch["observations"],
@@ -35,15 +35,9 @@ class TRAAgent(flax.struct.PyTreeNode):
         if len(phi.shape) == 2:  # Non-ensemble
             phi = phi[None, ...]
             psi = psi[None, ...]
-        print(phi.shape)
-        print(psi.shape)
-        
-        
-        
+
         logits = jnp.einsum("eik,ejk->ije", phi, psi) / jnp.sqrt(phi.shape[-1])
-        
-        print(logits)
-        #print(logits.shape)
+
         # logits.shape is (B, B, e) with one term for positive pair and (B - 1) terms for negative pairs in each row.
 
         # binary NCE
@@ -55,10 +49,9 @@ class TRAAgent(flax.struct.PyTreeNode):
         # )(logits)
         # contrastive_loss = jnp.mean(contrastive_loss)
 
-        # symmetric infoNCE 
+        # symmetric infoNCE
         assert logits.shape[0] == batch_size and logits.shape[1] == batch_size
         I = jnp.eye(batch_size)
-        #print(jax.nn.log_softmax(logits, axis=0).shape)
 
         contrastive_loss = -(
         jax.nn.log_softmax(logits, axis=0) * I[...,None]
@@ -93,14 +86,8 @@ class TRAAgent(flax.struct.PyTreeNode):
             params=grad_params,
         )
         psi = jnp.mean(psi, axis=0)
-        #print("v shape: ", v.shape)
-        #print("phi shape: ", phi.shape)
         psi = jax.lax.stop_gradient(psi)
-        #print("psi shape: ", psi.shape)
-        #print("observation shape: ", batch["observations"].shape)
-        dist = self.network.select("actor")(
-            batch["observations"], psi, params=grad_params
-        )
+        dist = self.network.select("actor")(batch["observations"], psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
 
         # actor_loss = -(exp_a * log_prob).mean()
@@ -126,9 +113,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         info = {}
         rng = rng if rng is not None else self.rng
 
-        critic_loss, critic_info = self.contrastive_loss(
-            batch, grad_params, "value"
-        )
+        critic_loss, critic_info = self.contrastive_loss(batch, grad_params, "value")
         for k, v in critic_info.items():
             info[f"value/{k}"] = v
 
@@ -168,28 +153,18 @@ class TRAAgent(flax.struct.PyTreeNode):
         psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
-        dist = self.network.select("actor")(
-            observations, psi, temperature=temperature
-        )
+        dist = self.network.select("actor")(observations, psi, temperature=temperature)
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
             actions = jnp.clip(actions, -1, 1)
         return actions
 
     @classmethod
-    def create(
-        cls,
-        seed,
-        ex_observations,
-        ex_actions,
-        config,
-        use_same_val_critic=True
-    ):
+    def create(cls, seed, ex_observations, ex_actions, config, use_same_val_critic=True):
 
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
-        #print(ex_observations.shape)
-        ex_goals_val = ex_observations#jnp.zeros((1, 512))
+        ex_goals_val = ex_observations  # jnp.zeros((1, 512))
         ex_goals_act = jnp.zeros((1, config["latent_dim"]))
         if config["discrete"]:
             action_dim = ex_actions.max() + 1
@@ -275,10 +250,14 @@ def get_config():
             actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
             gc_negative=False,  # Unused (defined for compatibility with GCDataset).
             p_aug=0.0,  # Probability of applying image augmentation.
+<<<<<<< HEAD
             alignment=1.0, # Coefficient for contrastive loss
             frame_stack=ml_collections.config_dict.placeholder(
                 int
             ),  # Number of frames to stack.
+=======
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack.
+>>>>>>> refs/remotes/origin/vivek
         )
     )
     return config
