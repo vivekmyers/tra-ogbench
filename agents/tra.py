@@ -250,14 +250,10 @@ def get_config():
             actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
             gc_negative=False,  # Unused (defined for compatibility with GCDataset).
             p_aug=0.0,  # Probability of applying image augmentation.
-<<<<<<< HEAD
             alignment=1.0, # Coefficient for contrastive loss
             frame_stack=ml_collections.config_dict.placeholder(
                 int
             ),  # Number of frames to stack.
-=======
-            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack.
->>>>>>> refs/remotes/origin/vivek
         )
     )
     return config
