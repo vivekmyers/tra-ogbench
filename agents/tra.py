@@ -54,8 +54,8 @@ class TRAAgent(flax.struct.PyTreeNode):
         I = jnp.eye(batch_size)
 
         contrastive_loss = -(
-        jax.nn.log_softmax(logits, axis=0) * I[...,None]
-        + jax.nn.log_softmax(logits, axis=1) * I[...,None]
+            jax.nn.log_softmax(logits, axis=0) * I[..., None]
+            + jax.nn.log_softmax(logits, axis=1) * I[..., None]
         )
         contrastive_loss = jnp.mean(contrastive_loss)
         # regularization term
@@ -86,9 +86,9 @@ class TRAAgent(flax.struct.PyTreeNode):
             params=grad_params,
         )
         # phi = jnp.mean(phi, axis=0)
-        #phi = jax.lax.stop_gradient(phi)
+        # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
-        #psi = jax.lax.stop_gradient(psi)
+        # psi = jax.lax.stop_gradient(psi)
         dist = self.network.select("actor")(batch["observations"], psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
 
@@ -254,10 +254,8 @@ def get_config():
             actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
             gc_negative=False,  # Unused (defined for compatibility with GCDataset).
             p_aug=0.0,  # Probability of applying image augmentation.
-            alignment=1.0, # Coefficient for contrastive loss
-            frame_stack=ml_collections.config_dict.placeholder(
-                int
-            ),  # Number of frames to stack
-            )
+            alignment=1.0,  # Coefficient for contrastive loss
+            frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
         )
+    )
     return config
