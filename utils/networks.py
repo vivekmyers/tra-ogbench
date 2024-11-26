@@ -179,7 +179,7 @@ class GCActor(nn.Module):
         self,
         observations,
         goals=None,
-        goal_encoded=False,
+        goal_encoded=True,
         temperature=1.0,
     ):
         """Return the action distribution.

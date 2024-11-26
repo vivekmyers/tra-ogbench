@@ -91,21 +91,21 @@ class ImpalaEncoder(nn.Module):
             if self.dropout_rate is not None:
                 conv_out = self.dropout(conv_out, deterministic=not train)
 
-            if z is not None:
-                gamma = nn.Dense(conv_out.shape[-1])(z)
-                gamma = jnp.expand_dims(gamma, axis=(-2, -3))
-                gamma = jnp.repeat(gamma, conv_out.shape[-2], axis=-2)
-                gamma = jnp.repeat(gamma, conv_out.shape[-3], axis=-3)
+            #if z is not None:
+            #    gamma = nn.Dense(conv_out.shape[-1])(z)
+            #    gamma = jnp.expand_dims(gamma, axis=(-2, -3))
+            #    gamma = jnp.repeat(gamma, conv_out.shape[-2], axis=-2)
+            #    gamma = jnp.repeat(gamma, conv_out.shape[-3], axis=-3)
 
-                beta = nn.Dense(conv_out.shape[-1])(z)
-                beta = jnp.expand_dims(beta, axis=(-2, -3))
-                beta = jnp.repeat(beta, conv_out.shape[-2], axis=-2)
-                beta = jnp.repeat(beta, conv_out.shape[-3], axis=-3)
-
-                conv_out = act(gamma * conv_out + beta)
-
+            #    beta = nn.Dense(conv_out.shape[-1])(z)
+            #    beta = jnp.expand_dims(beta, axis=(-2, -3))
+            #    beta = jnp.repeat(beta, conv_out.shape[-2], axis=-2)
+            #    beta = jnp.repeat(beta, conv_out.shape[-3], axis=-3)
 
         conv_out = nn.relu(conv_out)
+
+
+        #conv_out = nn.relu(conv_out)
         if self.layer_norm:
             conv_out = nn.LayerNorm()(conv_out)
         out = conv_out.reshape((*x.shape[:-3], -1))
