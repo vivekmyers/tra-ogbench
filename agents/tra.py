@@ -257,7 +257,7 @@ def get_config():
             alignment=1.0, # Coefficient for contrastive loss
             frame_stack=ml_collections.config_dict.placeholder(
                 int
-            ),  # Number of frames to stack.
+            ),  # Number of frames to stack
             )
         )
     return config

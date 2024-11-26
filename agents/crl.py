@@ -37,8 +37,10 @@ class CRLAgent(flax.struct.PyTreeNode):
         if len(phi.shape) == 2:  # Non-ensemble
             phi = phi[None, ...]
             psi = psi[None, ...]
+        # print(phi.shape, psi.shape)
         logits = jnp.einsum('eik,ejk->ije', phi, psi) / jnp.sqrt(phi.shape[-1])
         # logits.shape is (B, B, e) with one term for positive pair and (B - 1) terms for negative pairs in each row.
+        print(logits.shape)
         I = jnp.eye(batch_size)
         contrastive_loss = jax.vmap(
             lambda _logits: optax.sigmoid_binary_cross_entropy(logits=_logits, labels=I),
