@@ -60,7 +60,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         contrastive_loss = jnp.mean(contrastive_loss)
         # regularization term
         l2_reg = jnp.mean(phi ** 2) + jnp.mean(psi ** 2)
-        contrastive_loss += self.config.repr_reg * jnp.mean(l2_reg)
+        contrastive_loss += self.config["repr_reg"] * jnp.mean(l2_reg)
         logits = jnp.mean(logits, axis=-1)
         correct = jnp.argmax(logits, axis=1) == jnp.argmax(I, axis=1)
         logits_pos = jnp.sum(logits * I) / jnp.sum(I)
@@ -89,7 +89,8 @@ class TRAAgent(flax.struct.PyTreeNode):
         # phi = jnp.mean(phi, axis=0)
         # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
-        # psi = jax.lax.stop_gradient(psi)
+        if config["repr_stopgrad"]:
+            psi = jax.lax.stop_gradient(psi)
         dist = self.network.select("actor")(batch["observations"], psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
 
@@ -258,6 +259,7 @@ def get_config():
             alignment=1.0,  # Coefficient for contrastive loss
             repr_reg=1e-6,
             frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
+            repr_stopgrad=True,
         )
     )
     return config
