@@ -60,7 +60,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         contrastive_loss = jnp.mean(contrastive_loss)
         # regularization term
         l2_reg = jnp.mean(phi ** 2) + jnp.mean(psi ** 2)
-        contrastive_loss += self.config.repr_reg * jnp.mean(l2_reg)
+        contrastive_loss += self.config["repr_reg"] * jnp.mean(l2_reg)
         logits = jnp.mean(logits, axis=-1)
         correct = jnp.argmax(logits, axis=1) == jnp.argmax(I, axis=1)
         logits_pos = jnp.sum(logits * I) / jnp.sum(I)
