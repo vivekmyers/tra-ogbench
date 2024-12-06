@@ -89,7 +89,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         # phi = jnp.mean(phi, axis=0)
         # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
-        if config["repr_stopgrad"]:
+        if self.config["repr_stopgrad"]:
             psi = jax.lax.stop_gradient(psi)
         dist = self.network.select("actor")(batch["observations"], psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
@@ -241,9 +241,7 @@ def get_config():
             actor_log_q=True,  # Whether to maximize log Q (True) or Q itself (False) in the actor loss.
             const_std=True,  # Whether to use constant standard deviation for the actor.
             discrete=False,  # Whether the action space is discrete.
-            encoder=ml_collections.config_dict.placeholder(
-                str
-            ),  # Visual encoder name (None, 'impala_small', etc.).
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).
             # Dataset hyperparameters.
             dataset_class="GCDataset",  # Dataset class name.
             value_p_curgoal=0.0,  # Probability of using the current state as the value goal.
@@ -259,7 +257,7 @@ def get_config():
             alignment=1.0,  # Coefficient for contrastive loss
             repr_reg=1e-6,
             frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
-            repr_stopgrad=True,
+            repr_stopgrad=False,
         )
     )
     return config
