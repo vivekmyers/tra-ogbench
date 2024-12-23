@@ -86,12 +86,12 @@ class TRAAgent(flax.struct.PyTreeNode):
             info=True,
             params=grad_params,
         )
-        # phi = jnp.mean(phi, axis=0)
+        phi = jnp.mean(phi, axis=0)
         # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
         if self.config["repr_stopgrad"]:
             psi = jax.lax.stop_gradient(psi)
-        dist = self.network.select("actor")(batch["observations"], psi, params=grad_params)
+        dist = self.network.select("actor")(phi, psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
 
         # actor_loss = -(exp_a * log_prob).mean()
@@ -154,12 +154,12 @@ class TRAAgent(flax.struct.PyTreeNode):
             # jnp.zeros_like(self.ex_actions),
             info=True,
         )
-        # phi = jnp.mean(phi, axis=0)
+        phi = jnp.mean(phi, axis=0)
         # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
-        dist = self.network.select("actor")(observations, psi, temperature=temperature)
+        dist = self.network.select("actor")(phi, psi, temperature=temperature)
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
             actions = jnp.clip(actions, -1, 1)
@@ -212,7 +212,7 @@ class TRAAgent(flax.struct.PyTreeNode):
 
         network_info = dict(
             value=(value_def, (ex_observations, ex_goals_val)),
-            actor=(actor_def, (ex_observations, ex_goals_act)),
+            actor=(actor_def, (ex_goals_act, ex_goals_act)),
         )
         networks = {k: v[0] for k, v in network_info.items()}
         network_args = {k: v[1] for k, v in network_info.items()}
