@@ -214,7 +214,7 @@ class CMDAgent(flax.struct.PyTreeNode):
                 hidden_dims=config["actor_hidden_dims"],
                 action_dim=action_dim,
                 gc_encoder=encoders.get("actor"),
-                encode_goal=False,
+                goal_encoded=False,
             )
         else:
             actor_def = GCActor(
@@ -223,7 +223,7 @@ class CMDAgent(flax.struct.PyTreeNode):
                 state_dependent_std=False,
                 const_std=config["const_std"],
                 gc_encoder=encoders.get("actor"),
-                encode_goal=False,
+                goal_encoded=False,
             )
 
         network_info = dict(

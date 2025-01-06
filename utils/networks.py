@@ -164,7 +164,7 @@ class GCActor(nn.Module):
     const_std: bool = True
     final_fc_init_scale: float = 1e-2
     gc_encoder: nn.Module = None
-    encode_goal: bool = True
+    goal_encoded: bool = False
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
@@ -189,7 +189,7 @@ class GCActor(nn.Module):
             temperature: Scaling factor for the standard deviation.
         """
         if self.gc_encoder is not None:
-            inputs = self.gc_encoder(observations, goals, goal_encoded=self.encode_goal)
+            inputs = self.gc_encoder(observations, goals, goal_encoded=self.goal_encoded)
         else:
             inputs = [observations]
             if goals is not None:
@@ -229,7 +229,7 @@ class GCDiscreteActor(nn.Module):
     action_dim: int
     final_fc_init_scale: float = 1e-2
     gc_encoder: nn.Module = None
-    encode_goal: bool = True
+    goal_encoded: bool = False
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
@@ -250,7 +250,7 @@ class GCDiscreteActor(nn.Module):
             temperature: Inverse scaling factor for the logits (set to 0 to get the argmax).
         """
         if self.gc_encoder is not None:
-            inputs = self.gc_encoder(observations, goals, goal_encoded=self.encode_goal)
+            inputs = self.gc_encoder(observations, goals, goal_encoded=self.goal_encoded)
         else:
             inputs = [observations]
             if goals is not None:
