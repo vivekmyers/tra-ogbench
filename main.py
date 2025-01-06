@@ -48,7 +48,7 @@ config_flags.DEFINE_config_file('agent', 'algos/tra.py', lock_config=False)
 def main(_):
     # Set up logger.
     exp_name = get_exp_name(FLAGS.seed)
-    exp_name = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + FLAGS.dataset_path[:-4] + exp_name
+    exp_name = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "_"+ FLAGS.dataset_path[:-4].split("/")[-1] + "_" + exp_name
     setup_wandb(project='ogcrl', group=FLAGS.run_group, name=exp_name)
 
     FLAGS.save_dir = os.path.join(FLAGS.save_dir, wandb.run.project, FLAGS.run_group, exp_name)
