@@ -184,7 +184,8 @@ class TRAAgent(flax.struct.PyTreeNode):
             encoders["value_state"] = encoder_module()
             encoders["value_goal"] = encoder_module()
             encoders["actor"] = GCEncoder(concat_encoder=encoder_module())
-        # Define value and actor networks.
+
+
         value_def = GCBilinearValue(
             hidden_dims=config["value_hidden_dims"],
             latent_dim=config["latent_dim"],
@@ -200,6 +201,7 @@ class TRAAgent(flax.struct.PyTreeNode):
                 hidden_dims=config["actor_hidden_dims"],
                 action_dim=action_dim,
                 gc_encoder=encoders.get("actor"),
+                goal_encoded=True,
             )
         else:
             actor_def = GCActor(
@@ -208,6 +210,7 @@ class TRAAgent(flax.struct.PyTreeNode):
                 state_dependent_std=False,
                 const_std=config["const_std"],
                 gc_encoder=encoders.get("actor"),
+                goal_encoded=True,
             )
 
         network_info = dict(
@@ -219,6 +222,7 @@ class TRAAgent(flax.struct.PyTreeNode):
 
         network_def = ModuleDict(networks)
         network_tx = optax.adam(learning_rate=config["lr"])
+        
         network_params = network_def.init(init_rng, **network_args)["params"]
         network = TrainState.create(network_def, network_params, tx=network_tx)
 
