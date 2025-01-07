@@ -188,7 +188,6 @@ class CMDAgent(flax.struct.PyTreeNode):
             encoders["actor"] = GCEncoder(concat_encoder=encoder_module())
             encoders["state"] = encoder_module()
 
-        # Define value and actor networks.
         if config["discrete"]:
             critic_def = DiscreteStateActionRepresentation(
                 hidden_dims=config["value_hidden_dims"],
@@ -199,6 +198,12 @@ class CMDAgent(flax.struct.PyTreeNode):
                 state_encoder=encoders.get("state"),
                 action_dim=action_dim,
             )
+            actor_def = GCDiscreteActor(
+                hidden_dims=config["actor_hidden_dims"],
+                action_dim=action_dim,
+                gc_encoder=encoders.get("actor"),
+                goal_encoded=False,
+            )
         else:
             critic_def = StateRepresentation(
                 hidden_dims=config["value_hidden_dims"],
@@ -208,15 +213,6 @@ class CMDAgent(flax.struct.PyTreeNode):
                 value_exp=True,
                 state_encoder=encoders.get("state"),
             )
-
-        if config["discrete"]:
-            actor_def = GCDiscreteActor(
-                hidden_dims=config["actor_hidden_dims"],
-                action_dim=action_dim,
-                gc_encoder=encoders.get("actor"),
-                goal_encoded=False,
-            )
-        else:
             actor_def = GCActor(
                 hidden_dims=config["actor_hidden_dims"],
                 action_dim=action_dim,
