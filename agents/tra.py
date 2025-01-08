@@ -87,9 +87,9 @@ class TRAAgent(flax.struct.PyTreeNode):
             params=grad_params,
         )
         phi = jnp.mean(phi, axis=0)
-        # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
         if self.config["repr_stopgrad"]:
+            phi = jax.lax.stop_gradient(phi)
             psi = jax.lax.stop_gradient(psi)
         dist = self.network.select("actor")(phi, psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
@@ -151,15 +151,16 @@ class TRAAgent(flax.struct.PyTreeNode):
         _, phi, psi = self.network.select("value")(
             observations,
             goals,
-            # jnp.zeros_like(self.ex_actions),
             info=True,
         )
         phi = jnp.mean(phi, axis=0)
-        # phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
-        dist = self.network.select("actor")(phi, psi, temperature=temperature)
+        if self.config["use_state_repr"]:
+            dist = self.network.select("actor")(phi, psi, temperature=temperature)
+        else:
+            dist = self.network.select("actor")(observations, psi, temperature=temperature)
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
             actions = jnp.clip(actions, -1, 1)
@@ -262,6 +263,7 @@ def get_config():
             repr_reg=1e-6,
             frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
             repr_stopgrad=False,
+            use_state_repr=False,
         )
     )
     return config
