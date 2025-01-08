@@ -11,12 +11,12 @@ import wandb
 from absl import app, flags
 from ml_collections import config_flags
 
-from algos import algos
-from envs.env_loader import make_env_and_dataset
-from utils.dataset import Dataset, GCDataset, HGCDataset
+from agents import agents
+from ogbench.env_loader import make_env_and_dataset
+from utils.datasets import Dataset, GCDataset, HGCDataset
 from utils.evaluation import evaluate
 from utils.flax_utils import restore_agent, save_agent
-from utils.logger import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
+from utils.log_utils import CsvLogger, get_exp_name, get_flag_dict, get_wandb_video, setup_wandb
 
 FLAGS = flags.FLAGS
 
@@ -41,7 +41,7 @@ flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each tas
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
 flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU.')
 
-config_flags.DEFINE_config_file('agent', 'algos/gciql.py', lock_config=False)
+config_flags.DEFINE_config_file('agent', 'agents/gciql.py', lock_config=False)
 
 
 def main(_):
@@ -78,7 +78,7 @@ def main(_):
         # Fill with the maximum action to let the agent know the action space size.
         example_batch['actions'] = np.full_like(example_batch['actions'], env.action_space.n - 1)
 
-    agent_class = algos[config['agent_name']]
+    agent_class = agents[config['agent_name']]
     agent = agent_class.create(
         FLAGS.seed,
         example_batch['observations'],
@@ -124,12 +124,12 @@ def main(_):
             overall_metrics = defaultdict(list)
             task_infos = env.unwrapped.task_infos if hasattr(env.unwrapped, 'task_infos') else env.task_infos
             num_tasks = FLAGS.eval_tasks if FLAGS.eval_tasks is not None else len(task_infos)
-            for task_idx in tqdm.trange(num_tasks):
-                task_name = task_infos[task_idx]['task_name']
+            for task_id in tqdm.trange(1, num_tasks + 1):
+                task_name = task_infos[task_id - 1]['task_name']
                 eval_info, trajs, cur_renders = evaluate(
                     agent=eval_agent,
                     env=env,
-                    task_idx=task_idx,
+                    task_id=task_id,
                     config=config,
                     num_eval_episodes=FLAGS.eval_episodes,
                     num_video_episodes=FLAGS.video_episodes,

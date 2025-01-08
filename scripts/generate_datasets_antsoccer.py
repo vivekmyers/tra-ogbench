@@ -7,8 +7,8 @@ import numpy as np
 from absl import app, flags
 from tqdm import trange
 
-import envs.locomaze  # noqa
-from algos import SACAgent
+import ogbench.locomaze  # noqa
+from agents import SACAgent
 from utils.evaluation import supply_rng
 from utils.flax_utils import restore_agent
 
