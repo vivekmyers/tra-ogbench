@@ -15,6 +15,7 @@ from utils.networks import (
     DiscreteStateActionRepresentation,
 )
 
+
 class CMDAgent(flax.struct.PyTreeNode):
     """Contrastive Metric Distillation (CMD) agent."""
 
@@ -44,14 +45,14 @@ class CMDAgent(flax.struct.PyTreeNode):
         dists = [mrn_distance_component(x_split[i], y_split[i]) for i in range(K)]
         return jnp.stack(dists, axis=-1).mean(axis=-1)
 
-    def contrastive_loss(self, batch, grad_params, module_name="critic"):
+    def contrastive_loss(self, batch, grad_params):
         batch_size = batch["observations"].shape[0]
 
-        phi = self.network.select(module_name)(
+        phi = self.network.select("critic")(
             batch["observations"], batch["actions"], info=True, params=grad_params
         )
         actions_roll = jnp.roll(batch["actions"], shift=1, axis=0)
-        psi = self.network.select(module_name)(
+        psi = self.network.select("critic")(
             batch["value_goals"],
             actions_roll,
             info=True,
@@ -127,7 +128,7 @@ class CMDAgent(flax.struct.PyTreeNode):
         info = {}
         rng = rng if rng is not None else self.rng
 
-        critic_loss, critic_info = self.contrastive_loss(batch, grad_params, "critic")
+        critic_loss, critic_info = self.contrastive_loss(batch, grad_params)
         for k, v in critic_info.items():
             info[f"critic/{k}"] = v
 
@@ -202,7 +203,6 @@ class CMDAgent(flax.struct.PyTreeNode):
                 hidden_dims=config["actor_hidden_dims"],
                 action_dim=action_dim,
                 gc_encoder=encoders.get("actor"),
-                goal_encoded=False,
             )
         else:
             critic_def = StateRepresentation(
@@ -219,7 +219,6 @@ class CMDAgent(flax.struct.PyTreeNode):
                 state_dependent_std=False,
                 const_std=config["const_std"],
                 gc_encoder=encoders.get("actor"),
-                goal_encoded=False,
             )
 
         network_info = dict(
@@ -235,6 +234,7 @@ class CMDAgent(flax.struct.PyTreeNode):
         network = TrainState.create(network_def, network_params, tx=network_tx)
 
         return cls(rng, network=network, config=flax.core.FrozenDict(**config))
+
 
 def get_config():
     config = ml_collections.ConfigDict(

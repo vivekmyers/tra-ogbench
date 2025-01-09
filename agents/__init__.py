@@ -10,6 +10,7 @@ from agents.tra import TRAAgent
 
 agents = dict(
     crl=CRLAgent,
+    cmd=CMDAgent,
     gcbc=GCBCAgent,
     gciql=GCIQLAgent,
     hiql=HIQLAgent,
