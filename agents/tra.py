@@ -198,7 +198,6 @@ class TRAAgent(flax.struct.PyTreeNode):
             actor_def = GCDiscreteActor(
                 hidden_dims=config["actor_hidden_dims"],
                 action_dim=action_dim,
-                gc_encoder=encoders.get("actor"),
             )
         else:
             actor_def = GCActor(
@@ -206,7 +205,6 @@ class TRAAgent(flax.struct.PyTreeNode):
                 action_dim=action_dim,
                 state_dependent_std=False,
                 const_std=config["const_std"],
-                gc_encoder=encoders.get("actor"),
             )
 
         network_info = dict(
