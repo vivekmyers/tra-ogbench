@@ -91,7 +91,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         if self.config["repr_stopgrad"]:
             phi = jax.lax.stop_gradient(phi)
             psi = jax.lax.stop_gradient(psi)
-        dist = self.network.select("actor")(phi, psi, params=grad_params)
+        dist = self.network.select("actor")(phi, psi, params=grad_params, goal_encoded=True)
         log_prob = dist.log_prob(batch["actions"])
 
         # actor_loss = -(exp_a * log_prob).mean()
@@ -157,10 +157,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
-        if self.config["use_state_repr"]:
-            dist = self.network.select("actor")(phi, psi, temperature=temperature)
-        else:
-            dist = self.network.select("actor")(observations, psi, temperature=temperature)
+        dist = self.network.select("actor")(phi, psi, temperature=temperature, goal_encoded=True)
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
             actions = jnp.clip(actions, -1, 1)
@@ -202,7 +199,6 @@ class TRAAgent(flax.struct.PyTreeNode):
                 hidden_dims=config["actor_hidden_dims"],
                 action_dim=action_dim,
                 gc_encoder=encoders.get("actor"),
-                goal_encoded=True,
             )
         else:
             actor_def = GCActor(
@@ -211,7 +207,6 @@ class TRAAgent(flax.struct.PyTreeNode):
                 state_dependent_std=False,
                 const_std=config["const_std"],
                 gc_encoder=encoders.get("actor"),
-                goal_encoded=True,
             )
 
         network_info = dict(
@@ -263,7 +258,6 @@ def get_config():
             repr_reg=1e-6,
             frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
             repr_stopgrad=False,
-            use_state_repr=False,
         )
     )
     return config

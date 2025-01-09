@@ -164,7 +164,6 @@ class GCActor(nn.Module):
     const_std: bool = True
     final_fc_init_scale: float = 1e-2
     gc_encoder: nn.Module = None
-    goal_encoded: bool = False
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
@@ -179,6 +178,7 @@ class GCActor(nn.Module):
         self,
         observations,
         goals=None,
+        goal_encoded=False,
         temperature=1.0,
     ):
         """Return the action distribution.
@@ -186,10 +186,11 @@ class GCActor(nn.Module):
         Args:
             observations: Observations.
             goals: Goals (optional).
+            goal_encoded: Whether the goals are already encoded.
             temperature: Scaling factor for the standard deviation.
         """
         if self.gc_encoder is not None:
-            inputs = self.gc_encoder(observations, goals, goal_encoded=self.goal_encoded)
+            inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
         else:
             inputs = [observations]
             if goals is not None:
@@ -229,7 +230,6 @@ class GCDiscreteActor(nn.Module):
     action_dim: int
     final_fc_init_scale: float = 1e-2
     gc_encoder: nn.Module = None
-    goal_encoded: bool = False
 
     def setup(self):
         self.actor_net = MLP(self.hidden_dims, activate_final=True)
@@ -239,6 +239,7 @@ class GCDiscreteActor(nn.Module):
         self,
         observations,
         goals=None,
+        goal_encoded=False,
         temperature=1.0,
     ):
         """Return the action distribution.
@@ -250,7 +251,7 @@ class GCDiscreteActor(nn.Module):
             temperature: Inverse scaling factor for the logits (set to 0 to get the argmax).
         """
         if self.gc_encoder is not None:
-            inputs = self.gc_encoder(observations, goals, goal_encoded=self.goal_encoded)
+            inputs = self.gc_encoder(observations, goals, goal_encoded=goal_encoded)
         else:
             inputs = [observations]
             if goals is not None:
@@ -356,9 +357,10 @@ class GCBilinearValue(nn.Module):
         mlp_module = MLP
         if self.ensemble:
             mlp_module = ensemblize(mlp_module, 2)
-        #print(*self.hidden_dims, self.latent_dim)
+
         self.phi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
         self.psi = mlp_module((*self.hidden_dims, self.latent_dim), activate_final=False, layer_norm=self.layer_norm)
+
     def __call__(self, observations, goals, actions=None, info=False):
         """Return the value/critic function.
 

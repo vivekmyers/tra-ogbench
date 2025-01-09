@@ -17,6 +17,5 @@ agents = dict(
     ppo=PPOAgent,
     qrl=QRLAgent,
     sac=SACAgent,
-    cmd=CMDAgent,
     tra=TRAAgent,
 )
