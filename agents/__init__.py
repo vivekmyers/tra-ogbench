@@ -5,9 +5,11 @@ from agents.hiql import HIQLAgent
 from agents.ppo import PPOAgent
 from agents.qrl import QRLAgent
 from agents.sac import SACAgent
+from agents.cmd import CMDAgent
 
 agents = dict(
     crl=CRLAgent,
+    cmd=CMDAgent,
     gcbc=GCBCAgent,
     gciql=GCIQLAgent,
     hiql=HIQLAgent,
