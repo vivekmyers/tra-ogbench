@@ -325,7 +325,7 @@ def get_config():
             layer_norm=True,  # Whether to use layer normalization.
             discount=0.99,  # Discount factor.
             actor_loss='ddpgbc',  # Actor loss type ('awr' or 'ddpgbc').
-            alpha=1.0,  # Temperature in AWR or BC coefficient in DDPG+BC.
+            alpha=0.1,  # Temperature in AWR or BC coefficient in DDPG+BC.
             use_q=True,  # Whether to use Q functions (True for standard CRL, False for value-only CRL).
             actor_log_q=True,  # Whether to maximize log Q (True) or Q itself (False) in the actor loss.
             const_std=True,  # Whether to use constant standard deviation for the actor.

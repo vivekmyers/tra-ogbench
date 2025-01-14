@@ -249,7 +249,7 @@ def get_config():
             latent_dim=2048,  # Latent dimension for phi and psi.
             layer_norm=True,  # Whether to use layer normalization.
             discount=0.99,  # Discount factor.
-            alpha=1.0,  # Temperature in AWR or BC coefficient in DDPG+BC.
+            alpha=0.1,  # Temperature in AWR or BC coefficient in DDPG+BC.
             encoder=ml_collections.config_dict.placeholder(
                 str
             ),  # Visual encoder name (None, 'impala_small', etc.).
