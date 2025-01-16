@@ -58,7 +58,7 @@ class TRAAgent(flax.struct.PyTreeNode):
             + jax.nn.log_softmax(logits, axis=1) * I[..., None]
         )
         contrastive_loss = jnp.mean(contrastive_loss)
-        # regularization term
+        # regularization term for weight decay
         l2_reg = jnp.mean(phi ** 2) + jnp.mean(psi ** 2)
         contrastive_loss += self.config["repr_reg"] * jnp.mean(l2_reg)
         logits = jnp.mean(logits, axis=-1)
@@ -86,11 +86,16 @@ class TRAAgent(flax.struct.PyTreeNode):
             info=True,
             params=grad_params,
         )
-        phi = jnp.mean(phi, axis=0)
+        if len(phi.shape) == 3:
+            phi = jnp.mean(phi, axis=0)
         # phi = jax.lax.stop_gradient(phi)
-        psi = jnp.mean(psi, axis=0)
-        if self.config["repr_stopgrad"]:
-            psi = jax.lax.stop_gradient(psi)
+        if len(psi.shape) == 3:
+            psi = jnp.mean(psi, axis=0)
+        
+        # if self.config["repr_stopgrad"]:
+        #if self.config["alignment"]:
+        #    phi = jax.lax.stop_gradient(phi)
+        #    psi = jax.lax.stop_gradient(psi)
         dist = self.network.select("actor")(phi, psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
 
@@ -155,7 +160,7 @@ class TRAAgent(flax.struct.PyTreeNode):
             info=True,
         )
         phi = jnp.mean(phi, axis=0)
-        # phi = jax.lax.stop_gradient(phi)
+        phi = jax.lax.stop_gradient(phi)
         psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
@@ -170,8 +175,9 @@ class TRAAgent(flax.struct.PyTreeNode):
 
         rng = jax.random.PRNGKey(seed)
         rng, init_rng = jax.random.split(rng, 2)
+        ex_goals = ex_observations
         ex_goals_val = ex_observations  # jnp.zeros((1, 512))
-        ex_goals_act = jnp.zeros((1, config["latent_dim"]))
+        ex_goals_act = jnp.zeros((1, config["value_latent_dim"]))
         if config["discrete"]:
             action_dim = ex_actions.max() + 1
         else:
@@ -187,7 +193,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         # Define value and actor networks.
         value_def = GCBilinearValue(
             hidden_dims=config["value_hidden_dims"],
-            latent_dim=config["latent_dim"],
+            latent_dim=config["value_latent_dim"],
             layer_norm=config["layer_norm"],
             ensemble=True,
             value_exp=True,
@@ -212,6 +218,7 @@ class TRAAgent(flax.struct.PyTreeNode):
 
         network_info = dict(
             value=(value_def, (ex_observations, ex_goals_val)),
+            value_target=(value_def, (ex_observations, ex_goals_val)),
             actor=(actor_def, (ex_goals_act, ex_goals_act)),
         )
         networks = {k: v[0] for k, v in network_info.items()}
@@ -234,6 +241,7 @@ def get_config():
             batch_size=1024,  # Batch size.
             actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions.
             value_hidden_dims=(64, 64, 64),  # Value network hidden dimensions.
+            value_latent_dim=64,
             latent_dim=512,  # Latent dimension for phi and psi.
             layer_norm=True,  # Whether to use layer normalization.
             discount=0.99,  # Discount factor.
