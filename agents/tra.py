@@ -261,7 +261,7 @@ def get_config():
             actor_geom_sample=False,  # Whether to use geometric sampling for future actor goals.
             gc_negative=False,  # Unused (defined for compatibility with GCDataset).
             p_aug=0.0,  # Probability of applying image augmentation.
-            alignment=1e-3,  # Coefficient for contrastive loss
+            alignment=1.0,
             repr_reg=1e-6,
             frame_stack=ml_collections.config_dict.placeholder(int),  # Number of frames to stack
             repr_stopgrad=False,
