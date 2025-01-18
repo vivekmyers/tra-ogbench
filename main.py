@@ -1,5 +1,16 @@
-import json
 import os
+import platform
+
+if 'mac' in platform.platform():
+    # macOS doesn't support EGL.
+    pass
+else:
+    os.environ['MUJOCO_GL'] = 'egl'
+    if 'SLURM_STEP_GPUS' in os.environ:
+        os.environ['EGL_DEVICE_ID'] = os.environ['SLURM_STEP_GPUS']
+        os.environ['MUJOCO_EGL_DEVICE_ID'] = os.environ['SLURM_STEP_GPUS']
+
+import json
 import datetime
 import random
 import time
