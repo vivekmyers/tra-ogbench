@@ -96,7 +96,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         #if self.config["alignment"]:
         #    phi = jax.lax.stop_gradient(phi)
         #    psi = jax.lax.stop_gradient(psi)
-        dist = self.network.select("actor")(batch["observations"], psi, params=grad_params)
+        dist = self.network.select("actor")(phi, psi, params=grad_params)
         log_prob = dist.log_prob(batch["actions"])
 
         # actor_loss = -(exp_a * log_prob).mean()
@@ -163,7 +163,7 @@ class TRAAgent(flax.struct.PyTreeNode):
         psi = jnp.mean(psi, axis=0)
         psi = jax.lax.stop_gradient(psi)
 
-        dist = self.network.select("actor")(observations, psi, temperature=temperature, goal_encoded=True)
+        dist = self.network.select("actor")(phi, psi, temperature=temperature, goal_encoded=True)
         actions = dist.sample(seed=seed)
         if not self.config["discrete"]:
             actions = jnp.clip(actions, -1, 1)
@@ -192,8 +192,8 @@ class TRAAgent(flax.struct.PyTreeNode):
 
         value_def = GCBilinearValue(
             hidden_dims=config["value_hidden_dims"],
-            latent_dim=config["value_latent_dim"],
-            layer_norm=ex_observations.shape[1],
+            latent_dim=ex_observations.shape[1],
+            layer_norm=config["layer_norm"],
             ensemble=True,
             value_exp=True,
             state_encoder=encoders.get("value_state"),
