@@ -62,7 +62,7 @@ class CMDAgent(flax.struct.PyTreeNode):
             phi = phi[None, ...]
 
         dist = self.mrn_distance(phi[:, :, None], psi[:, None, :])
-        logits = -dist
+        logits = -dist / jnp.sqrt(phi.shape[-1])
         # logits.shape is (e, B, B) with one term for positive pair and (B - 1) terms for negative pairs in each row.
 
         I = jnp.eye(batch_size)
@@ -241,8 +241,8 @@ def get_config():
         dict(
             # Agent hyperparameters.
             agent_name="cmd",  # Agent name.
-            lr=3e-4,  # Learning rate.
-            mrn_components=8,  # Number of components in MRN.
+            lr=3e-5,  # Learning rate.
+            mrn_components=16,  # Number of components in MRN.
             batch_size=1024,  # Batch size.
             actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions.
             value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions.
@@ -250,9 +250,7 @@ def get_config():
             layer_norm=True,  # Whether to use layer normalization.
             discount=0.99,  # Discount factor.
             alpha=0.1,  # Temperature in AWR or BC coefficient in DDPG+BC.
-            encoder=ml_collections.config_dict.placeholder(
-                str
-            ),  # Visual encoder name (None, 'impala_small', etc.).
+            encoder=ml_collections.config_dict.placeholder(str),  # Visual encoder name (None, 'impala_small', etc.).
             actor_log_q=True,  # Whether to maximize log Q (True) or Q itself (False) in the actor loss.
             const_std=True,  # Whether to use constant standard deviation for the actor.
             discrete=False,  # Whether the action space is discrete.
