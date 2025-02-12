@@ -241,12 +241,12 @@ def get_config():
         dict(
             # Agent hyperparameters.
             agent_name="cmd",  # Agent name.
-            lr=3e-5,  # Learning rate.
-            mrn_components=16,  # Number of components in MRN.
+            lr=3e-4,
+            mrn_components=8,  # Number of components in MRN.
             batch_size=1024,  # Batch size.
             actor_hidden_dims=(512, 512, 512),  # Actor network hidden dimensions.
             value_hidden_dims=(512, 512, 512),  # Value network hidden dimensions.
-            latent_dim=2048,  # Latent dimension for phi and psi.
+            latent_dim=1024,  # Latent dimension for phi and psi.
             layer_norm=True,  # Whether to use layer normalization.
             discount=0.99,  # Discount factor.
             alpha=0.1,  # Temperature in AWR or BC coefficient in DDPG+BC.
