@@ -1,4 +1,4 @@
-### Temporal Representation Alignment
+## Temporal Representation Alignment
 [![arXiv](https://img.shields.io/badge/arXiv-2408.16228-df2a2a.svg)](https://arxiv.org/abs/2502.05454)
 [![Python](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org)
 [![License: MIT](https://img.shields.io/badge/License-CC0_1.0-lightgrey.svg)](https://creativecommons.org/licenses/by/1.0/)
