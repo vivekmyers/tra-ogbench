@@ -6,6 +6,7 @@ from agents.ppo import PPOAgent
 from agents.qrl import QRLAgent
 from agents.sac import SACAgent
 from agents.cmd import CMDAgent
+from agents.tra import TRAAgent
 
 agents = dict(
     crl=CRLAgent,
@@ -16,4 +17,5 @@ agents = dict(
     ppo=PPOAgent,
     qrl=QRLAgent,
     sac=SACAgent,
+    tra=TRAAgent,
 )

@@ -1,5 +1,17 @@
-import json
 import os
+import platform
+
+if 'mac' in platform.platform():
+    # macOS doesn't support EGL.
+    pass
+else:
+    os.environ['MUJOCO_GL'] = 'egl'
+    if 'SLURM_STEP_GPUS' in os.environ:
+        os.environ['EGL_DEVICE_ID'] = os.environ['SLURM_STEP_GPUS']
+        os.environ['MUJOCO_EGL_DEVICE_ID'] = os.environ['SLURM_STEP_GPUS']
+
+import json
+import datetime
 import random
 import time
 from collections import defaultdict
@@ -28,7 +40,7 @@ flags.DEFINE_string('save_dir', 'exp/', 'Save directory.')
 flags.DEFINE_string('restore_path', None, 'Restore path.')
 flags.DEFINE_integer('restore_epoch', None, 'Restore epoch.')
 
-flags.DEFINE_integer('train_steps', 1000000, 'Number of training steps.')
+flags.DEFINE_integer('train_steps', 500000, 'Number of training steps.')
 flags.DEFINE_integer('log_interval', 5000, 'Logging interval.')
 flags.DEFINE_integer('eval_interval', 100000, 'Evaluation interval.')
 flags.DEFINE_integer('save_interval', 1000000, 'Saving interval.')
@@ -39,14 +51,15 @@ flags.DEFINE_float('eval_temperature', 0, 'Actor temperature for evaluation.')
 flags.DEFINE_float('eval_gaussian', None, 'Action Gaussian noise for evaluation.')
 flags.DEFINE_integer('video_episodes', 1, 'Number of video episodes for each task.')
 flags.DEFINE_integer('video_frame_skip', 3, 'Frame skip for videos.')
-flags.DEFINE_integer('eval_on_cpu', 1, 'Whether to evaluate on CPU.')
+flags.DEFINE_integer('eval_on_cpu', 0, 'Whether to evaluate on CPU.')
 
-config_flags.DEFINE_config_file('agent', 'agents/gciql.py', lock_config=False)
+config_flags.DEFINE_config_file('agent', 'algos/tra.py', lock_config=False)
 
 
 def main(_):
     # Set up logger.
     exp_name = get_exp_name(FLAGS.seed)
+    exp_name = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S") + "_"+ FLAGS.dataset_path[:-4].split("/")[-1] + "_" + exp_name
     setup_wandb(project='ogcrl', group=FLAGS.run_group, name=exp_name)
 
     FLAGS.save_dir = os.path.join(FLAGS.save_dir, wandb.run.project, FLAGS.run_group, exp_name)
